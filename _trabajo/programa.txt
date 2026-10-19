@@ -1,0 +1,3325 @@
+
+===== [PDF pag 1] =====
+​
+ 
+ 
+ 
+SISTEMAS OPERATIVOS 
+Programa Analítico de la Asignatura 
+Ciclo lectivo 2026 
+ 
+Datos administrativos de la asignatura 
+ 
+Departamento: 
+Ingeniería en Sistemas de Información 
+Asignatura: 
+Sistemas Operativos 
+Nivel de la carrera 
+2°  
+Bloque: 
+Tecnologías Aplicadas 
+Área: 
+Computación y Comunicación de datos 
+Horas Cátedra 
+Semanales: 8 horas 
+(dictado semestral) 
+ 
+Horas Reloj Total: 96  horas 
+Carga horaria no 
+presencial semanal (si 
+correspondiese) 
+% horas no presenciales (si correspondiere): No corresponde 
+ 
+Profesor/es 
+Titular/Asociado/Adjunto y 
+Dedicaciones 
+ 
+N° 
+Legajo 
+Apellido 
+y nombre 
+Cargo 
+Cantidad de 
+dedicaciones 
+Condición
+40267 
+Martínez, 
+Paula  
+Titular 
+1 
+Concursado 
+28809  
+Faccio, 
+Sergio 
+Adjunto  
+1 
+Regular 
+25899  
+Marques, 
+Daniel 
+Adjunto  
+1 
+Regular 
+ 
+Auxiliar/es de 1º/JTP y 
+Dedicaciones: 
+ 
+N° 
+Legajo 
+Apellido 
+y nombre 
+Cargo 
+Cantidad de 
+dedicaciones 
+Condición 
+20548  
+Ortiz, 
+Italo 
+JTP 
+1 
+ Regular 
+46539  
+Pennissi, 
+Carolina 
+JTP  
+2 
+Regular 
+
+===== [PDF pag 2] =====
+​
+ 
+ 
+79179 
+Edera, 
+Gabriel 
+JTP 
+1 
+Interino 
+ 
+ 
+ 
+ 
+Presentación, Fundamentación de la materia 
+ 
+ 
+La asignatura Sistemas Operativos constituye una herramienta que desarrolla la capacidad 
+cognitiva y operativa del estudiante, dándole la posibilidad de clarificar aspectos teóricos y 
+técnicos además de fortalecer su elección de carrera. 
+ 
+La concepción del programa se basa en objetivos propios de carrera de Ingeniería, y su 
+enseñanza se debe desenvolver dentro de una concepción didáctica donde el proceso de 
+enseñanza-aprendizaje esté centrado en el estudiante. El docente interviene como mediador y 
+facilitador entre los saberes y el sujeto de aprendizaje. 
+ 
+Los conocimientos que se imparten deben ser útiles no sólo para su desarrollo cognitivo, sino para 
+que estos se apliquen a otras materias de la currícula y para su futuro desempeño profesional. 
+ 
+La asignatura presenta al estudiante a los sistemas operativos desde la óptica de su utilización, 
+así como también el conocimiento de los principales servicios ofrecidos y sus herramientas 
+asociadas. En este sentido, se realiza un estudio comparativo de estas temáticas desde el punto 
+de vista de distintos sistemas operativos actuales. 
+​
+ 
+ 
+ 
+Relación de la asignatura con las competencias de egreso de la carrera 
+ 
+Indicar a cuáles competencias de egreso tributa (aportes reales y significativos de la asignatura), 
+según lo siguiente: 
+Nivel 0: No aporta a la competencia. 
+ 
+Nivel 1: De conocimiento y comprensión. Se logran aspectos fundamentales de la competencia, se 
+comienza a practicar la competencia y en los resultados de aprendizaje, se ven elementos 
+fundamentales de la competencia.  
+ 
+Nivel 2: De aplicación y análisis. Se refuerza la competencia, en la práctica, se practica la 
+competencia y en el resultado de aprendizaje se comienza a evidenciar la competencia, pero puede 
+necesitar refuerzo. 
+ 
+Nivel 3: De creación y evaluación. Se refuerza la competencia de ser necesario, en la práctica, se 
+practica la competencia y en los resultados de aprendizaje, se evidencia un dominio de la 
+competencia. 
+ 
+ 
+Competencias específicas de 
+la Carrera  
+Competencias genéricas 
+tecnológicas  
+Competencias genéricas 
+sociales, políticas y 
+actitudinales  
+CE1.1: Especificar, proyectar 
+CG1: Identificar, formular y 
+CG6: 
+Desempeñarse 
+de 
+
+===== [PDF pag 3] =====
+​
+ 
+ 
+y 
+desarrollar 
+sistemas de 
+información 
+para 
+concebir 
+soluciones tecnológicas que 
+permitan resolver situaciones 
+en 
+las 
+organizaciones 
+mediante 
+el 
+empleo 
+de 
+metodologías de sistemas y 
+tecnologías asociadas a los 
+sistemas 
+de 
+información. 
+(Nivel 1) 
+ 
+resolver 
+problemas 
+de 
+ingeniería. (Nivel 1) 
+ 
+manera efectiva en equipos 
+de trabajo.  (Nivel 2) 
+ 
+CE1.2: Especificar, proyectar 
+y 
+desarrollar 
+sistemas de 
+comunicación 
+de 
+datos, 
+evaluando 
+posibles 
+soluciones 
+tecnológicas 
+disponibles para dar soporte a 
+los sistemas de información 
+en 
+lo 
+referido 
+al 
+procesamiento 
+y 
+comunicación de datos. (Nivel 
+1) 
+ 
+CG2: Concebir, diseñar y 
+desarrollar 
+proyectos 
+de 
+ingeniería. (Nivel 1) 
+ 
+CG7: 
+Comunicarse 
+con 
+efectividad. (Nivel 1) 
+ 
+CE1.3: Especificar, proyectar 
+y desarrollar software para la 
+elaboración 
+de 
+soluciones 
+informáticas con el propósito 
+de 
+resolver 
+problemas 
+estratégicos y operativos, así 
+como 
+de 
+servicios 
+y 
+de 
+negocios, en el marco de una 
+actividad económica que sea 
+social 
+y 
+ambientalmente 
+sustentable. (Nivel 0) 
+ 
+CG3: 
+Gestionar, 
+planificar, 
+ejecutar y controlar proyectos 
+de ingeniería. (Nivel 1) 
+ 
+CG8: 
+Actuar 
+con 
+ética, 
+responsabilidad profesional y 
+compromiso 
+social, 
+considerando 
+el 
+impacto 
+económico, social y ambiental 
+de su actividad en el contexto 
+local y global.   (Nivel 2) 
+ 
+CE2.1: Proyectar y dirigir lo 
+referido 
+a 
+seguridad 
+informática para seleccionar y 
+aplicar 
+técnicas, 
+herramientas, 
+métodos 
+y 
+normas, 
+garantizando 
+la 
+seguridad y privacidad de la 
+información 
+procesada 
+y 
+generada por los sistemas de 
+información.  (Nivel 1) 
+ 
+CG4: 
+Utilizar 
+de 
+manera 
+efectiva 
+las 
+técnicas 
+y 
+herramientas de aplicación en 
+la ingeniería. (Nivel 1) 
+ 
+CG9: 
+Aprender 
+en 
+forma 
+continua y autónoma. (Nivel 
+2) 
+ 
+CE3.1: Establecer métricas y 
+normas 
+de 
+calidad 
+de 
+software para medir, evaluar, 
+controlar 
+y 
+monitorear 
+el 
+CG5: 
+Contribuir 
+a 
+la 
+generación 
+de 
+desarrollos 
+tecnológicos y/o innovaciones 
+tecnológicas. (Nivel 1) 
+CG10: Actuar  
+con espíritu 
+emprendedor.  (Nivel 2) 
+ 
+
+===== [PDF pag 4] =====
+​
+ 
+ 
+rendimiento, 
+impulsando 
+mejoras 
+de 
+acuerdo 
+a 
+técnicas y normas vigentes 
+definidas por los organismos 
+de estandarización. (Nivel 0) 
+ 
+ 
+ 
+CE4.1: 
+Certificar 
+el 
+funcionamiento, condición de 
+uso o estado de sistemas de 
+información, 
+sistemas 
+de 
+comunicación 
+de 
+datos,  
+software, 
+seguridad 
+informática 
+y 
+calidad 
+de 
+software para asegurar la 
+generación de los resultados 
+deseados 
+en 
+función 
+de 
+restricciones 
+de 
+tiempo y 
+recursos establecidos. (Nivel 
+0) 
+ 
+ 
+ 
+CE5.1: Dirigir y controlar la 
+implementación, operación y 
+mantenimiento de sistemas 
+de información, sistemas de 
+comunicación 
+de 
+datos, 
+software, 
+seguridad 
+informática 
+y 
+calidad 
+de 
+software, 
+a 
+los 
+fines 
+de 
+alcanzar los objetivos fijados 
+por la organización. (Nivel 0) 
+ 
+ 
+ 
+CE6.1: Asesorar y capacitar a 
+organizaciones, 
+empresas, 
+organismos 
+públicos 
+o 
+privados en la adquisición, 
+instalación y uso, en lo que 
+respecta 
+a 
+sistemas 
+de 
+información, 
+sistemas 
+de 
+comunicación 
+de 
+datos, 
+software, 
+seguridad 
+informática 
+y 
+calidad 
+de 
+software, a los fines de un uso 
+correcto 
+de 
+los 
+sistemas 
+intervinientes. (Nivel 0) 
+ 
+ 
+ 
+CE7.1: 
+Realizar 
+pericias, 
+tasaciones 
+y 
+arbitrajes 
+relacionados con su actividad 
+profesional, 
+respetando 
+marcos normativos y jurídicos 
+ 
+ 
+
+===== [PDF pag 5] =====
+​
+ 
+ 
+con el objeto de asesorar a 
+las partes o a los tribunales 
+de justicia. (Nivel 0) 
+ 
+ 
+Propósito de la materia 
+ 
+Sistemas Operativos brinda al desarrollo de las capacidades necesarias que debe adquirir el 
+Ingeniero en Sistemas de Información, considerando a un sistema operativo como una parte 
+constitutiva fundamental de un Sistema de Información. 
+ 
+Objetivos 
+ 
+●​ Objetivos Generales: 
+-​
+Conocer en profundidad las cuestiones de diseño en los sistemas operativos, tanto desde la 
+perspectiva  
+de evolución histórica como de las implementaciones actuales. 
+-​
+Conocer los algoritmos utilizados por los sistemas operativos para la administración de 
+recursos. 
+-​
+Utilizar correctamente los conceptos básicos de instalación y administración de sistemas 
+operativos. 
+-​
+Evaluar los distintos sistemas operativos según los requerimientos de cada situación en 
+particular. 
+●​ Objetivos Específicos: 
+-​
+Analizar la organización, estructura, funciones y servicios que proporcionan los sistemas 
+operativos. 
+-​
+Presentar y desarrollar los distintos métodos de administración y gestión de memoria, proces
+y archivos. 
+-​
+Distinguir y comparar la implementación de distintos mecanismos de Entrada Salida en los 
+sistemas operativos  
+y estudiar el funcionamiento de los dispositivos de Entrada Salida típicos.  
+-​
+Estudiar las características y el funcionamiento de los sistemas operativos distribuidos y de 
+tiempo real.  
+-​
+Presentar y analizar las políticas y los mecanismos de seguridad implementados en los 
+sistemas operativos. 
+-​
+Analizar, caracterizar y comparar distintos sistemas operativos actuales. 
+ 
+Resultados de aprendizaje 
+●​ RA1: Comprende el funcionamiento de los sistemas operativos, su estructura, 
+funcionalidades y servicios a fin de hacer un uso eficiente y efectivo de los mismos. 
+
+===== [PDF pag 6] =====
+​
+ 
+ 
+●​ RA2: Reconoce todos los procesos que le permitan implementar y administrar a los 
+sistemas operativos a fin de dar sustento a los sistemas de información. 
+●​ RA3: Desarrolla estrategias de pensamiento divergente y habilidades de trabajo en 
+equipo para la generación de soluciones tecnológicas. 
+ 
+Asignaturas correlativas previas, para cursar y rendir 
+Debe tener cursada: 
+ 
+●​ Arquitectura de Computadoras. 
+Asignaturas correlativas posteriores (régimen de correlatividad) 
+ 
+Requieren esta Asignatura cursada: 
+●​ Redes de datos. 
+ 
+Requieren esta Asignatura aprobada: 
+●​ Proyecto Final. 
+ 
+ 
+ 
+Programa analítico 
+ 
+Unidad 
+temática 
+Comp
+etenci
+as 
+especí
+ficas 
+ 
+Compete
+ncias 
+genéricas 
+Contenidos 
+Horas 
+Cátedra 
+de 
+formación 
+teórica 
+Horas 
+Cátedra 
+de 
+formació
+n 
+experime
+ntal 
+Horas 
+Cátedra 
+de 
+resoluci
+ón de 
+problem
+as de 
+ingenierí
+a 
+Horas 
+Cáted
+ra de 
+Proye
+cto y 
+diseñ
+o 
+Referen
+cias a 
+bibliogra
+fía 
+1  
+CE1.1 
+CE2.1 
+CE1.2 
+CG1 
+CG2 
+CG3 
+CG6 
+CG7 
+CG8 
+CG9 
+CG10 
+1.1 Introducción y definiciones: 
+Lenguajes, niveles y máquinas 
+virtuales. Repaso de hardware 
+de cómputo. Entrada/Salida 
+programada, manejada por 
+interrupciones, DMA, canales 
+de datos. Control de flujo, 
+secuencial y saltos, 
+procedimientos, co-rutinas, 
+interrupciones. Lenguaje 
+Ensamblador: Definición y 
+conceptos. Sector de booteo. 
+ 
+1.2 Sistemas Operativos: 
+definición: como máquina 
+extendida, como administrador 
+de recursos. Conceptos 
+generales. Variedad de 
+sistemas operativos. 
+1.3 Historia de los sistemas 
+operativos: Generaciones. 
+1.4 Variedades de sistemas 
+operativos: de mainframe, de 
+servidor, multiprocesador, de 
+5 
+3 
+5 
+ 
+1, 2, 3, 4, 
+5, 7, 8,9 
+
+===== [PDF pag 7] =====
+​
+ 
+ 
+computadora personal, de 
+tiempo real, integrados y de 
+tarjeta inteligente. 
+ 
+1.5 Estructura de los sistemas 
+operativos: Monolíticos, por 
+capas, máquinas virtuales, 
+modelo cliente servidor.  
+ 
+1.6 Revisión y características 
+de diferentes sistemas 
+operativos. Tendencias actuales 
+en los sistemas operativos. 
+ 
+1.7   Análisis comparativo de 
+diferentes sistemas operativos. 
+Caso de estudio: 1. Los módulos 
+constitutivos del kernel de Linux 
+y cómo se relacionan entre sí. 2. 
+Arquitectura del sistema 
+operativo Windows y sus 
+componentes claves. 
+2  
+ 
+CE2.1 
+CE1.2 
+CG1 
+CG4 
+CG5 
+CG6 
+CG7 
+CG8 
+CG9 
+CG10 
+2.1 Introducción: Modelo de 
+procesos, jerarquías de 
+procesos, estado e 
+implementación de procesos. 
+Creación y terminación de 
+procesos. Jerarquías de 
+procesos. Estados de los 
+procesos.  
+Subprocesos, modelo, 
+implementación. Bloque de 
+Control de Proceso. 
+ 
+2.2 Comunicación entre 
+procesos: Programación 
+concurrente. Condiciones de 
+concurso, secciones críticas, 
+exclusión mutua con espera 
+ocupada, distintas soluciones. 
+Soluciones sin espera ocupada o 
+activa. Llamada a 
+procedimientos remotos. 
+Problemas clásicos de 
+comunicación entre procesos: el 
+problema de la cena de los 
+filósofos. El problema de los 
+lectores y escritores. El 
+problema del barbero dormilón. 
+ 
+2.3 Planificación de procesos: 
+conceptos. Tipos de 
+planificación: torneo, prioridad, 
+listas de esperas múltiples, 
+primer trabajo más corto, 
+conducida por política 
+(garantizada), de dos y tres 
+niveles, lotería, circular, etc. 
+Políticas de planificación 
+apropiativas y no apropiativas. 
+ 
+2.4 Multiprocesamiento. 
+Características. Paralelismo. 
+Características del hardware 
+multiprocesador.  Los sistemas 
+operativos de multiprocesadores. 
+Tendencias actuales. 
+ 
+2.5 El modelo clásico de los 
+hilos. Implementación a nivel del 
+usuario y del kernel. 
+8 
+3 
+ 
+5 
+ 
+1,2,3,4,5,
+7, 8,9 
+
+===== [PDF pag 8] =====
+​
+ 
+ 
+Implementación híbrida. 
+ 
+2.6 Análisis comparativo de 
+diferentes sistemas operativos 
+en cuanto a la administración de 
+los procesos. Casos de estudio:  
+1. Análisis de la llamada al 
+sistema fork() en el sistema 
+operativo Linux. 2. Análisis de la 
+administración de procesos, 
+hilos y trabajos en Windows. 
+Thread Scheduling. Diagrama de 
+estados y transiciones de un 
+hilo. Scheduling en 
+multiprocesadores. 
+3 
+ 
+CE2.1 
+CE1.2 
+CG1 
+CG4 
+CG5 
+CG6 
+CG7 
+CG8 
+CG9 
+CG10 
+3.1 Almacenamiento real. 
+Introducción. Organización y 
+administración del 
+almacenamiento. Jerarquías de 
+almacenamiento.  
+ 
+3.2 Multiprogramación y uso de 
+la memoria. Modelado de la 
+multiprogramación. Análisis del 
+rendimiento. Multiprogramación 
+con particiones fijas. 
+Recolocación y protección. 
+ 
+3.3 Intercambio: 
+Multiprogramación con 
+particiones variables. 
+Administración de memoria con 
+mapa de bits, con listas 
+enlazadas y con el sistema 
+compañero. 
+Distribución de espacio para 
+intercambio. Análisis del sistema 
+de intercambio. 
+ 
+3.4 Almacenamiento virtual. 
+Paginación. Traducción de 
+direcciones. Tablas de páginas. 
+Algoritmos de reemplazo de 
+páginas. Sustitución: de página 
+óptima, de página no usadas 
+recientemente, de página donde 
+la primera que entra es la 
+primera que sale, de página 
+usada menos recientemente 
+usada. Modelado de algoritmos 
+de reemplazo de páginas. 
+Aspectos de diseño de los 
+sistemas con paginación. 
+Aspectos de implementación. 
+Hiperpaginación o thrashing. 
+ 
+3.5 Segmentación.  
+ 
+3.6 Sistemas combinados con 
+paginación y segmentación. 
+ 
+3.7 Análisis comparativo de 
+diferentes sistemas operativos. 
+Casos de estudio:  1. Análisis de 
+las llamadas al sistema del 
+sistemas operativo Linux 
+relacionadas con la asignación y 
+liberación de memoria dinámica: 
+malloc, free, calloc, realloc, 
+memset. 2. Análisis de los 
+diferentes tipos de memorias 
+8 
+3 
+5 
+ 
+1,2,3,4,5,
+7,8,9 
+
+===== [PDF pag 9] =====
+​
+ 
+ 
+caché presentes en una 
+computadora estándar. 3.  
+Componentes y servicios que 
+provee el administrador de 
+memoria de Windows. 
+4 
+ 
+ 
+CE2.1 
+CE1.2 
+CG1 
+CG4 
+CG5 
+CG6 
+CG7 
+CG8 
+CG9 
+CG10 
+4.1 Generalidades: Aspectos 
+básicos. Nombres, estructura y 
+tipos de archivos. Acceso a 
+archivos. Atributos de archivos. 
+Operaciones con archivos. 
+Directorios. Niveles de 
+directorios. 
+ 
+4.2 Diseño de un sistema de 
+archivos: Manejo del espacio de 
+disco. 
+Almacenamiento de archivos. 
+Estructura de directorios. FAT, 
+Nodo i, NTFS, VFS. Links. 
+Confiabilidad, consistencia y 
+rendimiento del sistema de 
+archivos. 
+Respaldos. 
+ 
+4.3 Servidores de archivos: Nivel 
+de interfaz. Actualización 
+atómica. Control de 
+concurrencia. Transacciones. 
+Archivos duplicados. 
+ 
+4.4 Ejemplos de Sistemas de 
+Archivos. 
+ 
+4.5 Protección: Dominios de 
+protección. Listas con control de 
+acceso. 
+Capacidades. Modelos de 
+protección. Canales de 
+conversión. 
+ 
+4.6 Análisis comparativo de 
+diferentes sistemas operativos. 
+Casos de estudio:  1. Análisis de 
+las llamadas al sistema de Linux 
+relacionadas con archivos: open, 
+close, read, write, lseek. 2. 
+Análisis de rendimiento de 
+distintos sistemas de archivos, 
+por ejemplo: xfs, ext3, ext4, btrfs, 
+zfs, ntfs, reiserfs, jfs. 3. Análisis 
+de los Sistemas de Archivos 
+soportados por Windows: CDFS, 
+UDF,  FATxx, exFAT y NTFS. 4. 
+Análisis de File System Driver 
+Architecture (FSD) de 
+Windows.Hiperpaginación.  
+8 
+3 
+5 
+ 
+1,2,3,4,5,
+7,8,9 
+5 
+ 
+CE2.1 
+CE1.2 
+CG1 
+CG4 
+CG5 
+CG6 
+CG7 
+CG8 
+CG9 
+CG10 
+5.1 Principios del hardware de 
+E/S: 
+Dispositivos 
+de 
+E/S. 
+Controladores de dispositivos. 
+Acceso 
+directo 
+a 
+memoria 
+(DMA).  
+ 
+5.2 Principios del software de 
+E/S: Objetivos. Manejadores de 
+interrupciones. E/S programada. 
+E/S 
+controlada 
+por 
+interrupciones. E/S con DMA. 
+Manejadores 
+de 
+dispositivos. 
+7 
+3 
+5 
+ 
+1,2,3,4,5,
+7,8,9 
+
+===== [PDF pag 10] =====
+​
+ 
+ 
+Software de E/S independiente 
+del dispositivo.  
+Software de E/S en el espacio 
+del usuario. 
+ 
+5.3 Discos (físicos y en RAM). 
+Hardware y Software de discos y 
+de discos de RAM. Manejo de 
+errores. RAID de discos. 
+ 
+5.4 Relojes. Hardware y software 
+de relojes. Interfaces Gráficas 
+(GUI). 
+Terminales. Hardware y software 
+de terminales. Terminales de 
+red. 
+ 
+5.5 
+Análisis 
+comparativo de 
+diferentes sistemas operativos. 
+Casos de estudio: 1. Uso de 
+comandos 
+de 
+redirección 
+y 
+tuberías en el sistema operativo 
+Linux. 2.  Componentes de E/S 
+de 
+Windows. 
+Tipos 
+de 
+controladores de dispositivos. 
+Análisis de Kernel-Mode Driver 
+Framework 
+(KMDF) 
+y 
+User-Mode Driver Framework 
+(UMDF). 
+Plug-and-Play 
+transición de estados. 
+6 
+ 
+CE2.1 
+CE1.2 
+CG1 
+CG4 
+CG5 
+CG6 
+CG7 
+CG8 
+CG9 
+CG10 
+6.1 Recursos. 
+ 
+6.2 Introducción a los bloqueos. 
+ 
+6.3 Mecanismos para la 
+detección de los bloqueos. 
+ 
+6.4 Recuperación de bloqueos. 
+ 
+6.5 Evasión de bloqueos. 
+ 
+6.6 Prevención de bloqueos. 
+ 
+6.7 Análisis comparativo de 
+diferentes sistemas operativos. 
+Casos de estudio: 1. Uso e 
+implementación de semáforos 
+para sincronización en el 
+sistema operativo Linux. 2. 
+Manejo de interrupciones en 
+Windows. Trap dispatching, 
+llamadas a procedimientos 
+remotos diferidas (DPCs), 
+llamadas asincrónicas  a 
+procedimientos (APCs), 
+despacho de excepciones y 
+despacho de servicios del 
+sistema. 
+5 
+3 
+5 
+ 
+1,2,3,4,5,
+7,8,9 
+7 
+ 
+CE2.1 
+CE1.2 
+CG1 
+CG2 
+CG3 
+CG4 
+CG5 
+CG6 
+CG7 
+CG8 
+CG9 
+CG10 
+7.1 Concepto de virtualización y 
+requerimientos para implementar 
+virtualización. 
+ 
+7.2 Técnicas de virtualización. 
+ 
+7.3 Máquinas virtuales. 
+ 
+7.4 Ejemplos de 
+implementaciones. Casos de 
+estudio: 1. Comparación de 
+virtualizadores y evaluación de 
+5 
+3 
+5 
+ 
+1,2,3,4,5,
+7,8,9 
+
+===== [PDF pag 11] =====
+​
+ 
+ 
+rendimiento: lxc vs qemu-kvm o 
+VirtualBox.2. Análisis de Hiper-V 
+de Windows, descripción de los 
+componentes. 
+8 
+ 
+CE2.1 
+CE1.2 
+CG1 
+CG4 
+CG5 
+CG6 
+CG7 
+CG8 
+CG9 
+CG10 
+8.1 Introducción a los sistemas 
+distribuidos: Objetivos. Ventajas 
+y desventajas. 
+ 
+8.2 Comunicación y 
+sincronización entre los 
+sistemas distribuidos. Procesos 
+en sistemas distribuidos. 
+Archivos en sistemas 
+distribuidos. 
+ 
+8.3 Conceptos de hardware, 
+multiprocesadores y 
+multicomputadoras. Conceptos 
+de software, sistemas operativos 
+de redes. 
+ 
+8.4 Procesamiento en tiempo 
+real. Concepto. Características 
+de los sistemas en tiempo real. 
+Planificación en tiempo real. 
+ 
+8.5 Casos de estudio: 1. Análisis 
+de SO distribuidos como: Plan 9, 
+Minix, Amoeba.  
+5 
+3 
+5 
+ 
+1,2,3,4,5,
+6,7,8 
+9 
+ 
+CE2.1 
+CE1.2 
+CG1 
+CG4 
+CG5 
+CG6 
+CG7 
+CG8 
+CG9 
+CG10 
+9.1 El Entorno de la seguridad: 
+Amenazas. Intrusos. Pérdida de 
+datos. 
+ 
+9.2 Autenticación de usuarios. 
+Autenticación por contraseñas. 
+Otros tipos de autenticaciones. 
+ 
+9.3 Ataques desde adentro del 
+sistema. Caballos de Troya. 
+Falsificación de inicio de sesión. 
+Bombas lógicas. 
+Desbordamiento de buffer. 
+Ataques genéricos contra la 
+seguridad. Defectos de 
+seguridad. Principios de diseño 
+que proporcionan seguridad. 
+ 
+9.4 Ataques desde afuera del 
+sistema. Virus. Técnicas 
+antivirus. 
+ 
+9.5 Mecanismos de protección.  
+Listas de control de acceso. 
+Dominios de protección. 
+ 
+9.6 Sistemas de confianza. Base 
+de cómputo de confianza. 
+Modelos formales de sistemas 
+seguros. Seguridad multinivel. 
+ 
+9.7 Análisis comparativo de 
+diferentes sistemas operativos. 
+Casos de estudio:  1. 
+Herramientas de seguridad para 
+Linux: SELinux, AppArmor, , 
+Iptables, Cgroups. 2. 
+Componentes de Seguridad 
+incluidos en Windows, permisos 
+y privilegios de cuentas de 
+usuario, Active Directory.  
+5 
+3 
+5 
+ 
+1,2,3,5,7,
+8,9 
+
+===== [PDF pag 12] =====
+​
+ 
+ 
+ 
+Distribución de la carga horaria total: 
+ 
+Formación teórica 
+56 horas Cátedra. 
+Formación experimental 
+27 horas Cátedra. 
+Resolución de problemas de ingeniería 
+45 horas Cátedra. 
+Proyecto y diseño 
+ 
+ 
+ 
+Metodología de 
+enseñanza 
+Explicación de la modalidad 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Clases teóricas 
+Aspectos generales 
+ 
+El plan de estudios de Sistemas Operativos pretende aproximar a los estudiantes al campo 
+de la práctica profesional. Para ello se recurre a analizar y problematizar a los sistemas 
+operativos. 
+ 
+El desarrollo teórico de la asignatura se orienta a interrogar a la teoría para obtener 
+sugerencias que permitan al estudiante entender y actuar en consecuencia. Se incentiva al 
+estudiante a reflexionar sobre el por qué de las cosas. 
+ 
+El dictado de las clases teóricas se realiza de forma presencial. 
+ 
+Para acercar a los estudiantes al campo profesional, se estudian y comparan sistemas 
+operativos actuales a fin de poner en contacto al estudiante con las particularidades y la 
+complejidad habituales de los mismos, para luego reflexionar desde el marco teórico 
+conceptual. 
+ 
+Durante el proceso de enseñanza se trabajará con los contenidos teórico-prácticos, de 
+modo de que los mismos sean generadores de preguntas, confrontaciones, justificaciones, 
+refutaciones, clasificaciones, problemáticas, tanto conceptuales como surgidas de 
+situaciones concretas.  De esta manera se pretende que el estudiante sea capaz de 
+plantearse un problema, realizar un diagnóstico e intentar explicaciones como punto de 
+partida y sostén de posibles soluciones. 
+ 
+La metodología de enseñanza se orienta para desarrollar un aprendizaje significativo, 
+duradero, transferible y basado en la actividad reflexiva del sujeto que aprende.  Cada 
+clase teórica y/o práctica constará de las siguientes fases:  
+ 
+Actividades iniciales o de apertura: tendrán la finalidad lograr un confort comunicativo y 
+para ello se exploran los saberes previos, las expectativas y los intereses; se presenta en 
+forma significativa el tema de la clase; se plantea una situación problemática y luego se 
+proponen las formas de trabajo.  
+ 
+El docente, al proponer la situación problemática, tendrá en cuenta que para que una 
+situación constituya un problema para el estudiante, éste/a no debe disponer de 
+procedimientos que le permitan solucionarlo en forma más o menos inmediata. La 
+situación problemática será relevante desde el punto de vista de la práctica profesional y 
+de las capacidades propuestas como objetivos. 
+ 
+Se indagará con la mayor precisión posible, los conocimientos y las experiencias previas 
+de los estudiantes que sean relevantes en función de las capacidades nuevas que 
+deberán adquirir. 
+ 
+
+===== [PDF pag 13] =====
+​
+ 
+ 
+Al iniciarse un nuevo proceso, las estrategias se encaminan a la exploración de estas 
+ideas que, incluso, deberán registrarse en forma escrita. Asimismo, se promoverá que los 
+estudiantes reflexionen y discutan sobre ellas. Por ejemplo: ¿Cómo podrían ustedes 
+explicar esto?  ¿Cómo actuarían en esta situación? ¿Qué saben...?  ¿Qué necesitan saber 
+para...? 
+A partir de la situación problemática planteada y de las ideas que se han puesto de 
+manifiesto queda en evidencia que, para resolver la situación problemática, es necesario 
+saber más y que los conocimientos que se poseen no son suficientes.  
+ 
+Se delimita cuáles son las preguntas que se podrán responder y cuáles las que no podrán 
+ser tratadas. Será necesario explicitar que hay problemas pendientes de resolución. 
+ 
+Actividades de desarrollo: su finalidad es lograr que los/las estudiantes aprendan los 
+nuevos contenidos. Durante esta instancia:  
+ 
+●​
+Los estudiantes tienen la oportunidad de verificar o de cuestionarse acerca de su 
+aprendizaje.   
+●​
+El docente analiza los argumentos  y se presentan las conclusiones de los temas 
+de la asignatura tratados en la clase. 
+●​
+El docente propicia en los estudiantes la selección de los conceptos más 
+importantes, para que establezcan nuevas relaciones y organicen sus ideas.  
+●​
+Los estudiantes evalúan la calidad relativa de sus ideas y las comparan con otras. 
+●​
+Los estudiantes aplican sus conocimientos para resolver problemas de ingeniería 
+relativos a los sistemas operativos.   
+ 
+Actividades finales o de cierre: en esta instancia se promoverá la integración y la 
+aplicación del aprendizaje. Podrán consistir en la realización de una tarea, en la 
+elaboración de un producto, en la resolución de un problema, entre otras posibilidades.   
+ 
+El estudiante toma conciencia de cuál fue su punto de partida, qué cosas ha aprendido y 
+en qué medida los aprendizajes realizados modificaron y ampliaron los planteamientos 
+iniciales. Por último, ha de ser consciente del proceso que ha seguido su aprendizaje,  
+reconociendo la secuencia de pasos realizada, la labor individual y como parte de un 
+equipo.  
+ 
+Secuencia didáctica de la unidad: distribución del tiempo 
+Inicio 
+Desarrollo 
+Cierre 
+10% del total de las horas 
+70% del total de las horas 
+20% del total de las horas 
+ 
+Encuadre de la asignatura 
+ 
+Al comenzar las actividades académicas del ciclo lectivo, los estudiantes dispondrán en  el 
+campus virtual, de la asignatura, del programa, planificación de la asignatura y de la Guía 
+de Trabajos Prácticos. Durante el primer encuentro y siempre que sea necesario, el 
+docente: 
+ 
+●​
+Presenta a los estudiantes la metodología de enseñanza con que se abordarán 
+las clases teóricas y/o prácticas, explicando el sentido de cada una de las fases 
+en que se organiza cada encuentro. 
+●​
+Comenta con los estudiantes el programa y la planificación de la asignatura a fin 
+de despejar dudas. 
+●​
+Informa sobre la metodología de evaluación y el mecanismo y criterio para 
+obtener la nota final de la asignatura. 
+
+===== [PDF pag 14] =====
+​
+ 
+ 
+●​
+Informa sobre los horarios de consulta, la valoración de la puntualidad en el 
+ingreso a la clase y la importancia de entregar en tiempo y forma los trabajos 
+solicitados. 
+●​
+Informa las fechas de presentación de trabajos prácticos y evaluaciones. 
+●​
+Recomienda y comenta la bibliografía de la asignatura y el material on-line. 
+●​
+Informa sobre la plataforma virtual de la asignatura, muestra su funcionamiento, 
+contenido y funcionalidades a toda la clase mediante proyector multimedia y 
+solicita a los estudiantes que se den de alta en la plataforma. 
+●​
+Recomienda la participación en la plataforma virtual, para debate, consultas, 
+presentación de actividades y descarga de material.  
+●​
+Destaca la importancia de asistir a las clases de consulta. 
+●​
+Propone la conformación de grupos de trabajos de hasta 4 estudiantes para la 
+realización de las actividades prácticas grupales. 
+●​
+Informa que cuando las actividades prácticas se desarrollen en grupo, todos los 
+integrantes del grupo deberán contar con la carpeta de trabajos. 
+  
+ 
+Trabajos Prácticos 
+ 
+Las actividades prácticas pretenden que el estudiante pueda resolver problemas de 
+ingeniería referidos a los sistemas operativos mediante la aplicación directa de los 
+conceptos teóricos desarrollados. 
+Se desarrollan actividades basadas en situaciones reales o hipotéticas  que el estudiante 
+deberá resolver en el aula, proponiendo la/s solución/nes más adecuada teniendo en 
+cuenta las condiciones iniciales planteadas.  
+Dentro de las actividades prácticas, los estudiantes realizan el estudio comparativo de 
+distintos sistemas operativos actuales en cuanto a sus características y funcionalidades 
+ofrecidas. Los estudiantes deben informar por los medios adecuados formales cualquier 
+cambio que se produzca en el grupo y deberá esperar la aceptación del docente. Por este 
+motivo se trabajará en grupo y la entrega del trabajo la realizará un estudiante distinto en 
+cada entrega. Se conformarán grupos de 7 integrantes. Si hay un estudiante del grupo que 
+falta siempre podrá entregar el trabajo práctico otro estudiante, pero no siempre el mismo.  
+ 
+Prácticas en 
+laboratorio 
+Las prácticas se desarrollan en un ambiente de aprendizaje organizado y equipado 
+funcionalmente para posibilitar aprendizajes (individuales o en grupos) que requieren de 
+manipulación de equipamiento, herramientas e insumos específicos. Se realizan 
+experiencias de carácter técnico o de investigación y/o experimentación con fines de 
+aprendizaje.  
+En este sentido, los estudiantes aplican sus conocimientos a la resolución de problemas 
+relacionados a los sistemas operativos mediante la utilización de equipamiento informático. 
+Actividades de 
+articulación y visita de 
+profesional del medio 
+Se propone la articulación con la cátedra Arquitectura de computadoras mediante el 
+desarrollo de actividades que involucran dispositivos de entrada y salida, almacenamiento 
+en disco, placas de red y análisis de rendimiento, entre otros. 
+Se acerca al estudiante los conocimientos de sistemas operativos necesarios para aplicar 
+luego en la asignatura Redes de Información, como por ejemplo los aspectos de seguridad 
+a implementar en los sistemas operativos y necesarios para segurizar redes de 
+información.  
+Se brindan además los protocolos de red para sistemas distribuidos. 
+Se realiza la visita de un profesional del medio cuya actividad se realiza entorno a los 
+sistemas operativos, a fin de que transmita su experiencia profesional diaria. 
+ 
+ 
+Metodología de evaluación 
+ 
+Aspectos generales 
+ 
+Durante las instancias de enseñanza y aprendizaje se enfatiza la fundamentación del desarrollo de 
+
+===== [PDF pag 15] =====
+​
+ 
+ 
+opciones metodológicas y selección de instrumentos mediante diversas construcciones teóricas y 
+principios en los que se basan las actividades prácticas. Por lo tanto, la evaluación de los 
+aprendizajes debe ser coherente con este enfoque. Luego de la instancia de evaluación se produce 
+la retroalimentación, reflexionando con los estudiantes para que categoricen sus acciones de 
+acuerdo a una serie de criterios evaluativos. En este momento se ayuda a los estudiantes a percibir 
+relaciones causales entre sus opciones, sus acciones y los resultados alcanzados.   
+El proceso de evaluación permitirá en definitiva, mejorar el proceso de aprendizaje, tomar las 
+acciones correctivas necesarias sobre el plan original y diseñar estrategias de refuerzo necesarias 
+para cumplir con los objetivos planteados. 
+Se plantean tres momentos de evaluación: la evaluación diagnóstica, la evaluación continua o 
+formativa y la evaluación sumaria o sumativa. 
+ 
+Evaluación diagnóstica 
+ 
+La evaluación diagnóstica o inicial sirve para determinar los conocimientos previos del estudiante 
+para así planear las estrategias de enseñanza y adecuarlas en caso necesario. 
+ 
+Evaluación continua o formativa 
+ 
+Permite evaluar durante todo el semestre todas las actividades que se desarrollen, así como las 
+prácticas, en su caso. A su vez tiene como función retroalimentar el proceso de aprendizaje de los 
+estudiantes.  
+ 
+a)​ Aspectos a considerar durante la evaluación continua: 
+ 
+●​ Asistencia, puntualidad y participación activa en los encuentros teóricos y prácticos de la 
+asignatura. 
+●​ Entrega de las actividades prácticas respetando los tiempos de entrega y las consideraciones 
+de calidad mínimas acordadas. 
+●​ Uso y participación del aula virtual. 
+●​ Búsqueda y consulta de material bibliográfico. 
+●​ Asistencia a las evaluaciones que se establezcan. 
+●​ Actitud activa y creativa para evaluar alternativas tecnológicas. 
+●​ Actitud reflexiva y aceptación de otras opiniones y propuestas. 
+●​ Autonomía de aprendizaje. 
+●​ Iniciativa y espíritu emprendedor. 
+●​ Apertura hacia el aprendizaje a lo largo de toda la vida 
+●​ Compromiso con la identidad, desarrollo y ética profesional. 
+●​ Mantenimiento de pautas de comportamiento socialmente aceptables cuando se encuentre 
+en clases y laboratorio. 
+●​ Respeto a los compañeros y docentes. 
+ 
+b)​ Control parcial de avances: 
+ 
+●​ Actividades prácticas. Los estudiantes deben presentar y aprobar las 6 actividades 
+prácticas, entregadas en tiempo y forma, de acuerdo a lo indicado en el cronograma de la 
+
+===== [PDF pag 16] =====
+​
+ 
+ 
+asignatura. Se evalúa además en estas actividades, la participación y el compromiso del 
+estudiante y del grupo para su confección. Las actividades prácticas tienen carácter  grupal. 
+Los grupos conformados para las actividades prácticas serán los mismos que se conforman 
+para las actividades teóricas que así lo requieran. El armado del grupo ya es una tarea, con 
+fecha y consignas a cumplir.   
+●​ Asistencia. Los estudiantes deberán cumplir con un 75% de asistencia tanto para las clases 
+teóricas como para las prácticas, y asistir a las instancias de evaluación pautadas. 
+●​ Evaluaciones parciales. Las evaluaciones parciales tienen carácter individual y se realizan 
+2 evaluaciones parciales escritas de teoría y dos evaluaciones parciales de práctica, en el 
+horario de cursado de cada comisión. Estas evaluaciones se llevan a cabo en forma 
+presencial. 
+ 
+ 
+Evaluación sumaria 
+ 
+●​ La evaluación sumaria permite al docente emitir un juicio de acreditación al final del curso, 
+con base en los registros de evidencias de aprendizaje consignados durante la evaluación 
+continua o formativa. Este juicio de acreditación se traducirá en una calificación. 
+●​ El estudiante integrará un portafolio de evidencias de aprendizaje, en el cual concentrará: 
+●​ Dos evaluaciones parciales y sus respectivos recuperatorios. 
+●​ Un examen global y su respectivo recuperatorio. 
+●​ Seis actividades prácticas grupales. 
+●​ Las evaluaciones parciales y sus respectivos recuperatorios, las actividades prácticas y el 
+examen global y su respectivo recuperatorio se evaluarán mediante la implementación de 
+rúbricas. 
+ 
+ 
+b) Forma de evaluación y controles. 
+ 
+Según lo detallado en a) 
+ 
+Las evaluaciones parciales, sus respectivos recuperatorios, evaluación de competencias y 
+recuperatorio y examen global y su recuperatorio se llevarán a cabo de manera presencial. Cabe 
+destacar que dichas evaluaciones y sus recuperatorios deben tener una calificación mínima de 4. 
+ 
+c) Instancias de aprobación 
+ 
+Parcial No 1: a las 8 semanas del inicio de clases. 
+Parcial No 2: a las 13 semanas del inicio de clases. 
+Recuperatorio Parcial 1 / Parcial 2: a las 14 semanas de clases. 
+Examen Global: a las 15 semanas del inicio de clases. 
+Recuperatorio Examen Global: a las 16 semanas del inicio de clases. 
+Metodología de Evaluación por Competencias: La entrega y defensa de los ejercicios de 
+laboratorio bajo el formato de competencias constituye un requisito excluyente para acceder a la 
+evaluación global. Se establece como condición obligatoria la entrega y aprobación de al menos el 
+75% de las  competencias. Las competencias se aprueban con nota igual o superior a 6. 
+ 
+A continuación se detalla la forma de obtener la nota final y condición final: 
+ 
+ PT1: Parcial teoría 1 
+PT2: Parcial teoría 2 
+
+===== [PDF pag 17] =====
+​
+ 
+ 
+PP1: Parcial practica 1 
+PP2: Parcial practica 2 
+GT: Global teoría 
+GP: Global práctica 
+EC: Evaluación por competencias 
+ 
+Condiciones para Cursado Aprobado: 
+ 
+Cumplir con los puntos A1 a A3 de la Resolución 002/2024. 
+Deben obtener nota promedio de 6 de más tanto para los parciales de teoría como para los parciales de 
+práctica.  
+Nota promedio de evaluaciones parciales y competencias: 0,40 * ( Promedio de PT1+PT2 ) + 0,40  (Promedio 
+de PP1+PP2) +   0,2 * EC 
+ 
+Condiciones para AD: 
+ 
+Cumplir con los puntos A1 a A3 de la Resolución 002/2024. 
+Cada global o su respectivo recuperatorio deberá ser aprobado con nota igual o mayor a 6. 
+Obtener nota final mayor o igual a 6. 
+NOTA FINAL: 0,5 ( Nota promedio evaluación parciales) + 0,5 (PROMEDIO (GT, GP)) 
+Condiciones para LIBRE: 
+Al estudiante que al finalizar el cursado de la materia no haya cumplido con los requisitos indicados en la 
+ordenanza 02/2024, en lo referente a cursado aprobado y/o aprobación directa, se lo considerará ALUMNO 
+LIBRE por notas o ALUMNO LIBRE por inasistencias y deberá RECURSAR la materia. 
+ 
+d) Forma de evaluación 
+ 
+ Según lo detallado en a) 
+ 
+e) Instancias de aprobación 
+ 
+ Según lo detallado en c) 
+ 
+f) Instancias de recuperación  
+ 
+Cada instancia de evaluación parcial y global tendrá su respectivo recuperatorio, los cuales se 
+llevarán a cabo en las fechas indicadas y comunicadas oportunamente a los estudiantes.  Los 
+mismos se llevan a cabo de manera presencial. 
+El Examen Global se recupera la última semana del cursado. El mismo se tomará en forma presencial. 
+Dada la alta densidad poblacional de la asignatura, las instancias de recuperación se han diseñado 
+exclusivamente para aquellos estudiantes que no alcanzaron los objetivos mínimos. Esta política 
+busca optimizar los tiempos de gestión académica y, fundamentalmente, fomentar el compromiso y 
+
+===== [PDF pag 18] =====
+​
+ 
+ 
+la responsabilidad desde la primera instancia evaluativa, restringiendo la posibilidad de rendir 
+únicamente para mejorar calificaciones ya aprobadas. 
+g) Nota y escala porcentual 
+ 
+1 
+1 a 12 % 
+2 
+13 a 24% 
+3 
+25 a 39% 
+4 
+40 a 47% 
+5 
+48 a 59% 
+6 
+60 a 64% 
+7 
+65 a 74% 
+8 
+75 a 84% 
+9 
+85 a 94% 
+10 
+95 a 100% 
+ 
+1 a 5 
+Insuficiente 
+6 
+Aprobado 
+7 
+Bueno 
+8 
+Muy bueno 
+9 
+Distinguido 
+10 
+Sobresaliente 
+ 
+ 
+Modalidad de examen final 
+ 
+Para aprobar la materia debe rendir examen final y obtener una calificación mínima del 60%,  
+el cual es escrito para la parte práctica de la asignatura y oral para la parte teórica de la misma.  
+En caso de aprobar la parte práctica con al menos 60% el estudiante podrá rendir la parte teórica  
+del examen final. 
+El mismo será con modalidad presencial. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+PROCESOS DE ENSEÑANZA Y APRENDIZAJE 
+ 
+Resultados 
+de 
+Aprendizaje 
+Unidade
+s 
+Temática
+s 
+Actividades 
+Formativas 
+Estrategias de 
+Enseñanza 
+Aprendizaje 
+Tiempo Aproximado. 
+Horas Reloj x semana 
+Evaluación 
+
+===== [PDF pag 19] =====
+​
+ 
+ 
+Tipo Dentro 
+del 
+Aula 
+Fuera 
+del 
+Aula 
+Dentro del 
+Aula 
+Fuera 
+del 
+Aula 
+Tipo 
+Indicador 
+de logro 
+Técnic
+as 
+RA1 
+1,2,3,4,5,
+6 
+FE,R
+PI 
+x 
+ 
+Actividades de 
+apertura:  
+Presentación del 
+cronograma de 
+prácticas y 
+bibliografía. 
+Revisión de ideas 
+previas, mapa 
+conceptual de 
+conceptos teóricos 
+de las unidades 
+correspondientes. 
+Actividades de 
+desarrollo: 
+Formación de 
+grupos de trabajo. 
+Recomendaciones 
+para el desarrollo y 
+presentación de las 
+actividades 
+prácticas. 
+Recomendaciones 
+para la escritura de 
+los informes de las 
+actividades 
+prácticas. Se 
+sugerirá asistencia 
+a clases de 
+consulta.  
+Actividades de 
+cierre: reflexionar y 
+recapitular los 
+conceptos teóricos 
+aplicados en las 
+actividades 
+prácticas.  
+4 
+4 
+D, F 
+y S 
+Comprend
+e el 
+funcionam
+iento de 
+los 
+sistemas 
+operativos 
+su 
+estructura 
+funcionalid
+ades y 
+servicios a 
+fin de 
+hacer un 
+uso 
+eficiente y 
+efectivo 
+de los 
+mismos. 
+H 
+RA2 
+2,3,4,5,6,
+7,8,9 
+FE,R
+PI 
+x 
+ 
+Actividades de 
+apertura:   
+Revisión de ideas 
+previas, mapa 
+conceptual de 
+conceptos teóricos 
+de las unidades 
+correspondientes. 
+Actividades de 
+desarrollo:  
+Actividades 
+prácticas  y casos 
+de estudio. 
+Actividades de 
+cierre: reflexionar y 
+recapitular los 
+conceptos teóricos 
+aplicados en las 
+actividades 
+prácticas. 
+6 
+2 
+FyS 
+Reconoce 
+todos los 
+procesos 
+que le 
+permitan 
+implement
+ar y 
+administra
+r a los 
+sistemas 
+operativos 
+a fin de 
+dar 
+sustento a 
+los 
+sistemas 
+de 
+informació
+n 
+H 
+RA3 
+2,3,4,5,6,
+7,8,9 
+FE,R
+PI 
+x 
+ 
+Actividades de 
+apertura:   
+Revisión de ideas 
+previas, mapa 
+6 
+2 
+FyS 
+Desarrolla 
+estrategia
+s de 
+H 
+
+===== [PDF pag 20] =====
+​
+ 
+ 
+conceptual de 
+conceptos teóricos 
+de las unidades 
+correspondientes. 
+Actividades de 
+desarrollo:  
+Actividades 
+prácticas  y casos 
+de estudio. 
+Actividades de 
+cierre: reflexionar y 
+recapitular los 
+conceptos teóricos 
+aplicados en las 
+actividades 
+prácticas. 
+pensamie
+nto 
+divergente 
+y 
+habilidade
+s  de 
+trabajo en 
+equipo 
+para la 
+generació
+n de 
+soluciones 
+tecnológic
+as. 
+ 
+TIPO DE EVALUACIÓN: Diagnóstica, Formativa, Sumativa en relación a la actividad: 
+Autoevaluación; Coevaluación; Heteroevaluación. 
+ 
+TIPO DE ACTIVIDAD FORMATIVA: FE (formación experimental), RPI (resolución de problemas de 
+ingeniería). APyD  (actividades de proyecto y diseño) y PPS. 
+ 
+ 
+Referencias bibliográficas  
+ 
+Nro
+. 
+Autor/es 
+Título 
+Editorial 
+Año de 
+edició
+n 
+Principa
+l 
+Complemen
+ria 
+1 
+TANENBAUM, Andrew  
+Modern Operating Systems Paerson Education  
+2014 
+x 
+ 
+2 
+STALLINGS, William  
+Sistemas Operativos. 
+Principios de diseño e 
+interioridades 
+Prentice Hall 
+2007 
+x 
+ 
+3 
+CARRETERO PÉREZ  
+y Otros 
+ 
+Sistemas Operativos, una 
+visión aplicada 
+Mc Graw Hill 
+2021 
+ 
+x 
+4 
+TANENBAUM, Andrew  
+ 
+ 
+Organización de 
+Computadoras, un enfoque
+estructurado 
+Prentice-Hall 
+Hispanoamericana 
+2001 
+ 
+x 
+5 
+RUSSINOVICH Mark E. 
+y SOLOMON David A.  
+Windows Internals 
+Microsoft Press 
+2009 
+ 
+x 
+6 
+TANENBAUM, Andrew     Sistemas Operativos 
+Distribuidos 
+Prentice-Hall 
+Hispanoamericana 
+1996 
+x 
+ 
+7 
+SIEVER, Ellen, FIGGINS, 
+Stephen,  LOVE, Robert 
+y ROBBINS, Arnold  
+Linux in a Nutshell. A 
+Desktop Quick Reference  
+O'Reilly  
+2009 
+ 
+x 
+8 
+LOVE, Robert 
+Linux Kernel Development Addison Wesley 
+2010 
+ 
+x 
+9 
+Apuntes de la cátedra 
+ 
+ 
+ 
+ 
+x 
+ 
+ 
+ 
+ 
+ 
+ 
+Función Docencia del plantel de la cátedra  
+Profesor Titular, Mag. Ing. Paula Martínez 
+●​ Coordinar la cátedra, 
+●​ Realizar el programa y planificación. 
+
+===== [PDF pag 21] =====
+​
+ 
+ 
+●​ Actualizar material de estudio. 
+●​ Diseñar rúbricas. 
+●​ Atender consultas 
+●​ Administrar el aula virtual. 
+●​ Actividades de gestión universitaria como Consejera del departamento de Ingeniería en 
+Sistemas de Información. 
+Profesores Adjuntos 
+●​ Colaborar en el diseño de programa y planificación. 
+●​ Actualizar materiales de estudio. 
+●​ Atender consultas 
+●​ Colaborar con la configuración del aula virtual. 
+Profesores JTP 
+●​ Diseñar y actualizar actividades prácticas 
+●​ Diseñar rúbricas. 
+●​ Ejecutar y evaluar actividades prácticas 
+●​ Atender consultas 
+●​ Realizar actividades en el aula virtual. 
+ 
+ 
+ 
+Reuniones de asignatura y área  
+ 
+Fecha estimada 
+Tipo de reunión 
+Objetivo 
+Participantes 
+Febrero 
+De cátedra 
+Tratar 
+temas 
+relacionados al final 
+del 
+cursado 
+y 
+experiencias logradas. 
+Temas relacionados a 
+la 
+planificación 
+del 
+nuevo 
+ciclo lectivo. 
+Elaboración 
+de 
+nuevos 
+prácticos. 
+Nuevo 
+material 
+de 
+estudio.  
+Todos los docentes 
+de la cátedra 
+Julio 
+De cátedra 
+Tratar temas relativos 
+al 
+comienzo 
+del 
+dictado 
+de 
+clases. 
+Coordinación 
+de 
+tareas.  
+Todos los docentes 
+de la cátedra 
+Octubre 
+De cátedra 
+Tratar temas relativos 
+a 
+la 
+próxima 
+finalización 
+de 
+cursado, 
+exámenes, 
+recuperatorios 
+e 
+integradores. 
+Todos los docentes 
+de la cátedra 
+ 
+ 
+Orientación e Información para los estudiantes 
+-​
+Los estudiantes podrán asistir a las clases de consulta tanto de los profesores de teoría 
+como de práctica en los horarios pautados. 
+
+===== [PDF pag 22] =====
+​
+ 
+ 
+-​
+Se sugiere la  revisión de conceptos teóricos y actividades prácticas antes del dictado de la 
+clase correspondiente. 
+-​
+Horarios de consultas: 
+ 
+●​ Primer Semestre 
+ 
+Docente 
+Día de la semana 
+Horario 
+Paula Martinez 
+Jueves 
+16:30 
+Sergio Faccio 
+Jueves  
+21:00 (virtual) 
+Daniel Marques 
+Lunes 
+17:00 
+Gabriel Edera 
+Viernes 
+16:00 
+Carolina Penissi 
+Jueves 
+11:00 
+Italo Ortiz 
+Miércoles 
+18:00 
+●​ Segundo Semestre 
+Docente 
+Día de la semana 
+Horario 
+Paula Martinez 
+Viernes  
+17:30 
+Sergio Faccio 
+Jueves 
+21:00 (virtual) 
+Daniel Marques 
+Lunes 
+14:00 
+Gabriel Edera 
+Viernes 
+16:00 
+Carolina Penissi 
+Jueves 
+12:00 
+Italo Ortiz 
+Jueves 
+18:00 
+ 
+ 
+ 
+ 
+Fecha 20/02/2026 
+ 
+ 
+Paula Martínez                                                                
+Firma y Aclaración del Docente a cargo de la Cátedra: 
+ 
+ 
+                                                                
+Firma y Aclaración del Director de la Carrera: 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+===== [PDF pag 23] =====
+​
+ 
+ 
+ 
+ 
+SISTEMAS OPERATIVOS 
+Programa Analítico de la Asignatura 
+Ciclo lectivo 2026 
+ 
+Datos administrativos de la asignatura 
+ 
+Departamento: 
+Ingeniería en Sistemas de Información 
+Asignatura: 
+Sistemas Operativos 
+Nivel de la carrera 
+2°  
+Bloque: 
+Tecnologías Aplicadas 
+Área: 
+Computación y Comunicación de datos 
+Horas Cátedra 
+Semanales: 8 horas 
+(dictado semestral) 
+ 
+Horas Reloj Total: 96  horas 
+Carga horaria no 
+presencial semanal (si 
+correspondiese) 
+% horas no presenciales (si correspondiere): No corresponde 
+ 
+Profesor/es 
+Titular/Asociado/Adjunto y 
+Dedicaciones 
+ 
+N° 
+Legajo 
+Apellido 
+y nombre 
+Cargo 
+Cantidad de 
+dedicaciones 
+Condición
+40267 
+Martínez, 
+Paula  
+Titular 
+1 
+Concursado 
+28809  
+Faccio, 
+Sergio 
+Adjunto  
+1 
+Regular 
+25899  
+Marques, 
+Daniel 
+Adjunto  
+1 
+Regular 
+ 
+Auxiliar/es de 1º/JTP y 
+Dedicaciones: 
+ 
+N° 
+Legajo 
+Apellido 
+y nombre 
+Cargo 
+Cantidad de 
+dedicaciones 
+Condición 
+20548  
+Ortiz, 
+Italo 
+JTP 
+1 
+ Regular 
+46539  
+Pennissi, 
+Carolina 
+JTP  
+2 
+Regular 
+
+===== [PDF pag 24] =====
+​
+ 
+ 
+79179 
+Edera, 
+Gabriel 
+Adjunto 
+1 
+Interino 
+ 
+ 
+ 
+Cronograma de clases/trabajos prácticos/evaluaciones 
+ 
+CRONOGRAMA DE CLASES / TRABAJOS PRÁCTICOS / EXÁMENES 
+ 
+Sema
+na 
+N° 
+Unida
+d 
+N° 
+Resultado 
+de 
+Aprendiza
+je 
+Objetivos 
+Actividades y 
+participantes 
+Evaluaciones 
+Recursos 
+Bibliográficos Didácticos 
+1 
+ 
+1 
+RA1 
+Presentar la 
+asignatura y la  
+metodología de 
+enseñanza-apren
+dizaje. 
+Comprender las 
+generalidades de 
+los sistemas 
+operativos. 
+Actividades de 
+apertura: 
+Presentación de la 
+asignatura.  
+Inducción al 
+programa de 
+cursado. 
+Presentación de la 
+metodología de 
+enseñanza-aprendi
+zaje. Recolección 
+de información 
+para el eventual 
+ajuste del 
+programa.  
+Presentación de 
+plataforma virtual. 
+Presentación de 
+fechas de 
+evaluación y 
+bibliografía. 
+Problematización 
+de los sistemas 
+operativos 
+actuales. 
+Actividades de 
+desarrollo: 
+Explicación, 
+confección de 
+cuadros sinópticos 
+y mapas 
+conceptuales 
+generales del 
+espacio curricular. 
+Explicación de 
+conceptos para 
+comprensión de 
+contenidos 
+introductorios de la 
+asignatura. 
+Torbellino de ideas. 
+Debate dirigido. 
+Actividades de 
+cierre: reflexionar 
+para adquirir los 
+conocimientos, 
+ 
+1,2,3,5,7,8,9 
+Material 
+impreso  
+facilitado 
+por la 
+cátedra.  
+ 
+Libros de 
+la 
+biblioteca
+. 
+ 
+Material 
+on-line. 
+ 
+Guías 
+docentes 
+disponibl
+es 
+on-line. 
+ 
+Plataforma 
+virtual. 
+ 
+Laborator
+io de 
+prácticas. 
+ 
+Material 
+informátic
+o como 
+PCs y 
+software. 
+ 
+ 
+
+===== [PDF pag 25] =====
+​
+ 
+ 
+hechos, principios, 
+asociaciones y 
+estructuras 
+presentados en la 
+clase. Resolución 
+de dudas 
+generales de la 
+asignatura y su 
+abordaje. 
+2 
+2 
+RA1,RA
+2 
+Comprender el 
+modelo de 
+procesos, 
+estados, 
+jerarquías e 
+implementación. 
+Actividades de 
+apertura:  
+Recuperación de 
+experiencias, 
+conocimientos, 
+nociones. Planteo 
+de una situación 
+problemática.  
+Actividades de 
+desarrollo: 
+Explicación de 
+conceptos para 
+comprensión de 
+contenidos.  
+Establecimiento de 
+relaciones entre 
+conceptos, datos e 
+informaciones 
+generales sobre 
+sistemas 
+operativos. Análisis 
+de argumentos, 
+discusión de ideas.  
+Actividades de 
+cierre: reflexionar 
+para adquirir los 
+conocimientos, 
+hechos, principios, 
+asociaciones y 
+estructuras 
+presentados en la 
+clase. 
+ 
+1,2,3,5,7,8,9 
+Material 
+impreso  
+facilitado 
+por la 
+cátedra.  
+ 
+Libros de 
+la 
+biblioteca
+. 
+ 
+Material 
+on-line. 
+ 
+Guías 
+docentes 
+disponibl
+es 
+on-line. 
+ 
+Plataforma 
+virtual. 
+ 
+Laborator
+io de 
+prácticas. 
+ 
+Material 
+informátic
+o como 
+PCs y 
+software. 
+3 
+2 
+RA1, 
+RA2, 
+RA3 
+Comprender el 
+modelo de 
+procesos, 
+estados, 
+jerarquías e 
+implementación. 
+Actividades de 
+apertura: 
+Recuperación de 
+experiencias, 
+conocimientos, 
+nociones. Planteo 
+de una situación 
+problemática.   
+Actividades de 
+desarrollo: 
+Explicación de 
+conceptos para 
+comprensión de 
+contenidos.  
+Establecimiento de 
+relaciones entre 
+conceptos, datos e 
+informaciones.  
+Actividades de 
+cierre: reflexionar 
+para adquirir los 
+conocimientos, 
+ 
+1,2,3,5,7,8,9 
+Material 
+impreso  
+facilitado 
+por la 
+cátedra.  
+ 
+Libros de 
+la 
+biblioteca
+. 
+ 
+Material 
+on-line. 
+ 
+Guías 
+docentes 
+disponibl
+es 
+on-line. 
+ 
+Plataforma 
+virtual. 
+
+===== [PDF pag 26] =====
+​
+ 
+ 
+hechos, principios, 
+asociaciones y 
+estructuras 
+presentados en la 
+clase. 
+ 
+Laborator
+io de 
+prácticas. 
+ 
+Material 
+informátic
+o como 
+PCs y 
+software. 
+4 
+3 
+RA1, 
+RA2, 
+RA3 
+Comprender el 
+funcionamiento 
+de la memoria, 
+jerarquía de 
+almacenamiento 
+y administración 
+por parte del 
+sistema 
+operativo. 
+Actividades de 
+apertura: 
+Recuperación de 
+experiencias, 
+conocimientos, 
+nociones. Planteo 
+de una situación 
+problemática.   
+Actividades de 
+desarrollo: 
+Explicación de 
+conceptos para 
+comprensión de 
+contenidos.  
+Establecimiento de 
+relaciones entre 
+conceptos, datos e 
+informaciones.  
+Actividades de 
+cierre: reflexionar 
+para adquirir los 
+conocimientos, 
+hechos, principios, 
+asociaciones y 
+estructuras 
+presentados en la 
+clase. 
+ 
+ 
+1,2,3,5,7,8,9 
+Material 
+impreso  
+facilitado 
+por la 
+cátedra.  
+ 
+Libros de 
+la 
+biblioteca
+. 
+ 
+Material 
+on-line. 
+ 
+Guías 
+docentes 
+disponibl
+es 
+on-line. 
+ 
+Plataforma 
+virtual. 
+ 
+Laborator
+io de 
+prácticas. 
+ 
+Material 
+informátic
+o como 
+PCs y 
+software. 
+5 
+3 
+RA1, 
+RA2, 
+RA3 
+Comprender el 
+funcionamiento 
+de la memoria, 
+jerarquía de 
+almacenamiento 
+y administración 
+por parte del 
+sistema 
+operativo. 
+Actividades de 
+apertura:  
+Recuperación de 
+experiencias, 
+conocimientos, 
+nociones. Planteo 
+de una situación 
+problemática   
+Actividades de 
+desarrollo: 
+Ejemplificación. 
+Explicación de 
+conceptos para 
+comprensión de 
+contenidos.  
+Establecimiento de 
+relaciones entre 
+conceptos, datos e 
+informaciones. 
+Actividades de 
+cierre: reflexionar 
+ 
+1,2,3,5,7,8,9 
+Material 
+impreso  
+facilitado 
+por la 
+cátedra.  
+ 
+Libros de 
+la 
+biblioteca
+. 
+ 
+Material 
+on-line. 
+ 
+Guías 
+docentes 
+disponibl
+es 
+on-line. 
+ 
+Plataforma 
+
+===== [PDF pag 27] =====
+​
+ 
+ 
+para adquirir los 
+conocimientos, 
+hechos, principios, 
+asociaciones y 
+estructuras 
+presentados en la 
+clase. 
+  
+virtual. 
+ 
+Laborator
+io de 
+prácticas. 
+ 
+Material 
+informátic
+o como 
+PCs y 
+software. 
+6 
+4 
+RA1, 
+RA2, 
+RA3 
+Comprender las 
+características de 
+los sistemas de 
+archivos y su 
+implementación. 
+Actividades de 
+apertura: 
+Recuperación de 
+experiencias, 
+conocimientos, 
+nociones. Planteo 
+de una situación 
+problemática. 
+Actividades de 
+desarrollo: 
+Torbellino de ideas. 
+Ejemplificación. 
+Explicación de 
+conceptos para 
+comprensión de 
+contenidos.  
+Establecimiento de 
+relaciones entre 
+conceptos, datos e 
+informaciones. 
+Actividades de 
+cierre: reflexionar 
+para adquirir los 
+conocimientos, 
+hechos, principios, 
+asociaciones y 
+estructuras 
+presentados en la 
+clase. 
+ 
+ 
+1,2,3,5,7,8,9 
+Material 
+impreso  
+facilitado 
+por la 
+cátedra.  
+ 
+Libros de 
+la 
+biblioteca
+. 
+ 
+Material 
+on-line. 
+ 
+Guías 
+docentes 
+disponibl
+es 
+on-line. 
+ 
+Plataforma 
+virtual. 
+ 
+Laborator
+io de 
+prácticas. 
+ 
+Material 
+informátic
+o como 
+PCs y 
+software. 
+7 
+5 
+RA1, 
+RA2, 
+RA3 
+Comprender los 
+principios del 
+software de E/S 
+Actividades de 
+apertura: 
+Recuperación de 
+experiencias, 
+conocimientos, 
+nociones. Planteo 
+de una situación 
+problemática. 
+Actividades de 
+desarrollo: 
+Explicación de 
+conceptos para 
+comprensión de 
+contenidos. 
+Resolución de 
+ejercicios. 
+Establecimiento de 
+relaciones entre 
+conceptos, datos e 
+informaciones.  
+ 
+1,2,3,5,7,8,9 
+Material 
+impreso  
+facilitado 
+por la 
+cátedra.  
+ 
+Libros de 
+la 
+biblioteca
+. 
+ 
+Material 
+on-line. 
+ 
+Guías 
+docentes 
+disponibl
+es 
+on-line. 
+ 
+
+===== [PDF pag 28] =====
+​
+ 
+ 
+Actividades de 
+cierre: reflexionar 
+para adquirir los 
+conocimientos, 
+hechos, principios, 
+asociaciones y 
+estructuras 
+presentados en la 
+clase.  
+ 
+Plataforma 
+virtual. 
+ 
+Laborator
+io de 
+prácticas. 
+ 
+Material 
+informátic
+o como 
+PCs y 
+software. 
+8 
+ 
+RA1, 
+RA2, 
+RA3 
+Evaluación 
+Actividades de 
+apertura: 
+Presentación de 
+parcial 
+Actividades de 
+desarrollo:  
+Primer examen 
+parcial 
+correspondiente a 
+las unidades  I, II, 
+III y IV. 
+Actividades de 
+cierre: reflexionar 
+sobre el parcial y 
+las dificultades 
+encontradas 
+ 
+Primer evaluación 
+parcial 
+correspondiente a 
+las Unidades I, II, 
+III y IV 
+ 
+Libros de 
+la 
+biblioteca
+. 
+ 
+Material 
+on-line. 
+ 
+Guías 
+docentes 
+disponibl
+es 
+on-line. 
+ 
+Plataforma 
+virtual. 
+ 
+Material 
+informátic
+o como 
+PCs y 
+software. 
+9 
+6 
+RA1, 
+RA2, 
+RA3 
+Comprender el 
+concepto de 
+bloqueos y sus 
+repercuciones 
+Actividades de 
+apertura:   
+Recuperación de 
+experiencias, 
+conocimientos, 
+nociones. Planteo 
+de una situación 
+problemática.  
+Actividades de 
+desarrollo: 
+Explicación de 
+conceptos para 
+comprensión de 
+contenidos.  
+Establecimiento de 
+relaciones entre 
+conceptos, datos e 
+informaciones.  
+Actividades de 
+cierre: reflexionar 
+para adquirir los 
+conocimientos, 
+hechos, principios, 
+asociaciones y 
+estructuras 
+presentados en la 
+clase.  
+  
+ 
+1,2,3,5,7,8,9 
+Material 
+impreso  
+facilitado 
+por la 
+cátedra.  
+ 
+Libros de 
+la 
+biblioteca
+. 
+ 
+Material 
+on-line. 
+ 
+Guías 
+docentes 
+disponibl
+es 
+on-line. 
+ 
+Plataforma 
+virtual. 
+ 
+Laborator
+io de 
+prácticas. 
+ 
+Material 
+informátic
+
+===== [PDF pag 29] =====
+​
+ 
+ 
+o como 
+PCs y 
+software. 
+10 
+7 y 
+8 
+RA2, 
+RA3 
+Comprender el 
+concepto de 
+virtualización y su 
+implementación. 
+Comprender las 
+características de 
+los sistemas 
+distribuídos, 
+ventajas y 
+desventajas 
+Actividades de 
+apertura: 
+Recuperación de 
+experiencias, 
+conocimientos, 
+nociones. Planteo 
+de una situación 
+problemática. 
+Actividades de 
+desarrollo: 
+Explicación de 
+conceptos para 
+comprensión de 
+contenidos.  
+Debate dirigido. 
+Establecimiento de 
+relaciones entre 
+conceptos, datos e 
+informaciones.  
+Actividades de 
+cierre: reflexionar 
+para adquirir los 
+conocimientos, 
+hechos, principios, 
+asociaciones y 
+estructuras 
+presentados en la 
+clase. 
+ 
+ 
+1,2,3,5,6, 
+7,8,9 
+Material 
+impreso  
+facilitado 
+por la 
+cátedra.  
+ 
+Libros de 
+la 
+biblioteca
+. 
+ 
+Material 
+on-line. 
+ 
+Guías 
+docentes 
+disponibl
+es 
+on-line. 
+ 
+Plataforma 
+virtual. 
+ 
+Laborator
+io de 
+prácticas. 
+ 
+Material 
+informátic
+o como 
+PCs y 
+software. 
+
+===== [PDF pag 30] =====
+​
+ 
+ 
+11 
+9 
+RA2, 
+RA3 
+Comprender e 
+implementar  
+mecanimos de 
+seguridad. 
+Actividades de 
+apertura: 
+Recuperación de 
+experiencias, 
+conocimientos, 
+nociones. Planteo 
+de una situación 
+problemática.  
+Actividades de 
+desarrollo: 
+Explicación de 
+conceptos para 
+comprensión de 
+contenidos.  
+Establecimiento de 
+relaciones entre 
+conceptos, datos e 
+informaciones. 
+Discusión en clase. 
+Debate dirigido. 
+Recomendaciones 
+de lectura de 
+bibliografía.  
+Actividades de 
+cierre: reflexionar 
+para adquirir los 
+conocimientos, 
+hechos, principios, 
+asociaciones y 
+estructuras 
+presentados en la 
+clase.  
+ 
+ 
+1,2,3,5,7,8,9 
+Material 
+impreso  
+facilitado 
+por la 
+cátedra.  
+ 
+Libros de 
+la 
+biblioteca
+. 
+ 
+Material 
+on-line. 
+ 
+Guías 
+docentes 
+disponibl
+es 
+on-line. 
+ 
+Plataforma 
+virtual. 
+ 
+Laborator
+io de 
+prácticas. 
+ 
+Material 
+informátic
+o como 
+PCs y 
+software. 
+12 
+9 
+RA2, 
+RA3 
+ 
+Actividades de 
+apertura: 
+Devolución de los 
+resultados del 
+tercer examen 
+parcial, 
+ 
+1,2,3,5,7,8,9 
+Material 
+impreso  
+facilitado 
+por la 
+cátedra.  
+ 
+
+===== [PDF pag 31] =====
+​
+ 
+ 
+retroalimentación, 
+reflexión y 
+discusión de las 
+dificultades 
+encontradas. 
+Planteo de 
+sugerencias para 
+el abordaje de las 
+temáticas del 
+parcial. 
+Recuperación de 
+experiencias, 
+conocimientos, 
+nociones. Planteo 
+de una situación 
+problemática   
+Actividades de 
+desarrollo: 
+Explicación de 
+conceptos para 
+comprensión de 
+contenidos.  
+Establecimiento de 
+relaciones entre 
+conceptos, datos e 
+informaciones. 
+Lluvia de ideas.  
+Actividades de 
+cierre: reflexionar 
+para adquirir los 
+conocimientos, 
+hechos, principios, 
+asociaciones y 
+estructuras 
+presentados en la 
+clase. 
+  
+Libros de 
+la 
+biblioteca
+. 
+ 
+Material 
+on-line. 
+ 
+Guías 
+docentes 
+disponibl
+es 
+on-line. 
+ 
+Plataforma 
+virtual. 
+ 
+Laborator
+io de 
+prácticas. 
+ 
+Material 
+informátic
+o como 
+PCs y 
+software. 
+13 
+ 
+RA1, 
+RA2, 
+RA3 
+Evaluación 
+Actividades de 
+apertura: 
+Presentación de 
+parcial 
+Actividades de 
+desarrollo:  
+Primer examen 
+parcial 
+correspondiente a 
+las unidades  V, VI, 
+VII y VIII. 
+Actividades de 
+cierre: reflexionar 
+sobre el parcial y 
+las dificultades 
+encontradas 
+ 
+Contenido: visita 
+de profesional del 
+medio relacionado 
+con los sistemas 
+operativos, para 
+transmitir su 
+experiencia 
+práctica. 
+ 
+Segunda 
+evaluación parcial 
+correspondiente a 
+las Unidades V, VI, 
+VII y VIII 
+ 
+Libros de 
+la 
+biblioteca
+. 
+ 
+Material 
+on-line. 
+ 
+Guías 
+docentes 
+disponibl
+es 
+on-line. 
+ 
+Plataforma 
+virtual. 
+ 
+Material 
+informátic
+o como 
+PCs y 
+software. 
+
+===== [PDF pag 32] =====
+​
+ 
+ 
+14 
+ 
+RA1, 
+RA2, 
+RA3 
+Evaluación 
+Recuperatorios 
+de exámenes 
+parciales. 
+Recuperatorios de 
+exámenes 
+parciales. 
+ 
+Libros de 
+la 
+biblioteca
+. 
+ 
+Material 
+on-line. 
+ 
+Guías 
+docentes 
+disponibl
+es 
+on-line. 
+ 
+Plataforma 
+virtual. 
+ 
+Material 
+informátic
+o como 
+PCs y 
+software. 
+15 
+ 
+RA1, 
+RA2, 
+RA3 
+Evaluación 
+Examen Global 
+Examen Global 
+ 
+Libros de 
+la 
+biblioteca
+. 
+ 
+Material 
+on-line. 
+ 
+Guías 
+docentes 
+disponibl
+es 
+on-line. 
+ 
+Plataforma 
+virtual. 
+ 
+Material 
+informátic
+o como 
+PCs y 
+software. 
+16 
+ 
+RA1, 
+RA2, 
+RA3 
+Evaluación 
+Recuperatorio del 
+examen Global 
+Recuperatorio del 
+examen Global 
+ 
+Libros de 
+la 
+biblioteca
+. 
+ 
+Material 
+on-line. 
+ 
+Guías 
+docentes 
+disponibl
+es 
+on-line. 
+ 
+Plataforma 
+virtual. 
+ 
+Material 
+informátic
+
+===== [PDF pag 33] =====
+​
+ 
+ 
+o como 
+PCs y 
+software. 
+ 
+ 
+ 
+ 
+Recursos necesarios 
+●​ Espacios Físicos como aulas, laboratorios y equipamiento informático. 
+●​ Recursos tecnológicos de apoyo (proyector multimedia, software, equipo de sonido, aulas 
+virtuales). 
+●​ Libros de la biblioteca. 
+●​ Material on-line. 
+●​ Guías docentes disponibles on-line. 
+●​ Plataforma virtual. 
+ 
+Fecha  20/02/2026                                                   
+ 
+Firma y Aclaración del Docente a cargo de la Cátedra:         Paula Martínez                                                
+ 
+Firma y Aclaración del Director de la Carrera:………………………………………………………. 

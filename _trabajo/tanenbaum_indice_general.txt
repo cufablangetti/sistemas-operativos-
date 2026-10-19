@@ -1,0 +1,1547 @@
+
+===== [PDF pag 1] =====
+ www.FreeLibros.me
+
+===== [PDF pag 2] =====
+ www.FreeLibros.me
+
+===== [PDF pag 3] =====
+SISTEMAS OPERATIVOS
+MODERNOS
+TERCERA EDICIÓN
+Principios y Paradigmas
+Segunda edición
+ www.FreeLibros.me
+
+===== [PDF pag 4] =====
+ www.FreeLibros.me
+
+===== [PDF pag 5] =====
+SISTEMAS OPERATIVOS
+MODERNOS 
+TERCERA EDICIÓN
+ANDREW S. TANENBAUM
+Vrije Universiteit
+Amsterdam, Holanda
+TRADUCCIÓN
+Alfonso Vidal Romero Elizondo
+Ingeniero en Sistemas Computacionales
+Instituto Tecnológico y de Estudios Superiores de Monterrey
+Campus Monterrey
+REVISIÓN TÉCNICA
+José Ramón Ríos Sánchez
+Departamento Académico de Computación
+Instituto Tecnológico Autónomo de México
+Aarón Jiménez Govea
+Catedrático del Departamento de Ciencias Computacionales
+Universidad de Guadalajara, México
+ www.FreeLibros.me
+
+===== [PDF pag 6] =====
+Authorized translation from the English language edition, entitled Modern operating systems, 3rd edition, by Andrew S.
+Tanenbaum published by Pearson Education, Inc., publishing as PRENTICE HALL, INC., Copyright © 2008. 
+All rights reserved.
+ISBN 9780136006633
+Traducción autorizada de la edición en idioma inglés, titulada Modern operating systems, 3ª. edición por Andrew S.
+Tanenbaum, publicada por Pearson Education, Inc., publicada como PRENTICE HALL, INC., Copyright © 2008. 
+Todos los derechos reservados.
+Esta edición en español es la única autorizada.
+Edición en español
+Editor: Luis Miguel Cruz Castillo
+e-mail:luis.cruz@pearsoned.com
+Editor de desarrollo: Bernardino Gutiérrez Hernández
+Supervisor de producción: José D. Hernández Garduño
+Edición en inglés
+Editorial Director, Computer Science, Engineering,
+Cover Illustrator: Steve Lefkowitz
+and Advanced Mathematics: Marcia J. Horton
+Interior design: Andrew S. Tanenbaum
+Executive Editor: Tracy Dunkelberger
+Typesetting: Andrew S. Tanenbaum
+Editorial Assistant: Melinda Haggerty
+Art Director: Kenny Beck
+Associtate Editor: ReeAnne Davis
+Art Editor: Gregory Dulles
+Senior Managing Editor: Scott Disanno
+Media Editor: David Alick
+Production Editor: Irwin Zucker
+Manufacturing Manager: Alan Fischer
+Cover Concept: Andrews S. Tanenbaum and Tracy Dunkelberger
+Manufacturing Buyer: Lisa McDowell
+Cover Design: Tamara Newman
+Marketing Manager: Mack Patterson
+TERCERA EDICIÓN, 2009
+D.R. © 2009 por Pearson Educación de México, S.A. de C.V.
+Atlacomulco 500-5o. piso
+Col. Industrial Atoto
+53519, Naucalpan de Juárez, Estado de México
+Cámara Nacional de la Industria Editorial Mexicana. Reg. Núm. 1031.
+Prentice Hall es una marca registrada de Pearson Educación de México, S.A. de C.V.
+Reservados todos los derechos. Ni la totalidad ni parte de esta publicación pueden reproducirse, registrarse o transmitirse,
+por un sistema de recuperación de información, en ninguna forma ni por ningún medio, sea electrónico, mecánico, foto-
+químico, magnético o electroóptico, por fotocopia, grabación o cualquier otro, sin permiso previo por escrito del editor.
+El préstamo, alquiler o cualquier otra forma de cesión de uso de este ejemplar requirirá también la autorización del editor
+o de sus representantes.
+ISBN: 978-607-442-046-3
+Impreso en México. Printed in Mexico.
+1 2 3 4 5 6 7 8 9 0    09 10 11 12
+Datos de catalogación bibliográfica
+TANENBAUM, ANDREW S. y 
+MAARTEN VAN STEEN
+Sistemas operativos modernos. Tercera edición
+PEARSON EDUCACIÓN, México, 2009
+ 
+ISBN: 978-607-442-046-3
+ 
+Área: Computación
+Formato: 18.5 × 23.5 cm                          Páginas: 1104
+ www.FreeLibros.me
+
+===== [PDF pag 7] =====
+Para Suzanne, Barbara, Marvin y a la memoria de Bram y Sweetie 
+ www.FreeLibros.me
+
+===== [PDF pag 8] =====
+ www.FreeLibros.me
+
+===== [PDF pag 9] =====
+CONTENIDO
+PREFACIO
+xxiv
+1
+INTRODUCCIÓN
+1
+1.1
+¿QUÉ ES UN SISTEMA OPERATIVO?
+3
+1.1.1  El sistema operativo como una máquina extendida
+4
+1.1.2 El sistema operativo como administrador de recursos
+6
+1.2
+HISTORIA DE LOS SISTEMAS OPERATIVOS
+7
+1.2.1 La primera generación (1945 a 1955): tubos al vacío
+7
+1.2.2 La segunda generación (1955 a 1965): transistores 
+y sistemas de procesamiento por lotes
+8
+1.2.3 La tercera generación (1965 a 1980): circuitos integrados 
+y multiprogramación
+10
+1.2.4 La cuarta generación (1980 a la fecha): 
+las computadoras personales
+15
+1.3
+REVISIÓN DEL HARDWARE DE COMPUTADORA
+19
+1.3.1 Procesadores
+19
+1.3.2  Memoria
+23
+1.3.3 Discos
+26
+1.3.4  Cintas
+27
+1.3.5  Dispositivos de E/S
+27
+1.3.6  Buses
+30
+1.3.7 Arranque de la computadora
+33
+vii
+ www.FreeLibros.me
+
+===== [PDF pag 10] =====
+1.4  
+LOS TIPOS DE SISTEMAS OPERATIVOS
+33
+1.4.1 Sistemas operativos de mainframe
+34
+1.4.2  Sistemas operativos de servidores
+34
+1.4.3  Sistemas operativos de multiprocesadores
+34
+1.4.4 Sistemas operativos de computadoras personales
+35
+1.4.5 Sistemas operativos de computadoras de bolsillo
+35
+1.4.6  Sistemas operativos integrados
+35
+1.4.7 Sistemas operativos de nodos sensores
+36
+1.4.8 Sistemas operativos en tiempo real
+36
+1.4.9  Sistemas operativos de tarjetas inteligentes
+37
+1.5
+CONCEPTOS DE LOS SISTEMAS OPERATIVOS
+37
+1.5.1 Procesos
+38
+1.5.2 Espacios de direcciones
+40
+1.5.3 Archivos
+40
+1.5.4  Entrada/salida
+43
+1.5.5 Protección
+44
+1.5.6 El shell
+44
+1.5.7 La ontogenia recapitula la filogenia
+46
+1.6
+LLAMADAS AL SISTEMA
+49
+1.6.1 Llamadas al sistema para la administración de procesos
+52
+1.6.2 Llamadas al sistema para la administración de archivos
+56
+1.6.3 Llamadas al sistema para la administración de directorios
+57
+1.6.4  Miscelánea de llamadas al sistema
+58
+1.6.5  La API Win32 de Windows
+59
+1.7
+ESTRUCTURA DE UN SISTEMA OPERATIVO
+62
+1.7.1 Sistemas monolíticos
+62
+1.7.2 Sistemas de capas
+63
+1.7.3  Microkernels
+64
+1.7.4 Modelo cliente-servidor
+67
+1.7.5  Máquinas virtuales
+67
+1.7.6 Exokernels
+71
+1.8
+EL MUNDO SEGÚN C
+72
+1.8.1  El lenguaje C 
+72
+1.8.2  Archivos de encabezado
+73
+1.8.3 Proyectos de programación extensos
+74
+1.8.4 El modelo del tiempo de ejecución
+75
+1.9
+INVESTIGACIÓN ACERCA DE LOS SISTEMAS OPERATIVOS
+76
+1.10
+DESCRIPCIÓN GENERAL SOBRE EL RESTO DE ESTE LIBRO
+77
+viii
+CONTENIDO
+ www.FreeLibros.me
+
+===== [PDF pag 11] =====
+CONTENIDO
+ix
+1.11
+UNIDADES MÉTRICAS
+78
+1.12
+RESUMEN
+79
+2
+PROCESOS E HILOS
+83
+2.1
+PROCESOS
+83
+2.1.1  El modelo del proceso
+84
+2.1.2  Creación de un proceso
+86
+2.1.3  Terminación de procesos
+88
+2.1.4  Jerarquías de procesos
+89
+2.1.5  Estados de un proceso
+90
+2.1.6  Implementación de los procesos
+91
+2.1.7  Modelación de la multiprogramación
+93
+2.2
+HILOS
+95
+2.2.1  Uso de hilos
+95
+2.2.2  El modelo clásico de hilo
+100
+2.2.3  Hilos en POSIX
+104
+2.2.4  Implementación de hilos en el espacio de usuario
+106
+2.2.5  Implementación de hilos en el kernel
+109
+2.2.6  Implementaciones híbridas
+110
+2.2.7  Activaciones del planificador
+111
+2.2.8  Hilos emergentes
+112
+2.2.9 Conversión de código de hilado simple a multihilado
+114
+2.3
+COMUNICACIÓN ENTRE PROCESOS
+117
+2.3.1  Condiciones de carrera
+117
+2.3.2  Regiones críticas
+119
+2.3.3  Exclusión mutua con espera ocupada
+120
+2.3.4  Dormir y despertar
+125
+2.3.5  Semáforos
+128
+2.3.6 Mutexes
+130
+2.3.7  Monitores
+134
+2.3.8  Pasaje (transmisión) de mensajes
+140
+2.3.9  Barreras
+144
+2.4
+PLANIFICACIÓN
+145
+2.4.1  Introducción a la planificación
+145
+2.4.2  Planificación en sistemas de procesamiento por lotes
+152
+2.4.3  Planificación en sistemas interactivos
+154
+2.4.4  Planificación en sistemas de tiempo real
+160
+ www.FreeLibros.me
+
+===== [PDF pag 12] =====
+2.4.5  Política contra mecanismo
+161
+2.4.6  Planificación de hilos
+162
+2.5
+PROBLEMAS CLÁSICOS DE COMUNICACIÓN 
+ENTRE PROCESOS (IPC)
+163
+2.5.1  El problema de los filósofos comelones
+164
+2.5.2  El problema de los lectores y escritores
+167
+2.6
+INVESTIGACIÓN ACERCA DE LOS PROCESOS E HILOS
+168
+2.7
+RESUMEN
+169
+3
+ADMINISTRACIÓN DE MEMORIA
+175
+3.1
+SIN ABSTRACCIÓN DE MEMORIA
+176
+3.2
+UNA ABSTRACCIÓN DE MEMORIA: 
+ESPACIOS DE DIRECCIONES
+179
+3.2.1  La noción de un espacio de direcciones
+180
+3.2.2  Intercambio
+181
+3.2.3 Administración de memoria libre
+184
+3.3
+MEMORIA VIRTUAL
+188
+3.3.1  Paginación
+189
+3.3.2  Tablas de páginas
+193
+3.3.3  Aceleración de la paginación
+194
+3.3.4  Tablas de páginas para memorias extensas
+198
+3.4
+ALGORITMOS DE REEMPLAZO DE PÁGINAS
+201
+3.4.1  El algoritmo de reemplazo de páginas óptimo
+202
+3.4.2  El algoritmo de reemplazo de páginas: no usadas 
+recientemente
+203
+3.4.3  El algoritmo de reemplazo de páginas: 
+Primera en entrar, primera en salir (FIFO)
+204
+3.4.4  El algoritmo de reemplazo de páginas: segunda oportunidad
+204
+3.4.5  El algoritmo de reemplazo de páginas: reloj
+205
+3.4.6  El algoritmo de reemplazo de páginas: 
+menos usadas recientemente (LRU)
+206
+3.4.7  Simulación de LRU en software
+207
+3.4.8  El algoritmo de reemplazo de páginas: conjunto de trabajo
+209
+3.4.9 El algoritmo de reemplazo de páginas WSClock
+213
+3.4.10  Resumen de los algoritmos de reemplazo de páginas
+215
+x
+CONTENIDO
+ www.FreeLibros.me
+
+===== [PDF pag 13] =====
+CONTENIDO
+xi
+3.5
+CUESTIONES DE DISEÑO PARA
+LOS SISTEMAS DE PAGINACIÓN
+216
+3.5.1 Políticas de asignación local contra las de asignación global
+216
+3.5.2 Control de carga
+218
+3.5.3 Tamaño de página
+219
+3.5.4 Espacios separados de instrucciones y de datos
+221
+3.5.5 Páginas compartidas
+221
+3.5.6 Bibliotecas compartidas
+223
+3.5.7 Archivos asociados
+225
+3.5.8  Política de limpieza
+226
+3.5.9  Interfaz de memoria virtual
+226
+3.6
+CUESTIONES DE IMPLEMENTACIÓN
+227
+3.6.1 Participación del sistema operativo en la paginación
+227
+3.6.2  Manejo de fallos de página
+228
+3.6.3  Respaldo de instrucción
+229
+3.6.4  Bloqueo de páginas en memoria
+230
+3.6.5  Almacén de respaldo
+231
+3.6.6  Separación de política y mecanismo
+233
+3.7
+SEGMENTACIÓN
+234
+3.7.1  Implementación de segmentación pura
+237
+3.7.2  Segmentación con paginación: MULTICS
+238
+3.7.3  Segmentación con paginación: Intel Pentium
+242
+3.8
+INVESTIGACIÓN ACERCA DE LA ADMINISTRACIÓN 
+DE MEMORIA
+247
+3.9
+RESUMEN
+248
+4
+SISTEMAS DE ARCHIVOS
+255
+4.1
+ARCHIVOS
+257
+4.1.1  Nomenclatura de archivos
+257
+4.1.2  Estructura de archivos
+259
+4.1.3  Tipos de archivos
+260
+4.1.4  Acceso a archivos
+262
+4.1.5  Atributos de archivos
+263
+4.1.6  Operaciones de archivos
+264
+4.1.7  Un programa de ejemplo que utiliza llamadas al sistema 
+de archivos
+265
+ www.FreeLibros.me
+
+===== [PDF pag 14] =====
+4.2
+DIRECTORIOS
+268
+4.2.1  Sistemas de directorios de un solo nivel
+268
+4.2.2  Sistemas de directorios jerárquicos
+268
+4.2.3  Nombres de rutas
+269
+4.2.4  Operaciones de directorios
+272
+4.3
+IMPLEMENTACIÓN DE SISTEMAS DE ARCHIVOS 
+273
+4.3.1  Distribución del sistema de archivos
+273
+4.3.2  Implementación de archivos
+274
+4.3.3  Implementación de directorios
+280
+4.3.4  Archivos compartidos
+283
+4.3.5  Sistemas de archivos estructurados por registro
+285
+4.3.6  Sistemas de archivos por bitácora
+287
+4.3.7  Sistemas de archivos virtuales
+288
+4.4
+ADMINISTRACIÓN Y OPTIMIZACIÓN 
+DE SISTEMAS DE ARCHIVOS
+292
+4.4.1  Administración del espacio en disco
+292
+4.4.2  Respaldos del sistema de archivos
+298
+4.4.3  Consistencia del sistema de archivos
+304
+4.4.4  Rendimiento del sistema de archivos
+307
+4.4.5  Desfragmentación de discos
+311
+4.5
+EJEMPLOS DE SISTEMAS DE ARCHIVOS
+312
+4.5.1  Sistemas de archivos de CD-ROM
+312
+4.5.2  El sistema de archivos MS-DOS
+318
+4.5.3  El sistema de archivos V7 de UNIX
+321
+4.6
+INVESTIGACIÓN ACERCA DE LOS SISTEMAS 
+DE ARCHIVOS
+324
+4.7
+RESUMEN
+324
+5
+ENTRADA/SALIDA
+329
+5.1
+PRINCIPIOS DEL HARDWARE DE E/S
+329
+5.1.1  Dispositivos de E/S
+330
+5.1.2  Controladores de dispositivos
+331
+5.1.3  E/S por asignación de memoria
+332
+5.1.4  Acceso directo a memoria (DMA)
+336
+5.1.5  Repaso de las interrupciones
+339
+xii
+CONTENIDO
+ www.FreeLibros.me
+
+===== [PDF pag 15] =====
+CONTENIDO
+xiii
+5.2
+FUNDAMENTOS DEL SOFTWARE DE E/S
+343
+5.2.1  Objetivos del software de E/S
+343
+5.2.2  E/S programada
+344
+5.2.3  E/S controlada por interrupciones
+346
+5.2.4  E/S mediante el uso de DMA
+347
+5.3
+CAPAS DEL SOFTWARE DE E/S
+348
+5.3.1  Manejadores de interrupciones
+348
+5.3.2  Drivers de dispositivos
+349
+5.3.3  Software de E/S independiente del dispositivo
+353
+5.3.4  Software de E/S en espacio de usuario
+359
+5.4
+DISCOS
+360
+5.4.1 Hardware de disco
+361
+5.4.2 Formato de disco
+376
+5.4.3  Algoritmos de programación del brazo del disco
+379
+5.4.4 Manejo de errores
+382
+5.4.5  Almacenamiento estable
+385
+5.5
+RELOJES
+388
+5.5.1  Hardware de reloj
+388
+5.5.2  Software de reloj
+390
+5.5.3  Temporizadores de software
+393
+5.6
+INTERFACES DE USUARIO: TECLADO, 
+RATÓN, MONITOR
+394
+5.6.1  Software de entrada
+394
+5.6.2  Software de salida
+399
+5.7
+CLIENTES DELGADOS 
+415
+5.8
+ADMINISTRACIÓN DE ENERGÍA
+417
+5.8.1  Cuestiones de hardware
+418
+5.8.2  Cuestiones del sistema operativo
+419
+5.8.3  Cuestiones de los programas de aplicaciones
+424
+5.9
+INVESTIGACIÓN ACERCA DE LA E/S
+425
+5.10
+RESUMEN
+426
+6
+INTERBLOQUEOS
+433
+6.1
+RECURSOS
+434
+ www.FreeLibros.me
+
+===== [PDF pag 16] =====
+6.1.1 Recursos apropiativos y no apropiativos
+434
+6.1.2  Adquisición de recursos
+435
+6.2
+INTRODUCCIÓN A LOS INTERBLOQUEOS
+437
+6.2.1  Condiciones para los interbloqueos de recursos
+438
+6.2.2  Modelado de interbloqueos
+438
+6.3
+EL ALGORITMO DE LA AVESTRUZ
+441
+6.4
+DETECCIÓN Y RECUPERACIÓN DE UN INTERBLOQUEO
+442
+6.4.1  Detección de interbloqueos con un recurso de cada tipo
+442
+6.4.2  Detección del interbloqueo con varios recursos de cada tipo
+444
+6.4.3  Recuperación de un interbloqueo
+447
+6.5
+CÓMO EVITAR INTERBLOQUEOS
+448
+6.5.1  Trayectorias de los recursos
+449
+6.5.2  Estados seguros e inseguros
+450
+6.5.3  El algoritmo del banquero para un solo recurso
+451
+6.5.4  El algoritmo del banquero para varios recursos
+452
+6.6
+CÓMO PREVENIR INTERBLOQUEOS
+454
+6.6.1  Cómo atacar la condición de exclusión mutua
+454
+6.6.2  Cómo atacar la condición de contención y espera
+455
+6.6.3  Cómo atacar la condición no apropiativa
+455
+6.6.4  Cómo atacar la condición de espera circular
+456
+6.7
+OTRAS CUESTIONES
+457
+6.7.1  Bloqueo de dos fases
+457
+6.7.2  Interbloqueos de comunicaciones
+458
+6.7.3  Bloqueo activo
+459
+6.7.4  Inanición
+461
+6.8
+INVESTIGACIÓN SOBRE LOS INTERBLOQUEOS
+461
+6.9
+RESUMEN
+462
+7
+SISTEMAS OPERATIVOS MULTIMEDIA
+467
+7.1
+INTRODUCCIÓN A MULTIMEDIA
+468
+7.2
+ARCHIVOS DE MULTIMEDIA
+472
+7.2.1  Codificación de video
+473
+xiv
+CONTENIDO
+ www.FreeLibros.me
+
+===== [PDF pag 17] =====
+CONTENIDO
+xv
+7.2.2  Codificación de audio
+476
+7.3
+COMPRESIÓN DE VIDEO
+478
+7.3.1  El estándar JPEG
+478
+7.3.2  El estándar MPEG
+481
+7.4
+COMPRESIÓN DE AUDIO
+484
+7.5
+PROGRAMACIÓN DE PROCESOS MULTIMEDIA
+487
+7.5.1  Procesos de programación homogéneos
+488
+7.5.2  Programación general en tiempo real
+488
+7.5.3  Programación monotónica en frecuencia
+490
+7.5.4  Programación del menor tiempo de respuesta primero
+491
+7.6
+PARADIGMAS DE LOS SISTEMAS DE ARCHIVOS MULTIMEDIA
+493
+7.6.1  Funciones de control de VCR
+494
+7.6.2  Video casi bajo demanda
+496
+7.6.3  Video casi bajo demanda con funciones de VCR
+498
+7.7
+COLOCACIÓN DE LOS ARCHIVOS
+499
+7.7.1  Colocación de un archivo en un solo disco
+500
+7.7.2  Dos estrategias alternativas de organización de archivos
+501
+7.7.3  Colocación de archivos para el video casi bajo demanda
+504
+7.7.4  Colocación de varios archivos en un solo disco
+506
+7.7.5  Colocación de archivos en varios discos
+508
+7.8
+USO DE CACHÉ
+510
+7.8.1  Caché de bloque
+511
+7.8.2  Caché de archivo
+512
+7.9
+PROGRAMACIÓN DE DISCOS PARA MULTIMEDIA
+513
+7.9.1  Programación de discos estática
+513
+7.9.2  Programación de disco dinámica
+515
+7.10
+INVESTIGACIÓN SOBRE MULTIMEDIA
+516
+7.11
+RESUMEN
+517
+8
+SISTEMAS DE MÚLTIPLES PROCESADORES
+523
+8.1
+MULTIPROCESADORES
+526
+8.1.1  Hardware de multiprocesador
+526
+ www.FreeLibros.me
+
+===== [PDF pag 18] =====
+8.1.2  Tipos de sistemas operativos multiprocesador
+534
+8.1.3  Sincronización de multiprocesadores
+538
+8.1.4  Planificación de multiprocesadores
+542
+8.2
+MULTICOMPUTADORAS
+548
+8.2.1  Hardware de una multicomputadora
+549
+8.2.2  Software de comunicación de bajo nivel
+553
+8.2.3  Software de comunicación a nivel de usuario
+555
+8.2.4  Llamada a procedimiento remoto
+558
+8.2.5  Memoria compartida distribuida
+560
+8.2.6  Planificación de multicomputadoras
+565
+8.2.7  Balanceo de carga
+565
+8.3
+VIRTUALIZACIÓN
+568
+8.3.1 Requerimientos para la virtualización
+570
+8.3.2  Hipervisores de tipo 1
+571
+8.3.3  Hipervisores de tipo 2
+572
+8.3.4  Paravirtualización
+574
+8.3.5  Virtualización de la memoria
+576
+8.3.6  Virtualización de la E/S
+578
+8.3.7  Dispositivos virtuales
+579
+8.3.8  Máquinas virtuales en CPUs de multinúcleo
+579
+8.3.9  Cuestiones sobre licencias
+580
+8.4
+SISTEMAS DISTRIBUIDOS
+580
+8.4.1  Hardware de red
+583
+8.4.2  Protocolos y servicios de red
+586
+8.4.3  Middleware basado en documentos
+590
+8.4.4  Middleware basado en sistemas de archivos
+591
+8.4.5  Middleware basado en objetos
+596
+8.4.6  Middleware basado en coordinación
+598
+8.4.7  Grids (Mallas)
+603
+8.5
+INVESTIGACIÓN SOBRE LOS SISTEMAS 
+DE MÚLTIPLES PROCESADORES
+604
+8.6
+RESUMEN
+605
+9
+SEGURIDAD
+611
+9.1
+EL ENTORNO DE SEGURIDAD
+613
+9.1.1 Amenazas
+613
+xvi
+CONTENIDO
+ www.FreeLibros.me
+
+===== [PDF pag 19] =====
+CONTENIDO
+xvii
+9.1.2  Intrusos
+615
+9.1.3  Pérdida accidental de datos
+616
+9.2
+FUNDAMENTOS DE LA CRIPTOGRAFÍA (CIFRADO)
+616
+9.2.1  Criptografía de clave secreta 
+617
+9.2.2  Criptografía de clave pública
+618
+9.2.3  Funciones de una vía
+619
+9.2.4  Firmas digitales
+619
+9.2.5  Módulo de plataforma confiable
+621
+9.3
+MECANISMOS DE PROTECCIÓN
+622
+9.3.1  Dominios de protección
+622
+9.3.2  Listas de control de acceso
+624
+9.3.3  Capacidades
+627
+9.3.4  Sistemas confiables
+630
+9.3.5  Base de cómputo confiable
+631
+9.3.6  Modelos formales de los sistemas seguros
+632
+9.3.7  Seguridad multinivel
+634
+9.3.8  Canales encubiertos 
+637
+9.4
+AUTENTICACIÓN
+641
+9.4.1  Autenticación mediante el uso de contraseñas
+642
+9.4.2  Autenticación mediante el uso de un objeto físico
+651
+9.4.3  Autenticación mediante biométrica
+653
+9.5  ATAQUES DESDE EL INTERIOR
+656
+9.5.1  Bombas lógicas
+656
+9.5.2  Trampas 
+657
+9.5.3  Suplantación de identidad en el inicio de sesión
+658
+9.6
+CÓMO EXPLOTAR LOS ERRORES (BUGS) EN EL CÓDIGO
+659
+9.6.1  Ataques de desbordamiento del búfer
+660
+9.6.2  Ataques mediante cadenas de formato
+662
+9.6.3  Ataques de retorno a libc
+664
+9.6.4  Ataques por desbordamiento de enteros
+665
+9.6.5  Ataques por inyección de código
+666
+9.6.6  Ataques por escalada de privilegios
+667
+9.7
+MALWARE
+667
+9.7.1  Caballos de Troya (troyanos)
+670
+9.7.2  Virus
+672
+9.7.3  Gusanos
+682
+9.7.4  Spyware
+684
+9.7.5  Rootkits
+688
+ www.FreeLibros.me
+
+===== [PDF pag 20] =====
+9.8
+DEFENSAS
+692
+9.8.1  Firewalls
+693
+9.8.2  Los antivirus y las técnicas anti-antivirus
+695
+9.8.3  Firma de código
+701
+9.8.4  Encarcelamiento
+702
+9.8.5  Detección de intrusos basada en modelos
+703
+9.8.6  Encapsulamiento de código móvil
+705
+9.8.7  Seguridad de Java
+709
+9.9  INVESTIGACIÓN SOBRE LA SEGURIDAD 
+711
+9.10  RESUMEN 712
+10 CASO DE ESTUDIO 1: LINUX
+719
+10.1
+HISTORIA DE UNIX Y LINUX 
+720
+10.1.1 UNICS
+720
+10.1.2  UNIX EN LA PDP-11
+721
+10.1.3  UNIX  portable
+722
+10.1.4 Berkeley UNIX
+723
+10.1.5  UNIX estándar 
+724
+10.1.6  MINIX
+725
+10.1.7  Linux
+726
+10.2
+GENERALIDADES SOBRE LINUX
+728
+10.2.1  Objetivos de Linux
+729
+10.2.2  Interfaces para Linux
+730
+10.2.3  El shell
+731
+10.2.4  Programas utilitarios de Linux
+734
+10.2.5  Estructura del kernel
+736
+10.3
+LOS PROCESOS EN LINUX
+739
+10.3.1  Conceptos fundamentales
+739
+10.3.2  Llamadas al sistema para administrar procesos en Linux
+741
+10.3.3  Implementación de procesos e hilos en Linux
+745
+10.3.4  Planificación en Linux
+752
+10.3.5  Arranque  de Linux
+755
+10.4
+ADMINISTRACIÓN DE LA MEMORIA EN LINUX
+758
+10.4.1  Conceptos fundamentales
+758
+10.4.2  Llamadas al sistema de administración de memoria en Linux
+761
+xviii
+CONTENIDO
+ www.FreeLibros.me
+
+===== [PDF pag 21] =====
+CONTENIDO
+xix
+10.4.3  Implementación de la administración de la memoria 
+en Linux
+762
+10.4.4  La paginación en Linux
+768
+10.5
+ENTRADA/SALIDA EN LINUX
+771
+10.5.1  Conceptos fundamentales
+772
+10.5.2  Redes
+773
+10.5.3  Llamadas al sistema de Entrada/Salida en Linux
+775
+10.5.4  Implementación de la entrada/salida en Linux
+775
+10.5.5  Los módulos en Linux
+779
+10.6
+EL SISTEMA DE ARCHIVOS DE LINUX
+779
+10.6.1  Conceptos fundamentales
+780
+10.6.2  Llamadas al sistema de archivos en Linux
+785
+10.6.3  Implementación del sistema de archivos de Linux
+788
+10.6.4  NFS: El sistema de archivos de red
+796
+10.7
+LA SEGURIDAD EN LINUX
+803
+10.7.1  Conceptos fundamentales
+803
+10.7.2  Llamadas al sistema de seguridad en Linux
+805
+10.7.3  Implementación de la seguridad en Linux
+806
+10.8  RESUMEN 806
+11 CASO DE ESTUDIO 2:WINDOWS VISTA
+813
+11. 1
+HISTORIA DE WINDOWS VISTA
+813
+11.1.1  1980: MS-DOS
+814
+11.1.2  1990: Windows basado en MS-DOS
+815
+11.1.3  2000: Windows basado en NT
+815
+11.1.4  Windows Vista
+818
+11.2
+PROGRAMACIÓN DE WINDOWS VISTA
+819
+11.2.1  La Interfaz de programación de aplicaciones de NT nativa
+822
+11.2.2  La interfaz de programación de aplicaciones Win32
+825
+11.2.3  El registro de Windows
+829
+11.3
+ESTRUCTURA DEL SISTEMA
+831
+11.3.1  Estructura del sistema operativo
+832
+11.3.2  Booteo de Windows Vista 
+847
+11.3.3  Implementación del administrador de objetos
+848
+11.3.4  Subsistemas, DLLs y servicios en modo de usuario
+858
+ www.FreeLibros.me
+
+===== [PDF pag 22] =====
+11.4
+PROCESOS E HILOS EN WINDOWS VISTA
+861
+11.4.1  Conceptos fundamentales
+861
+11.4.2  Llamadas a la API para administrar trabajos, procesos, 
+hilos y fibras
+866
+11.4.3  Implementación de procesos e hilos
+871
+11.5
+ADMINISTRACIÓN DE LA MEMORIA
+879
+11.5.1  Conceptos fundamentales
+879
+11.5.2  Llamadas al sistema para administrar la memoria
+884
+11.5.3  Implementación de la administración de memoria
+885
+11.6
+USO DE LA CACHÉ EN WINDOWS VISTA
+894
+11.7
+ENTRADA/SALIDA EN WINDOWS VISTA
+896
+11.7.1  Conceptos fundamentales
+897
+11.7.2  Llamadas a la API de entrada/salida
+898
+11.7.3  Implementación de la E/S
+901
+11.8
+EL SISTEMA DE ARCHIVOS NT DE WINDOWS
+906
+11.8.1  Conceptos fundamentales
+907
+11.8.2  Implementación del sistema de archivos NT
+908
+11.9
+LA SEGURIDAD EN WINDOWS VISTA
+918
+11.9.1  Conceptos fundamentales
+919
+11.9.2  Llamadas a la API de seguridad
+921
+11.9.3  Implementación de la seguridad
+922
+11.10 RESUMEN
+924
+12 CASO DE ESTUDIO 3: SYMBIAN OS
+929
+12.1
+LA HISTORIA DE SYMBIAN OS
+930
+12.1.1  Raíces de Symbian OS: Psion y EPOC
+930
+12.1.2  Symbian OS versión 6
+931
+12.1.3  Symbian OS versión 7
+932
+12.1.4  Symbian OS en la actualidad
+932
+12.2
+GENERALIDADES SOBRE SYMBIAN OS
+932
+12.2.1  Orientación a objetos
+933
+12.2.2  Diseño del microkernel
+934
+12.2.3  El nanokernel de Symbian OS
+935
+12.2.4  Acceso a los recursos de cliente/servidor
+935
+xx
+CONTENIDO
+ www.FreeLibros.me
+
+===== [PDF pag 23] =====
+CONTENIDO
+xxi
+12.2.5  Características de un sistema operativo más grande
+936
+12.2.6 Comunicaciones y multimedia
+937
+12.3
+PROCESOS E HILOS EN SYMBIAN OS
+937
+12.3.1  Hilos y nanohilos
+938
+12.3.2  Procesos
+939
+12.3.3  Objetos activos 
+939
+12.3.4  Comunicación entre procesos
+940
+12.4
+ADMINISTRACIÓN DE LA MEMORIA
+941
+12.4.1  Sistemas sin memoria virtual
+941
+12.4.2  Cómo direcciona Symbian OS la memoria
+943
+12.5
+ENTRADA Y SALIDA
+945
+12.5.1  Drivers de dispositivos
+945
+12.5.2  Extensiones del kernel
+946
+12.5.3  Acceso directo a la memoria
+946
+12.5.4  Caso especial: medios de almacenamiento
+947
+12.5.5  Bloqueo de E/S
+947
+12.5.6  Medios removibles
+948
+12.6
+SISTEMAS DE ALMACENAMIENTO
+948
+12.6.1  Sistemas de archivos para dispositivos móviles
+948
+12.6.2  Sistemas de archivos de Symbian OS
+949
+12.6.3  Seguridad y protección del sistema de archivos
+949
+12.7
+LA SEGURIDAD EN SYMBIAN OS
+950
+12.8
+LA COMUNICACIÓN EN SYMBIAN OS
+953
+12.8.1  Infraestructura básica
+953
+12.8.2  Un análisis más detallado de la infraestructura
+954
+12.9
+RESUMEN
+957
+13 DISEÑO DE SISTEMAS OPERATIVOS
+959
+13.1
+LA NATURALEZA DEL PROBLEMA DE DISEÑO
+960
+13.1.1  Objetivos
+960
+13.1.2  ¿Por qué es difícil diseñar un sistema operativo?
+961
+13.2
+DISEÑO DE INTERFACES
+963
+13.2.1  Principios de guía
+963
+ www.FreeLibros.me
+
+===== [PDF pag 24] =====
+13.2.2  Paradigmas
+965
+13.2.3  La interfaz de llamadas al sistema
+968
+13.3
+IMPLEMENTACIÓN
+971
+13.3.1  Estructura del sistema
+971
+13.3.2  Comparación entre mecanismo y directiva
+975
+13.3.3  Ortogonalidad
+976
+13.3.4  Nomenclatura
+977
+13.3.5  Tiempo de vinculación
+978
+13.3.6  Comparación entre estructuras estáticas y dinámicas
+979
+13.3.7  Comparación entre la implementación de arriba-abajo 
+y la implementación de abajo-arriba
+980
+13.3.8  Técnicas útiles
+981
+13.4
+RENDIMIENTO
+987
+13.4.1  ¿Por qué son lentos los sistemas operativos?
+987
+13.4.2  ¿Qué se debe optimizar?
+988
+13.4.3  Concesiones entre espacio y tiempo
+988
+13.4.4  Uso de caché
+991
+13.4.5  Sugerencias
+992
+13.4.6  Explotar la localidad
+993
+13.4.7  Optimizar el caso común
+993
+13.5  ADMINISTRACIÓN DE PROYECTOS 
+994
+13.5.1  El mítico hombre-mes
+994
+13.5.2  Estructura de equipos
+995
+13.5.3  La función de la experiencia
+997
+13.5.4  Sin bala de plata
+998
+13.6
+TENDENCIAS EN EL DISEÑO DE SISTEMAS OPERATIVOS
+998
+13.6.1  Virtualización
+999
+13.6.2  Chips multinúcleo
+999
+13.6.3  Sistemas operativos con espacios de direcciones extensos
+1000
+13.6.4  Redes
+1000
+13.6.5  Sistemas paralelos y distribuidos
+1001
+13.6.6  Multimedia
+1001
+13.6.7  Computadoras operadas por baterías
+1002
+13.6.8  Sistemas embebidos
+1002
+13.6.9  Nodos de monitoreo
+1003
+13.7  RESUMEN
+1003
+xxii
+CONTENIDO
+ www.FreeLibros.me
+
+===== [PDF pag 25] =====
+CONTENIDO
+xxiii
+14 LISTA DE LECTURAS Y BIBLIOGRAFÍA
+1007
+14.1
+SUGERENCIAS PARA CONTINUAR LA LECTURA
+1007
+14.1.1  Introducción y obras generales
+1008
+14.1.2  Procesos e hilos
+1008
+14.1.3  Administración de la memoria
+1009
+14.1.4  Entrada/salida
+1009
+14.1.5  Sistemas de archivos
+1010
+14.1.6  Interbloqueos
+1010
+14.1.7  Sistemas operativos multimedia
+1010
+14.1.8  Sistemas con varios procesadores
+1011
+14.1.9  Seguridad
+1012
+14.1.10 Linux
+1014
+14.1.11 Windows Vista
+1014
+14.1.12  El sistema operativo Symbian
+1015
+14.1.13 Principios de diseño
+1015
+14.2
+BIBLIOGRAFÍA EN ORDEN ALFABÉTICO
+1016
+ÍNDICE
+1049
+ www.FreeLibros.me
+
+===== [PDF pag 26] =====
+La tercera edición de este libro difiere de la segunda en muchos aspectos. Para empezar, reordena-
+mos los capítulos para colocar el material central al principio. También pusimos mayor énfasis en
+el sistema operativo como el creador de las abstracciones. El capítulo 1, se ha actualizado en forma
+considerable y ofrece una introducción de todos los conceptos; el capítulo 2 trata sobre la abstrac-
+ción de la CPU en varios procesos; el 3 aborda la abstracción de la memoria física en espacios de
+direcciones (memoria virtual); el 4 versa sobre la abstracción del disco en archivos. En conjunto,
+los procesos, espacios de direcciones virtuales y archivos son los conceptos clave que proporcionan
+los sistemas operativos, y es la razón por la que hayamos colocado los capítulos correspondientes
+antes de lo establecido en la edición anterior.
+El capítulo 1 se modificó y actualizó de manera considerable. Por ejemplo, ahora proporciona
+una introducción al lenguaje de programación C y al modelo de C en tiempo de ejecución para los
+lectores que están familiarizados sólo con Java.
+En el capítulo 2, el análisis de los hilos (threads) se modificó y expandió para reflejar su nue-
+va importancia. Entre otras cosas, ahora hay una sección acerca de los hilos Pthreads del estándar
+de IEEE.
+El capítulo 3, sobre la administración de memoria, se reorganizó para poner énfasis en la idea
+de que una de las funciones clave de un sistema operativo es proporcionar la abstracción de un es-
+pacio de direcciones virtuales para cada proceso. Se eliminó el material que trata de la administra-
+ción de memoria en los sistemas de procesamiento por lotes, y se actualizó el referente a la
+implementación de la paginación, con el fin de destacar la necesidad de administrar espacios de di-
+recciones más extensos (ahora muy comunes) y de ofrecer una mayor velocidad.
+PREFACIO
+xxiv
+ www.FreeLibros.me
+
+===== [PDF pag 27] =====
+PREFACIO
+xxv
+Se actualizaron los capítulos 4 a 7: se eliminó cierto material anterior y se agregó nuevo. Las
+secciones sobre las actividades actuales de investigación en estos capítulos se reescribieron desde
+cero y se agregaron muchos nuevos problemas y ejercicios de programación.
+Se actualizó el capítulo 8, incluyendo cierto material acerca de los sistemas multinúcleo. Se
+agregó una nueva sección sobre la tecnología de hipervirtualización, los hipervisores y las máqui-
+nas virtuales, donde se utilizó VMware como ejemplo.
+El capítulo 9 se modificó y reorganizó de manera considerable, con mucho material actuali-
+zado referente a la explotación de los errores (bugs) en el código, el malware y las defensas con-
+tra éstos.
+El capítulo 10, que trata acerca de Linux, es una readaptación del anterior (que trataba so-
+bre UNIX y Linux). Sin duda, ahora el énfasis está en Linux y hay una gran cantidad de mate-
+rial nuevo.
+El capítulo 11, sobre Windows Vista, es una importante revisión del capítulo 11 anterior, que
+trataba de Windows 2000. Este capítulo muestra un análisis completamente actualizado de Win-
+dows.
+El capítulo 12 es nuevo. A mi parecer, los sistemas operativos embebidos, o incrustados (co-
+mo los que se encuentran en los teléfonos celulares y los asistentes digitales personales, o PDAs)
+se ignoran en la mayoría de los libros de texto, a pesar de que hay más de estos dispositivos en
+el mercado que PCs y computadoras portátiles. Esta edición remedia este problema con un aná-
+lisis extendido de Symbian OS, que se utiliza ampliamente en los teléfonos inteligentes (Smart
+Phones).
+El capítulo 13, sobre el diseño de sistemas operativos, no presenta modificaciones importantes.
+Este libro pone a su disposición una gran cantidad de material didáctico de apoyo. Los suple-
+mentos para el instructor se encuentran en el sitio web de este libro: www.pearsoneducacion.net/
+tanembaum, e incluyen diapositivas de PowerPoint, herramientas de software para estudiar sistemas
+operativos, experimentos de laboratorio para los estudiantes, simuladores y material adicional para
+utilizar en sus cursos. Los instructores que utilicen este libro como texto definitivamente deben dar-
+le un vistazo.
+Varias personas me ayudaron con esta revisión. En primer lugar deseo agradecer a mi editora,
+Tracy Dunkelberger. Éste es mi libro número 18 y he desgastado a muchos editores en el proceso. Tracy
+fue más allá del cumplimiento de su deber con este libro, ya que hizo cosas tales como buscar colabo-
+radores, organizar varias reseñas, ayudar con todos los suplementos, lidiar con los contratos, actuar 
+como intermediario con PH, coordinar una gran cantidad de procesamiento en paralelo y, en general,
+asegurarse de que todo saliera a tiempo, además de otras cosas. También me ayudó a mantener un es-
+tricto itinerario de trabajo para poder lograr que este libro se imprimiera a tiempo, e hizo todo esto man-
+teniéndose animosa y alegre, a pesar de tener muchas otras actividades que exigían gran parte de su
+atención. Gracias Tracy, en verdad te lo agradezco.
+Ada Gavrilovska de Georgia Tech, experta en los aspectos internos sobre Linux, actualizó el
+capítulo 10 que estaba basado en UNIX (con énfasis en FreeBSD) para convertirlo en algo más en-
+focado en Linux, aunque gran parte del capítulo sigue siendo genérico para todos los sistemas
+UNIX. Linux es más popular entre los estudiantes que FreeBSD, por lo que éste es un cambio im-
+portante. 
+Dave Probert de Microsoft actualizó el capítulo 11, que estaba basado en Windows 2000, para
+concentrarlo en Windows Vista. Aunque tienen varias similitudes, también tienen diferencias con-
+siderables. Dave conoce mucho de Windows y tiene suficiente visión como para poder indicar la
+diferencia entre los puntos en los que Microsoft hizo lo correcto y en los que se equivocó. Como
+resultado de su trabajo este libro es mucho mejor.
+ www.FreeLibros.me
+
+===== [PDF pag 28] =====
+Mike Jipping de Hope College escribió el capítulo acerca de Symbian OS. No abordar los sis-
+temas embebidos en tiempo real era una grave omisión en el libro; gracias a Mike se resolvió ese
+problema. Los sistemas embebidos en tiempo real se están volviendo cada vez más importantes en
+el mundo, y este capítulo ofrece una excelente introducción al tema.
+A diferencia de Ada, Dave y Mike, cada uno de los cuales se enfocó en un capítulo, Shivakant
+Mishra, de la University of Colorado en Boulder, fungió más como un sistema distribuido, leyendo
+y haciendo comentarios sobre muchos capítulos, además de proporcionar una gran cantidad de ejer-
+cicios y problemas de programación nuevos a lo largo del libro.
+Hugh Lauer también merece una mención especial. Cuando le pedimos ideas sobre cómo re-
+visar la segunda edición, no esperábamos un informe de 23 páginas con interlineado sencillo; y
+sin embargo eso fue lo que obtuvimos. Muchos de los cambios, como el nuevo énfasis sobre las
+abstracciones de los procesos, los espacios de direcciones y los archivos, se deben a su participa-
+ción.
+También quiero agradecer a otras personas que me ayudaron de muchas formas, incluyendo el
+sugerir nuevos temas a cubrir, leer el manuscrito con cuidado, hacer suplementos y contribuir con
+nuevos ejercicios. Entre ellos Steve Armstrong, Jeffrey Chastine, John Connelly, Mischa Gelder-
+mans, Paul Gray, James Griffioen, Jorrit Herder, Michael Howard, Suraj Kothari, Roger Kraft,
+Trudy Levine, John Masiyowski, Shivakant Mishra, Rudy Pait, Xiao Qin, Mark Russinovich,
+Krishna Sivalingam, Leendert van Doorn y Ken Wong.
+El personal de Prentice Hall fue amistoso y cooperativo como siempre, en especial Irwin Zuc-
+ker y Scott Disanno en producción, y David Alick, ReeAnne Davies y Melinda Haggerty en edito-
+rial.
+Por último, pero no por ello menos importante, Barbara y Marvin siguen siendo maravillosos,
+como siempre, cada uno en una forma especial y única. Y desde luego, quiero agradecer a Suzan-
+ne por su amor y paciencia recientes.
+Andrew S. Tanenbaum.
+xxvi
+PREFACIO
+ www.FreeLibros.me
+
+===== [PDF pag 29] =====
+ACERCA DEL AUTOR
+Andrew S. Tanenbaum tiene una licenciatura en ciencias del M.I.T. y un doctorado de la University
+of California, en Berkeley. En la actualidad es profesor de Ciencias computacionales en la Vrije
+Universiteit, en Amsterdam, Holanda, donde encabeza el Grupo de sistemas computacionales. Fue
+Decano de la Advanced School for Computing and Imaging, una escuela de graduados interuniver-
+sidades que realiza investigaciones acerca de los sistemas paralelos avanzados, distribuidos y de
+creación de imágenes. Ahora es Profesor académico de la Royal Netherlands Academy of Arts and
+Sciencies, lo cual le ha salvado de convertirse en un burócrata.
+Tanenbaum ha realizado investigaciones sobre compiladores, sistemas operativos, redes, siste-
+mas distribuidos de área local y sistemas distribuidos de área amplia que se escalan hasta mil mi-
+llones de usuarios. Estos proyectos de investigación han producido más de 140 artículos evaluados
+por expertos en publicaciones especializadas y conferencias. También ha participado como autor 
+o coautor en cinco libros, que a la fecha han aparecido en 18 ediciones. Estos libros se han traduci-
+do a 21 idiomas, desde vasco hasta tailandés, y se utilizan en universidades de todo el mundo; La
+combinación idioma+edición da 130 versiones.
+El profesor Tanenbaum también ha producido una cantidad considerable de software. Fue el ar-
+quitecto principal del Amsterdam Compiler Kit, un kit de herramientas utilizado ampliamente para
+escribir compiladores portables. También fue uno de los diseñadores principales de Amoeba, uno
+de los primeros sistemas distribuidos utilizado en una colección de estaciones de trabajo conecta-
+das mediante una LAN, y Globe, un sistema distribuido de área amplia.
+También es autor de MINIX, un pequeño clon de UNIX cuyo propósito principal fue utilizar-
+lo en los laboratorios de programación de los estudiantes. Fue la inspiración directa para Linux y la
+plataforma en la que se desarrolló inicialmente. La versión actual de MINIX, conocida como MI-
+NIX 3, se concentra en un sistema operativo extremadamente confiable y seguro. El profesor Ta-
+nenbaum considera que su labor habrá terminado el día que sea innecesario equipar cada
+computadora con un botón de reinicio. MIINIX 3 es un proyecto continuo de código fuente abier-
+to, al cual todos están invitados a participar. El lector puede visitar www.minix3.org para descargar
+una copia gratuita y averiguar qué es lo que está ocurriendo en la actualidad.
+Los estudiantes de doctorado del profesor Tanenbaum han obtenido mayor gloria después de
+graduarse y él está muy orgulloso de ellos. 
+Tanenbaum es miembro del ACM, del IEEE y de la Royal Netherlands Academy of Arts and
+Sciences. También ha recibido muchos premios por su labor científica, entre los que se incluyen:
+• 2007 IEEE James H. Mulligan, Jr. Education Medal
+• 2003 TAA McGuffey Award for Computer Science and Engineering
+• 2002 TAA Texty Award for Computer Science and Engineering
+• 1997 ACM/SIGCSE Award for Outstanding Contributions to Computer
+• 1994 ACM Karl V. Karlstrom Outstanding Educator Award
+También pertenece a la lista de Quién es quién en el mundo (Who’s Who in the World). Su página
+Web se encuentra en el URL http://www.cs.vu.nl/~ast /.
+ www.FreeLibros.me
+
+===== [PDF pag 30] =====
+ www.FreeLibros.me

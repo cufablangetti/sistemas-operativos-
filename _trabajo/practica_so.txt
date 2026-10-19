@@ -1,0 +1,424 @@
+
+===== [PDF pag 1] =====
+ 
+1-a                 21  →  3   →  7  → 27 
+   b​
+ ​
+ 21  →  3   →  7  → 27(1) 
+​
+​
+27(0) → 21  →  3   →  7(0) Se reemplaza por el n! pagina 23  
+​
+​
+23(1) → 27(0) → 21(1) → 3(1) 
+ 
+ 
+2- Convertimos la direccion hexa a bin 6047H → 0110 0000 0100 0111  → n°pag 12  
+​
+Tenemos los 11 bit de desplazamiento y los 5 de n° de pagina 
+​
+Buscamos en la tabla y obtenemos el marco de pagina  
+​
+Reemplazamos el marco de pagina por el n° de pag 11 H → 10001 
+​
+1000 1000 0100 0111  
+​
+ 
+3- 512 bytes   7200 rpm   6.8 ms     velocidad transf   19mb    sobrecarga 2ms 
+TmLW = tiempo medio posicionamiento + t retardo + t de transferencia + sobrecarga 
+​
+=  6.8ms + 4.165ms + 0,0269ms + 2ms=12,99ms 
+ 
+7200 / 60 =120 por segundo     1/120 = 0,00833s  / 2 = 0,004165 → 4,165 ms  
+Tiempo de transferencia = Tamaño sector / velocidad    512/19*10 a la 6= 0,0269ms 
+
+===== [PDF pag 2] =====
+
+===== [PDF pag 3] =====
+ 
+ 
+4- Get-Process 
+ 
+ 
+ 
+ 
+ 
+ 
+
+===== [PDF pag 4] =====
+
+===== [PDF pag 5] =====
+5- Sector del disco 512bytes ​Fat32 marco de pagina y sector por bloque 4kbytes 
+ 
+a- Sectores por bloque = Tamaño del bloque / Tamaño sector = 4096/512 = 8 
+b- 
+c- 3712518 bytes archivo /  sector por bloque = 3712518 / 4096 =  906,37 bloques ocupados 
+completamente   
+0,37 *4096= 1515,52 bytes ocupados 
+4096-1515,52= 2580,48 bytes de fragmentacion 
+ 
+6-  
+a- No es posible porque no alcanzas a desbloquearlos y se produciria un interbloqueo  
+b-​
+ 
+P​
+Asignados​
+Créditos 
+​
+A​
+3​
+​
+5 
+​
+B​
+1​
+​
+7 
+​
+C​
+3​
+​
+6 
+​
+2 recursos libres 
+ 
+P​
+Asignados​
+Créditos 
+​
+A​
+5​
+​
+5 
+​
+B​
+1​
+​
+7 
+​
+C​
+3​
+​
+6 
+​
+0 Recursos libres 
+ 
+P​
+Asignados​
+Créditos 
+​
+A​
+-​
+​
+5 
+​
+B​
+1​
+​
+7 
+​
+C​
+6​
+​
+6 
+​
+2 Recursos libres 
+ 
+P​
+Asignados​
+Créditos 
+​
+A​
+-​
+​
+5 
+​
+B​
+7​
+​
+7 
+​
+C​
+-​
+​
+6 
+​
+2 Recursos libres 
+ 
+P​
+Asignados​
+Créditos 
+​
+A​
+-​
+​
+5 
+​
+B​
+-​
+​
+7 
+​
+C​
+-​
+​
+6 
+​
+9 Recursos libres 
+ 
+No se produce interbloqueo 
+ 
+ 
+​
+ 
+ 
+ 
+
+===== [PDF pag 6] =====
+​
+ 
+ 
+ 
+
+===== [PDF pag 7] =====
+​
+ 
+2- 
+ps aux o ps 
+Suspender un proceso: kill -stop PID 
+Reiniciar un proceso: kill -HUP PID 
+ 
+3-  
+8x256= 2046 bytes 
+ 
+4- Existen 6 fallos de página, porque al principio no hay nadie pero luego al estar cargados 
+ya no hace falta volver a traerlos 
+ 
+5-  
+ 
+ 
+
+===== [PDF pag 8] =====
+
+===== [PDF pag 9] =====
+ 
+Tamaño de bloque 2kbytes 
+Direcciones de bloques 4bytes 
+12 directos 12          2816 bloques -12 bloques = 2804 bloques  - - - NIngun puntero 
+1 simple 512​         2804 bloques - 512  = 2292 bloques            - - - 1 puntero 
+1 doble 1-> 512        2292/512= 4.47   → 5 punteros  + el que apunta a cada bloque 6 
+1 triple  
+ 
+5.5mb a kb = 5632 kb / 2kbyte = 2816 bloques de datos necesita el archivo 
+Punteros por bloque = 2048/4= 512 punteros por bloque 
+ 
+En total son 7 bloques índice 
+ 
+ 
+ 
+ 
+tamaño de bloque 2kbytes 
+12 directos 
+1 indirecto 
+1 doble 
+1 triple 
+tamaño puntero 4 bytes 
+a- Si el puntero ocupa más bytes, lo único que pasa es que cada dirección puede 
+representar un espacio de direcciones más grande, pero eso no garantiza automáticamente 
+que el archivo crezca. 
+b. En realidad: los 12 punteros directos sirven para archivos pequeños cuando esos no 
+alcanzan, se usa la indirección simple si todavía no alcanza, la doble después la triple O 
+sea, los indirectos no son “solo para archivos muy grandes”. La indirección simple puede 
+usarse para archivos de tamaño intermedio, no necesariamente enormes. 
+c - En un sistema tipo i-nodo, un archivo normalmente tiene un i-nodo asociado. 
+Cuando el archivo crece o se achica, lo que cambia es la cantidad de bloques de datos 
+asignados al archivo, no que se agreguen o quiten i-nodos. 
+d- ninguna de las anteriores 
+ 
+ 
+ 
+ 
+ 
+
+===== [PDF pag 10] =====
+
+===== [PDF pag 11] =====
+ 
+ 
+ 
+10 directos 10 
+1 indirecto 1024 
+1 doble 1024* 1024 
+1 triple  1024*1024*1024 
+puntero ocupa 4 bytes 
+tamaño de bloque 4kbyte 
+ 
+4096/4=1024 punteros por bloque 
+ 
+ 
+(10 + 1024 +1024*1024 + 1024*1024*1024) * 4096 = 4.402.345.714.000/2 a la 40= nos da 
+al rededor de 4.27 TB 
+ 
+ 
+ 
+ Para el puerto 1 3F8H 
+Activando el bit 7 del LCR 
+Es ninguna 
+
+===== [PDF pag 12] =====
+ 
+ 
+ 
+Los bits que indican error son el 1,2,3 y 4 Entonces  
+1E-> 00011110 ok 
+1F-> 00011111 NO ACTIVAS UN ERROR CON EL 0 DE DATO DISPONIBLE 
+CMP CON ERROR? 
+ 
+1gb sistema 
+4000 inodos 
+Espacio reservado para metadatos 2bytes 
+Tamaño máximo de cada archivo 25Gb 
+ 
+A- No porque ya te esta dando los 4000 inodos 
+b- no tiene nada que ver 
+c- te esta diciendo que es solo para los metadatos no para el inodo 
+d- seria esta 
+
+===== [PDF pag 13] =====
+ 
+a  ok 
+b- eso se usa en la int21 
+c- SI imprime la 14h es falso 
+ 
+ 
+MOV DX, 3FBh ; LCR de COM1 
+MOV AL, 80h ; bit 7 = DLAB en 1 
+OUT DX, AL 
+ 
+MOV DX, 3F8h ; DLL 
+MOV AL, 0Ch ; divisor bajo = 12 ​
+​
+9600bps 
+OUT DX, AL 
+ 
+MOV DX, 3F9h ; DLH 
+MOV AL, 00h ; divisor alto = 0​
+​
+9600bps 
+OUT DX, AL 
+ 
+MOV DX, 3FBh ; LCR otra vez 
+MOV AL, 03h ; 8 bits, sin paridad, 1 bit de stop, DLAB=0 
+OUT DX, AL 
+ 
+
+===== [PDF pag 14] =====
+ 
+1.a-  Hay 2 ciclos 
+   b- No existe interbloqueo por lo que R6 puede tener 3 procesos a la vez 
+ 
+ 
+Tamaño de marco de pagina 2kbyte 11 bits 
+B915 → 1011 1001 0001 0101  
+10111 → N°pag 23 
+ 
+Tiempo de llegada fueron recientemente usados 
+131 → 123 →91 →87 
+ 
+21(1) → 3 (1)→ 7(0) →27(1) 
+27(0) →21(1) → 3(1) → 7(0) Fallo de pagina 
+23(1) →27(0) →21(1) → 3 (1) 
+ 
+ 
+Tamaño de pagina 4kb 12 bits 
+30AE →11 0000 1010 1110   El numero de pagina es 3  
+ 
+ 
+Entonces, qué hace el comando    
+cat​
+​
+  significa mostrar el contenido de un archivo 
+/etc/fstab ​
+es el archivo que contiene la tabla de sistemas de archivos 
+ 
+
+===== [PDF pag 15] =====
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+El 4 nos preguntaron 
+¿En el comando smem -k que dice la columna USS? 
+ 
+ 
+
+===== [PDF pag 16] =====
+ 
+Ejercicio de interrupción 
+ 
+ 
+Interrupción 
+AH 
+Función 
+¿Qué hace? 
+Parámetros 
+principales 
+INT 10h (BIOS 
+Video) 
+0Eh 
+Teletype 
+Output 
+Muestra un carácter en pantalla 
+y avanza el cursor. 
+AL = carácter 
+ASCII a 
+imprimir. 
+INT 21h (DOS) 10h 
+Buffered 
+Keyboard 
+Input 
+Lee una línea de texto desde el 
+teclado y la guarda en un buffer 
+de memoria hasta que se 
+presiona Enter. 
+DS:DX = 
+dirección del 
+buffer. 
+ 
+
+===== [PDF pag 17] =====
+
+===== [PDF pag 18] =====
+
+===== [PDF pag 19] =====
+
+===== [PDF pag 20] =====
+
+===== [PDF pag 21] =====
+
+===== [PDF pag 22] =====
+
+===== [PDF pag 23] =====
+
+===== [PDF pag 24] =====
+
+===== [PDF pag 25] =====
+
+===== [PDF pag 26] =====
+
+===== [PDF pag 27] =====
+
+===== [PDF pag 28] =====
+
+===== [PDF pag 29] =====
+
+===== [PDF pag 30] =====

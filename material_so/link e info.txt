@@ -1,0 +1,46 @@
+https://docs.google.com/document/d/1aauTgHIi6YPjmAJbf9FwTRj4Y4najFdV2-BvVZWYK4k/edit?tab=t.0
+
+
+4- cat /etc/fstab: Se utiliza para conocer el tamaño del bloque de una particion formateada con file siystem ext4
+5-La columna id de vmstat El porcentaje de tiempo que la cpu permanece inactiva
+
+
+
+Otros comandos
+ps -ef | grep firefox te muestra el pid del proceso
+pgrep firefox encuentra el pid de firefox
+lsblk -f muestra discos, particiones y sistemas de archivos, los dispositivos de bloque, el espacio utilizado y libre
+ls -l /dev | grep '^c'  identifica los dispositivos de carácter
+strace -o output.txt ls -la Rastre las llamadas del proceso y las imprime en output.txt
+
+free -h 
+cat /proc/meminfo Permiten visualizar la memoria ram total y libre
+
+cat /proc/devices: muestra los dispositivos de bloque
+iostat muestra actividad, velocidad, espera y utilización de E/s ESTADISTICAS DE USO DE LA CPU
+vmstat: muestra información de la memoria y swap de los procesos. La columna id El porcentaje de tiempo que la cpi permanece inactiva
+
+bg: Pasa un proceso a segundo plano
+
+
+
+*TODAS VAN EN EL AH*
+*INT 10H*
+*13H* escribe una cadena de caracteres
+14/OEH escribe un carácter en la posición y después avanza
+02H inicializa posición del curso
+*INT 14H*
+00H Inicializar el puerto
+01H Transmitir un carácter
+02H Recibir un carácter
+03H Obtener el estado del puerto
+
+*INT 16H*
+00H lee el teclado
+
+*INT 21H*
+01h Permite leer un caracter del teclado con repeticion de pantalla
+02h muestra un carácter en pantalla
+09h muestra una cadena de caracteres
+10/0AH lee desde el teclado y lo guarda en el buffer
+4CH termina un proceso

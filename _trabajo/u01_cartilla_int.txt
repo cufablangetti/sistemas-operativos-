@@ -1,0 +1,2204 @@
+
+===== [PDF pag 1] =====
+       Universidad Tecnológica Nacional - Facultad RegionalMendoza 
+Cartilla de Interrupciones 
+ 
+U.T.N.                                                                                     
+ 
+Interrupción 10h: (I/O de Video) 
+ 
+AH 
+Propósito 
+Entradas 
+Observaciones 
+00h 
+Inicializa el modo de Video 
+AH : 00h 
+AL : Modo de Video 
+ 
+Sin retorno. 
+Registros destruidos: AX, SP, BP, SI, DI. 
+01h 
+Ajusta el tamaño del cursor inicializando las 
+líneas de comienzo y final 
+AH : 01h 
+CH :Línea inicial del cursor <bits 4 a 0> 
+CL : Línea final del cursor <bits 4 a 0> 
+Sin retorno. 
+Registros destruidos: AX, SP, BP, SI, DI. 
+02h 
+Inicializar la posición del cursor (fila y 
+columna) para una página determinada 
+AH : 02h 
+BH : Número de  página 
+DH : Fila 
+DL : Columna 
+Sin retorno. 
+Registros destruidos: AX, SP, BP, SI, DI. 
+Este servicio puede posicionar el cursor en una página activa o en una inactiva. 
+03h 
+Obtener posición (fila y columna) y tamaño 
+del cursor 
+AH : 03h 
+BH : Número de página 
+Retorno: 
+CH : Línea inicial 
+CL : Línea final 
+DH : Fila 
+DL : Columna 
+Registros destruidos: AX, SP, BP, SI, DI. 
+04h 
+Lee la posición y el estado del lápiz óptico 
+AH : 04h 
+Retorno: 
+AH : Estado (0 = no iniciado, 1 = iniciado) 
+BX : Nro. de columna del píxel (0-639) 
+CH : Nro. de línea del píxel (0-199) 
+CX : Nro. de línea del píxel para los modos 0Fh-10h (0-nnn) 
+DH : Nro. de fila del carácter (0-24) 
+DL : Nro. de columna del carácter (0-39, 0-79) 
+Registros destruidos: AX, SP, BP, SI, DI. 
+Las coordenadas de los píxeles no son precisas, la coordenada “Y” es siempre múltiplo de 2, mientras que la coordenada 
+“X” es un múltiplo de 4 para el modo gráfico de 320x200 y un múltiplo de 8 para el modo gráfico de 640x200 
+05h 
+Establece la página activa 
+AH : 05h 
+AL : Número de página a mostrar 
+Sin retorno 
+Registros destruidos: AX, SP, BP, SI, DI 
+El contenido de la página mostrada no es destruido cuando la página activa es cambiada por otra. 
+
+===== [PDF pag 2] =====
+       Universidad Tecnológica Nacional - Facultad RegionalMendoza 
+Cartilla de Interrupciones 
+ 
+U.T.N.                                                                                     
+ 
+ 
+AH 
+Propósito 
+Entradas 
+Observaciones 
+06h 
+Desplaza una ventana 
+específica hacia arriba un 
+número especifico de líneas 
+AH : 06h 
+AL : Nro. de líneas a desplazar (si es 0, limpia toda la  
+         ventana) 
+BH : Mostrar atributos para las líneas en blanco 
+CH : Nro. de línea de la esquina superior izquierda 
+CL : Nro. de columna de la esquina superior izquierda 
+DH : Nro. de línea de la esquina inferior derecha 
+DL : Nro. de columna de la esquina inferior derecha 
+Sin retorno 
+Registros destruidos: AX, SP, BP, SI, DI 
+Las líneas son insertadas al final a medida que las actuales son desplazadas hacia arriba. Las nuevas líneas son rellenadas con el 
+carácter blanco especificado en BH. 
+Las líneas que desaparecen hacia arriba se eliminan. 
+Este servicio solo afecta a la página activa 
+07h 
+Desplaza una ventana 
+específica hacia abajo un 
+número especifico de líneas 
+AH : 07h 
+AL : Nro. de líneas a desplazar (si es 0, limpia toda la  
+        ventana) 
+BH : Mostrar atributos para las líneas en blanco 
+CH : Nro. de línea de la esquina superior izquierda 
+CL : Nro. de columna de la esquina superior izquierda 
+DH : Nro. de línea de la esquina inferior derecha 
+DL : Nro. de columna de la esquina inferior derecha 
+Sin retorno 
+Registros destruidos: AX, SP, BP, SI, DI 
+Las líneas son insertadas al principio a medida que las actuales son desplazadas hacia abajo. Las nuevas líneas son rellenadas con el 
+carácter blanco especificado en BH. 
+Las líneas que desaparecen hacia abajo se eliminan. 
+Este servicio solo afecta a la página activa 
+08h 
+Devuelve el valor ASCII y (en 
+modo texto) el atributo del 
+carácter de la posición actual 
+del cursor en la página activa 
+AH : 08h 
+BH : Número de la página a mostrar (sólo en modo texto) 
+Retorno: 
+AH : Atributo del carácter (en modo texto) 
+AL : Valor ASCII del carácter 
+Registros destruidos: AX, SP, BP, SI, DI 
+En modo gráfico, la página activa no necesita ser especificada, en este modo, el servicio retorna 00h en AL si el patrón del carácter 
+no es reconocido. 
+09h 
+Muestra en la posición actual 
+del cursor un carácter 
+especifico con un atributo 
+determinado la cantidad de 
+veces que se designe 
+AH : 09h 
+AL : Valor ASCII del carácter 
+BH : Página a mostrar (sólo en modo texto) 
+BL : Atributo / Color 
+CX : Cantidad de veces que el carácter será mostrado 
+Sin retorno 
+Registros destruidos: AX, SP, BP, SI, DI 
+Muestra al comienzo de la posición actual del cursor, pero el cursor no es desplazado. 
+En modo texto, aquellos caracteres que excedan el limite derecho de la pantalla serán visualizados en la línea siguiente, no siendo 
+así en modo gráfico. 
+0Ah 
+Muestra un carácter específico 
+la cantidad de veces que se 
+determine 
+AH : 0Ah 
+AL : Valor ASCII del carácter 
+BH : Página a mostrar (sólo en modo texto) 
+CX : Cantidad de veces que el carácter será mostrado 
+Sin retorno 
+Registros destruidos: AX, SP, BP, SI, DI 
+Muestra al comienzo de la posición actual del cursor, pero el cursor no es desplazado. 
+En modo texto, aquellos caracteres que excedan el limite derecho de la pantalla serán visualizados en la línea siguiente, no siendo 
+así en modo gráfico. 
+
+===== [PDF pag 3] =====
+       Universidad Tecnológica Nacional - Facultad RegionalMendoza 
+Cartilla de Interrupciones 
+ 
+U.T.N.                                                                                     
+ 
+ 
+AH 
+Propósito 
+Entradas 
+Observaciones 
+0Bh 
+Selecciona una paleta de 
+colores de distintos modos 
+gráficos 
+AH : 0Bh 
+BH : ID de la paleta de colores (0 ó 1) 
+BL : Valor de color o paleta a ser utilizado con ID de color (0-
+31) 
+Sin retorno 
+Registros destruidos: AX, SP, BP, SI, DI 
+Paleta 0 (BL = 0) 
+Valor del píxel        Color 
+0 
+Color de fondo actual 
+1 
+Verde 
+2 
+Rojo 
+3 
+Marrón 
+ 
+Paleta 0 (BL = 1) 
+Valor del píxel        Color 
+0 
+Color de Fondo actual 
+1 
+Cyan 
+2 
+Magenta 
+3 
+Blanco 
+ 
+0Ch 
+Escribe un punto de un píxel 
+con un color específico en una 
+coordenada específica  
+AH : 0Ch 
+AL : Color del píxel 
+CX : Posición horizontal del píxel 
+DX : Posición vertical del píxel 
+BH : Nro. de página a mostrar (en modos gráficos con más de 
+una página) 
+Sin retorno 
+Registros destruidos: AX, SP, BP, SI, DI 
+Valores Admitidos: 
+Modo    CX (Horizontal)    DX (Vertical)    AL (Color del Píxel)    BH (Nro. de Página) 
+04h            0 – 319                    0-199                 0-3 
+05h            0 – 319                    0-199                 0-3 
+06h            0 – 639                    0-199                 0-1 
+0Dh           0 – 319                    0-199                 0-15                               0-7 
+0Eh            0 – 639                    0-199                 0-15                               0-3 
+0Fh            0 – 639                    0-349                 0-1                                 0-1 
+10h            0 – 639                    0-349                 0-15                               0-1 
+0Dh 
+Devuelve el color del píxel 
+para una coordenada 
+determinada de pantalla  
+AH : 0Dh 
+CX : Posición horizontal del píxel 
+DX : Posición vertical del píxel 
+BH : Nro. de página a mostrar (en modos gráficos con más de 
+una página) 
+Retorno: 
+AL : Color del píxel 
+Registros destruidos: AX, SP, BP, SI, DI 
+Valores Admitidos: Ídem a la tabla de la función anterior 
+
+===== [PDF pag 4] =====
+       Universidad Tecnológica Nacional - Facultad RegionalMendoza 
+Cartilla de Interrupciones 
+ 
+U.T.N.                                                                                     
+ 
+ 
+AH 
+Propósito 
+Entradas 
+Observaciones 
+0Eh 
+Escribe un carácter en la 
+posición actual del cursor y 
+avanza el cursor 
+AH : 0Eh 
+AL : Carácter a ser escrito 
+BL : Foreground Color (sólo en modos gráficos) 
+BH : Número de página a mostrar (sólo en modo texto) 
+Sin retorno 
+En modo texto, el carácter es visualizado con los mismos atributos que el carácter previo. En modo gráfico, es necesario especificar 
+el foreground color (en BL) cada vez que se utilice este servicio 
+0Fh 
+Devuelve el modo de video, el 
+nro. de caracteres por línea 
+para dicho modo y la página 
+actual 
+AH : 0Fh 
+ 
+Retorna: 
+AL : Modo de video 
+AH : Nro. de columnas por línea 
+BH : Número de página activa 
+Registros destruidos: AX, SP, BP, SI, DI 
+10h 
+Establece la paleta y el 
+registro de borde en  sistemas 
+PCjr y EGA 
+AH : 10h 
+AL : Subservicio 
+        0 – Establece el registro de paleta 
+              BL     Registro de paleta 
+              BH    Valor a establecer 
+        1 – Establece el registro de color de borde 
+               BH   Valor a establecer 
+        2 – Establece los registros de paleta y de borde 
+                ES:DX     Puntero a la lista de colores 
+        3 – Intensidad / BIT de parpadeo 
+                BL    0  -  Activar intensidad 
+                BL    1  -  Activar parpadeo 
+Registros destruidos: AX, SP, BP, SI, DI 
+11h 
+Generador de caracteres 
+Cambia la fuente predefinida 
+en EGA a las fuentes 
+predefinidas o definidas por el 
+usuario tanto en modo texto 
+como gráfico 
+AH : 11h 
+AL Subservicio (ver lista de subservicios) 
+Retorno: 
+(Solamente en el subservicio 30h – Retorno de Información de Fuente) 
+          ES:BP    Puntero a la tabla especificada en BH 
+          CX         Scan lines por carácter 
+          DL          líneas 
+12h 
+Devuelve la información en 
+modo EGA y permite la 
+selección de una rutina EGA  
+de pantalla alternativa  
+AH : 12h 
+BL : Subservicio 
+        10h    -    Retorna información EGA 
+        20h    -    Selecciona una rutina de impresión de pantalla 
+EGA alternativa 
+(Solamente en el subservicio 10h) 
+BH    retorna el modo actual 
+          00h    Modo Color (rango de dirección 3Dxh) 
+          01h    Modo Monocromo (rango de dirección 3Bxh) 
+BL    memoria EGA 
+          00h    64k 
+          01h    128k 
+          02h    192k 
+          03h    256k 
+CH    Bits adaptadores 
+CL    Establece intercambio 
+
+===== [PDF pag 5] =====
+       Universidad Tecnológica Nacional - Facultad RegionalMendoza 
+Cartilla de Interrupciones 
+ 
+U.T.N.                                                                                     
+ 
+ 
+AH 
+Propósito 
+Entradas 
+Observaciones 
+13h 
+Escribe una cadena de 
+caracteres con atributo 
+específico en cualquier página 
+AH : 13h 
+AL : Subservicio (0-3) 
+BH : Nro. de página 
+BL : Atributo (subservicios 0 y 1) 
+CX : Longitud de la cadena 
+DH : línea donde la cadena será escrita 
+DL : Columna donde la cadena será escrita 
+ES:BP : Puntero a la cadena a ser escrita 
+Sin retorno. 
+Registros destruidos: AX, SP, BP, SI, DI 
+Posee los cuatro servicios siguientes: 
+AL = 00h  :  Asigna a todos los caracteres en atributo puesto en BL, no actualiza el cursor 
+AL = 01h  :  Asigna a todos los caracteres el atributo puesto en BL, actualiza el cursor 
+AL = 02h  :  Usa los atributos de la cadena, no actualiza el cursor 
+AL = 03h  :  Usa los atributos de la cadena, actualiza el cursor 
+14h 
+Manejador LCD 
+Permite el uso de fuentes 
+definidas por el usuario y 
+mapear los atributos de alta 
+intensidad para los diferentes 
+atributos de una pantalla LCD 
+AH : 14h 
+AL : Subservicio 
+  00h  -  Carga la fuente especificada por el usuario 
+    ES:DI Puntero a la primer fuente de la tabla de fuentes 
+    CX     Nro. de caracteres a almacenar (1-256) 
+    DX    Offset de caract. en el buffer de fuentes de la RAM 
+    BL     Bloque de fuentes a cargar 
+0 
+-   Fuente principal (bloque 0) 
+1 
+-   Fuente alternativa (bloque 1) 
+    BH    Bytes por carácter (1-255) 
+  01h  -  Carga el bloque de fuentes del sistema de la ROM 
+    BL     Bloque de fuentes a cargar 
+0      -   Fuente principal (bloque 0) 
+1      -   Fuente alternativa (bloque 1) 
+ 
+  02h  -  Mapeo del atributo de alta intensidad LCD 
+    BL     Esquema de mapeo 
+     0  -  Ignorar atributo de alta intensidad 
+     1  -  Mapear alta intensidad al video reverso 
+     2  -  Mapear alta intensidad al subrayado 
+     3  - Mapear alta intensidad al seleccionar fuente alternativa 
+Sin Retorno 
+15h 
+Devuelve las características 
+físicas del tipo de adaptador y 
+la tabla descriptiva de las 
+características de video 
+actuales 
+AH : 15h 
+Retorna: 
+AX : Tipo de adaptador de video alternativo 
+         00h        -    Sin adaptador alternativo 
+         5140h    -    LCD 
+         5153h    -    Pantalla tipo CGA 
+         5151h    -    Pantalla tipo monocromo 
+ES:DI : Puntero a la tabla de adaptadores de video actuales 
+ 
+
+===== [PDF pag 6] =====
+       Universidad Tecnológica Nacional - Facultad RegionalMendoza 
+Cartilla de Interrupciones 
+ 
+U.T.N.                                                                                     
+ 
+ 
+Modos de Video 
+ 
+Modo 
+Tipo 
+Resolución 
+Adaptador 
+Colores 
+Dirección de 
+Buffer 
+00h 
+Texto 
+40 x 25 
+Todos excepto 
+MDA 
+16 gray 
+B8000 
+01h 
+Texto 
+40 x 25 
+Idem 
+16 fore/8 back 
+B8000 
+02h 
+Texto 
+80 x 25 
+Idem 
+16 gray 
+B8000 
+03h 
+Texto 
+80 x 25 
+Idem 
+16 fore/8 back 
+B8000 
+04h 
+Gráfico 
+320 x 200 
+Idem 
+4 
+B8000 
+05h 
+Gráfico 
+320 x 200 
+Idem 
+4 gray 
+B8000 
+06h 
+Gráfico 
+640 x 200 
+Idem 
+2 
+B8000 
+07h 
+Texto 
+80 x 25 
+Idem 
+b/w 
+B0000 
+08h 
+Gráfico 
+160 x 200 
+PCjr 
+16 
+B0000 
+09h 
+Gráfico 
+320 x 200 
+PCjr 
+16 
+B0000 
+0Ah 
+Gráfico 
+640 x 200 
+PCjr 
+4 
+B0000 
+0BH 
+Reservada 
+ 
+ 
+ 
+ 
+0CH 
+Reservada 
+ 
+ 
+ 
+ 
+0DH 
+Gráfico 
+320 x 200 
+EGA 
+16 
+A0000 
+0EH 
+Gráfico 
+640 x 200 
+EGA 
+16 
+A0000 
+0FH 
+Gráfico 
+640 x 350 
+EGA 
+b/w 
+A0000 
+10H 
+Gráfico 
+640 x 350 
+EGA 
+16 
+A0000 
+ 
+Tabla de Valores Válidos de Páginas (AL) para el servicio 05h de la Int 10h 
+ 
+Modo de Video 
+Páginas Válidas 
+00h 
+0-7 
+01h 
+0-7 
+02h 
+0-3 
+03h 
+0-3 
+04h 
+0 
+05h 
+0 
+06h 
+0 
+07h 
+0 
+08h 
+0 
+09h 
+0 
+0AH 
+0 
+0DH 
+0-7 
+0EH 
+0-3 
+0FH 
+0-1 
+10H 
+0-1 
+
+===== [PDF pag 7] =====
+       Universidad Tecnológica Nacional - Facultad RegionalMendoza 
+Cartilla de Interrupciones 
+ 
+U.T.N.                                                                                     
+ 
+Interrupción 16h: (I/O por Teclado)  
+ 
+AH 
+Propósito 
+Entradas 
+Observaciones 
+00h 
+Lee el teclado. 
+Retorna el siguiente carácter 
+en buffer de teclado, si no 
+existe ningún carácter 
+disponible, este servicio 
+esperará hasta que reciba uno. 
+AH : 00h 
+ 
+Retorna: 
+AL : El código ASCII del carácter 
+AH : Código de barrido 
+El Código de barrido, son los nros. que representan la ubicación de la tecla en el teclado. Si se trata de un carácter especial, entonces 
+AL puede ser 0 y el valor en AH puede ser el Código de barrido extendido para la tecla. 
+01h 
+Estado del teclado. 
+Verifica se existe un carácter 
+disponible en el buffer de 
+teclado. 
+AH : 01h 
+ 
+Retorna: 
+ZF : 0 si existe un carácter disponible 
+        1 si ningún carácter se encuentra disponible  
+AL : El Código ASCII del carácter (si existe uno disponible) 
+AH : El Código de barrido del carácter (si existe uno disponible) 
+02h 
+Retorna el estado Shift actual 
+del teclado. 
+AH : 02h 
+Retorna: 
+AL : El estado Shift 
+Estado SHIFT (AL) 
+7
+6
+5
+4
+3
+2
+1
+0
+Tecla Activa
+1
+.
+.
+.
+.
+.
+.
+.
+INSERT
+.
+1
+.
+.
+.
+.
+.
+.
+MAYÚSCULAS
+.
+.
+1
+.
+.
+.
+.
+.
+BLOQUEO NUMÉRICO
+.
+.
+.
+1
+.
+.
+.
+.
+BLOQUEO DE DESPLAZAMIENTO
+.
+.
+.
+.
+1
+.
+.
+Tecla ALT presionada
+.
+.
+.
+.
+.
+1
+.
+.
+Tecla CTRL presionada
+.
+.
+.
+.
+.
+.
+1
+.
+Tecla SHIFT IZQ. presionada
+.
+.
+.
+.
+.
+.
+.
+1
+Tecla SHIFT DER. presionada
+   
+03h 
+Configurar la velocidad  y el 
+retardo del teclado 
+AH : 03h 
+AL : Subservicio 
+0  -  Retorna el estado por defecto del teclado 
+         1  -  Incrementa el retardo inicial 
+         2  -  Disminuye la lentitud en 1/2 
+         3  -  Ejecuta los subservicios 1 y 2 
+         4  -  Desactiva  repetición de caracteres 
+         5  -  Configura la velocidad de repetición y el retardo 
+                 BL : velocidad de repetición 
+                 BH : Valor de retardo 
+ 
+ 
+Sin retorno: 
+Los subservicios 0 al 4 sólo están disponibles para PCjr. El 5 sólo está disponible para AT fabricadas a partir del 11/11/85 y 
+posteriores. 
+
+===== [PDF pag 8] =====
+       Universidad Tecnológica Nacional - Facultad RegionalMendoza 
+Cartilla de Interrupciones 
+ 
+U.T.N.                                                                                     
+ 
+04h 
+Ajusta el click del teclado 
+AH : 04h 
+AL : 0  -  Desactiva el clic del teclado 
+        0  -  Activa el clic del teclado 
+Sin retorno. 
+05h 
+Escribe en teclado 
+Coloca una combinación de 
+Código de Carácter / Barrido 
+en el buffer de teclado 
+AH : 05h 
+CH : Código de barrido 
+CL : Código ASCII del caracter 
+Retorna: 
+AL :  00h  -  Operación completada 
+         01h  -  Buffer lleno 
+Este servicio se utiliza para simular un carácter ingresado por teclado 
+10h 
+Lectura del teclado extendido. 
+Posee la misma funcionalidad 
+que servicio 00h aplicada a 
+teclados extendidos 
+AH : 10h 
+Retorna: 
+AL : Código ASCII del carácter 
+AH : Código de barrido 
+11h 
+Estado del teclado extendido 
+Posee la misma funcionalidad 
+que el servicio 01h aplicada a 
+teclados extendidos 
+AH : 11h 
+Retorna: 
+ZF : 0 si existe un carácter disponible 
+        1 si ningún carácter se encuentra disponible  
+AX : Si encuentra un carácter disponible, inicializa este registro como en el servicio 10h 
+Este servicio puede utilizarse para limpiar el buffer de teclado. 
+12h 
+Retorna el estado Shift actual 
+del teclado. 
+Posee la misma funcionalidad 
+que el servicio 02h aplicada a 
+teclados extendidos 
+AH : 12h 
+Retorna: 
+AL : El estado Shift 
+AH : Estado Shift extendido 
+ 
+ 
+Estado SHIFT (AL) 
+Estado SHIFT extendido (AH) 
+ 
+7 
+6 
+5 
+4 
+3 
+2 
+1 
+0 
+Detalle 
+1 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+INSERT Activo 
+. 
+1 
+. 
+. 
+. 
+. 
+. 
+. 
+MAYÚSCULAS Activas 
+. 
+. 
+1 
+. 
+. 
+. 
+. 
+. 
+BLOQUEO NUMÉRICO Activo 
+. 
+. 
+. 
+1 
+. 
+. 
+. 
+. 
+BLOQUEO DE DESPLAZAMIENTO activo 
+. 
+. 
+. 
+. 
+1 
+ 
+. 
+. 
+Tecla ALT presionada 
+. 
+. 
+. 
+. 
+. 
+1 
+. 
+. 
+Tecla CTRL presionada 
+. 
+. 
+. 
+. 
+. 
+. 
+1 
+. 
+Tecla SHIFT IZQUIERDA presionada 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+1 Tecla SHIFT DERECHA presionada 
+ 
+ 
+7 
+6 
+5 
+4 
+3 
+2 
+1 
+0 
+Detalle 
+1 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+Tecla SYS REQ   presionada 
+. 
+1 
+. 
+. 
+. 
+. 
+. 
+. 
+Tecla MAYÚSCULAS presionada 
+. 
+. 
+1 
+. 
+. 
+. 
+. 
+. 
+Tecla BLOQUEO NUMÉRICO presionada 
+. 
+. 
+. 
+1 
+. 
+. 
+. 
+. 
+Tecla BLOQUEO DE DESPLAZAMIENTO presionada 
+. 
+. 
+. 
+. 
+1 
+ 
+. 
+. 
+Tecla ALT DERECHA presionada 
+. 
+. 
+. 
+. 
+. 
+1 
+. 
+. 
+Tecla CTRL DERECHA presionada 
+. 
+. 
+. 
+. 
+. 
+. 
+1 
+. 
+Tecla ALT IZQUIERDA presionada 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+1 Tecla CTRL DERECHA presionada 
+ 
+ 
+ 
+
+===== [PDF pag 9] =====
+       Universidad Tecnológica Nacional - Facultad RegionalMendoza 
+Cartilla de Interrupciones 
+ 
+U.T.N.                                                                                     
+ 
+Interrupción 17h: (I/O de la Impresora) 
+ 
+AH 
+Propósito 
+Entradas 
+Observaciones 
+00h 
+Envía un Byte a la impresora 
+Envía un carácter al puerto 
+paralelo especificado y retorna 
+el estado actual de la 
+impresora 
+AH : 00h 
+AL : Carácter a imprimir 
+DX : Nro. de Puerto Paralelo (0 – LPT1, 1 – LPT2, etc.) 
+Retorna: 
+AH : Estado de la impresora (ver servicio 02h) 
+Para las AT en adelante, cuando la impresora está ocupada es invocada la Int 15h, servicio 90h (dispositivo ocupado). Esto notifica 
+al Sistema Operativo, el cual inicia un bucle que finaliza por Time-Out 
+01h 
+Inicializa la impresora. 
+AH : 01h 
+DX : Nro. de Puerto Paralelo (0 – LPT1, 1 – LPT2, etc.) 
+Retorna: 
+AH : Estado de la impresora (ver servicio 02h) 
+Este servicio envía el valor hexadecimal08h y 0Ch al Control  del Puerto de Impresora, inicializando la misma. 
+02h 
+Retorna el estado de la 
+Impresora 
+Retorna la información del 
+estado de un Puerto Paralelo 
+Específico. 
+AH : 02h 
+DX : Nro. de Puerto Paralelo (0 – LPT1, 1 – LPT2, etc.) 
+Retorna: 
+AH : Estado de la impresora 
+ 
+Estado de la Impresora (AH) 
+ 
+7 
+6 
+5 
+4 
+3 
+2 
+1 
+0 
+Descripción 
+X
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+IMPRESORA NO OCUPADA (0 = OCUPADA) 
+. 
+X
+. 
+. 
+. 
+. 
+. 
+. 
+ACK DE LA IMPRESORA 
+. 
+. 
+X
+. 
+. 
+. 
+. 
+. 
+IMPRESORA SIN PAPEL 
+. 
+. 
+. 
+X
+. 
+. 
+. 
+. 
+IMPRESORA SELECCIONADA 
+. 
+. 
+. 
+. 
+X
+ 
+. 
+. 
+ERROR I / O 
+. 
+. 
+. 
+. 
+. 
+0 
+0 
+. 
+NO UTILIZADO 
+. 
+. 
+. 
+. 
+. 
+. 
+ 
+X. ERROR DE TIME-OUT 
+ 
+ 
+
+===== [PDF pag 10] =====
+       Universidad Tecnológica Nacional - Facultad RegionalMendoza 
+Cartilla de Interrupciones 
+ 
+U.T.N.                                                                                     
+ 
+ 
+Interrupción 21h: (Llamadas a Funciones de DOS) 
+ 
+AH 
+Propósito 
+Entradas 
+Observaciones 
+00h 
+Finaliza la ejecución de un programa. 
+AH : 00h 
+CS : Dirección del Segmento del PSP 
+Sin retorno. 
+DOS finaliza el programa, limpia los archivos de buffer, restaura el terminador Ctrl.-Break y la dirección de salida de error 
+crítico desde el PSP. 
+Básicamente cumple la misma función que la Int 20h, también puede ser reemplazada por la función 4CH. 
+01h 
+Permite leer un carácter del Teclado con 
+repetición en pantalla. 
+AH : 01h 
+Retorna: 
+AL : Caracter leído. 
+En caso de que sea un carácter extendido, el registro AL contendrá el valor de 0 y será necesario llamar nuevamente a la 
+función para obtener el código de este carácter. 
+02h 
+Mostrar un carácter en pantalla. 
+AH : 02h 
+DL : Valor ASCII del carácter a mostrar. 
+Sin retorno. 
+Esta función muestra el carácter cuyo código ASCII corresponde al valor almacenado en DL, no se modifica ningún registro 
+al utilizar este comando. 
+Es recomendado el uso de la función 40h de la misma interrupción en lugar de esta función. 
+03h 
+Entrada Auxiliar de un caracter. 
+Espera un carácter proveniente de un 
+dispositivo Auxiliar estándar. 
+AH : 03h 
+Retorna: 
+AL: El carácter leído. 
+Esta función lee un carácter proveniente de una dispositivo auxiliar estándar (normalmente el puerto serial) 
+Es reemplazado por la interrupción 14h del BIOS. 
+04h 
+Salida Auxiliar de un carácter. 
+Envía un carácter a un dispositivo 
+Auxiliar estándar. 
+AH : 04h 
+DL : Valor ASCII del carácter a transmitir 
+Esta función envía un carácter cuyo código ASCII corresponde al valor almacenado en DL al dispositivo auxiliar estándar 
+(normalmente el puerto serial). Si el dispositivo está ocupado, espera a que sea leído. 
+Es reemplazado por la interrupción 14h del BIOS. 
+05h 
+Salida a la impresora 
+AH: 05h 
+DL : Valor ASCII del carácter a imprimir 
+Sin retorno 
+Si el dispositivo está ocupado, espera a que sea leído. 
+Debido a que esta función no verifica el estado de la impresora, es recomendable abrir primero el dispositivo LPT1 como un 
+archivo. 
+06h 
+Entrada y salida de Teclado y pantalla 
+directos. 
+AH : 06h 
+ Entrada                                            Salida 
+AH : 06h                                        AH : 06h 
+DL : FFh                                        DL : Caracter     
+Retorno: 
+Entrada                                                                                              Salida 
+AL :  Carácter                                                                                   
+ZF :  0 Si existe un caracter disponible                                       Sin retorno 
+         1 Si no existe un caracter disponible 
+En caso de que un carácter extendido sea ingresado, el registro AL contendrá el valor de 0 y será necesario llamar 
+nuevamente a la función para obtener el código de este carácter. 
+07h 
+Entrada de Teclado directo sin 
+repetición en pantalla. 
+AH : 07h 
+Retorno: 
+AL : Código ASCII del carácter leído, en el caso de un carácter especial, se comporta del mismo modo que la func. Anterior 
+08h 
+Entrada desde el teclado sin repetición 
+en pantalla. 
+AH : 08h 
+Idem a la función anterior. La única diferencia radica en que esta función verifica que se haya presionado Ctrl.-Break, en este 
+caso se efectúa un llamado al la Int 23h 
+
+===== [PDF pag 11] =====
+       Universidad Tecnológica Nacional - Facultad RegionalMendoza 
+Cartilla de Interrupciones 
+ 
+U.T.N.                                                                                     
+ 
+09h 
+Imprime una cadena de caracteres en 
+pantalla. 
+AH : 09h 
+DS:DX  : Puntero a la cadena de caracteres. 
+Sin retorno. 
+Esta función imprime los caracteres, uno a uno, desde la dirección indicada en el registro DS:DX hasta encontrar un carácter 
+$, que es interpretado como el final de la cadena. 
+0Ah 
+Lee caracteres del teclado y los 
+almacena en buffer. 
+AH : 0Ah 
+DS:DX = Puntero al buffer. 
+El primer byte del buffer especifica la máxima 
+longitud del mismo. El segundo byte indica el 
+número de caracteres leídos 
+Los caracteres son leídos y almacenados en un espacio predefinido de memoria. La estructura de este espacio le indica que en 
+el primer byte del mismo se indican cuantos caracteres serán leídos. En el segundo byte se almacena el número de caracteres 
+que ya se leyeron, y del tercer byte en adelante se escriben los caracteres leídos. 
+Cuando se han almacenado todos los caracteres indicados menos uno la bocina suena y cualquier caracter adicional es 
+ignorado. Para terminar la captura de la cadena es necesario presionar [ENTER]. 
+0Bh 
+Verificar estado del dispositivo estándar 
+de entrada. 
+AH : 0Bh 
+Retorno: 
+AL :  
+        FFh =  Un carácter se encuentra disponible 
+        00h  =  Ningún carácter se encuentra disponible 
+0Ch 
+Limpiar el búfer de entrada e invoca a 
+una función. 
+AH : 0Ch 
+AL : Función a ser invocada (únicamente 
+01h,06h,07h,08h ó 0Ah) 
+Retorna: 
+AL : Carácter de entrada (excepto que la función invocada sea  0Ah) 
+0Dh 
+Restablecer unidad de disco 
+AH : 0Dh 
+Sin retorno. 
+El propósito es limpiar todos los archivos de buffer pero no cierra los archivos. Para asegurarse que la totalidad de un archivo 
+modificado es almacenado utilice una de las dos funciones de Cierre de Archivos (10h ó 3Eh). 
+Se pierden los archivos que no han sido cerrados. 
+0Eh 
+Selecciona unidad de disco por omisión 
+y retorna el número de disco lógico del 
+sistema. 
+AH : 0Eh 
+DL : Número de disco (0=A, 1=B, etc.) 
+Retorna: 
+AL : Número de disco lógico del sistema. 
+El disco flexible (en un sistema con un solo de estos dispositivos instalados), es contado  como dos unidades lógicas A y B 
+0Fh 
+Abre un archivo existente usando FCB 
+(File Control Block). 
+AH : 0Fh 
+DS:DX = Puntero a un FCB cerrado 
+Retorna: 
+AL : 00h si el archivo fue abierto sin problemas 
+         FFh si el archivo no se encuentra 
+10h 
+Cierra un archivo usando FCB. 
+AH : 10h 
+DS:DX = Puntero a un FCB abierto 
+Retorna: 
+AL : 00h si el archivo fue cerrado 
+         FFh si el archivo no se encuentra 
+Cierra y actualiza el archivo. 
+11h 
+Busca la primer entrada que coincida en 
+un disco usando FCB. 
+AH : 11h 
+DS:DX = Puntero a un FCB cerrado 
+Retorna: 
+AL : 00h si el archivo fue encontrado 
+         FFh en caso contrario 
+La búsqueda se realiza en el directorio actual 
+12h 
+Busca la siguiente entrada que coincida 
+en un disco usando FCB. 
+AH : 12h 
+DS:DX = Puntero al FCB cerrado especificado en 
+una llamada previa a las funciones 11h ó 12h 
+Retorna: 
+AL : 00h si otra entrada fue hallada 
+         FFh en caso contrario 
+Después de haber encontrado el nombre del archivo, esta función continuará la búsqueda para la siguiente ocurrencia. 
+
+===== [PDF pag 12] =====
+       Universidad Tecnológica Nacional - Facultad RegionalMendoza 
+Cartilla de Interrupciones 
+ 
+U.T.N.                                                                                     
+ 
+ 
+13h 
+Borra un archivo usando FCB. 
+AH : 13h 
+DS:DX = Puntero a un FCB cerrado 
+Retorna: 
+AL : 00h si el archivo fue borrado 
+         FFh si el archivo no se encuentra 
+Borra todas las entradas que señala el puntero DS:DX. 
+Al trabajar en una red requiere derechos de creación. 
+14h 
+Lee un registro secuencial usando FCB. 
+AH : 14h 
+DS:DX = Puntero a un FCB abierto. 
+Retorna: 
+AL 
+      00h   si la lectura pudo ser realizada 
+      01h   si la marca EOF fue encontrada y ningún dato fue leído 
+      02h   si el DTA (Disk Transfer Address) es demasiado pequeño 
+      03h   si la marca EOF fue encontrada y se produjo una lectura parcial del registro 
+Lee el siguiente registro secuencial de un archivo e incrementa el bloque del FCB y el campo del registro 
+Al trabajar en una red requiere derechos de lectura 
+15h 
+Escribe un registro secuencial usando 
+FCB. 
+AH : 15h 
+DS:DX = Puntero a un FCB abierto. 
+Retorna: 
+AL 
+      00h   si la escritura pudo ser realizada 
+      01h   si el disco está lleno 
+      02h   si el DTA (Disk Transfer Address) es demasiado pequeño 
+Al trabajar en una red requiere derechos de escritura. Si el archivo tiene atributo de sólo lectura la escritura no se realiza 
+16h 
+Crea un archivo usando FCB. 
+AH : 16h 
+DS:DX = Puntero a un FCB cerrado 
+Retorna: 
+AL 
+      00h   si el archivo fue creado 
+      FFh   Si el archivo no fue creado 
+Crea y abre un nuevo archivo, o abre un archivo existente y trunca su longitud a 0. 
+Al trabajar en una red requiere derechos de creación 
+17h 
+Renombra un archivo usando FCB. 
+AH : 17h 
+DS:DX = Puntero a un FCB que ha sido 
+modificado y que contiene dos nombres de 
+archivos. 
+Retorna: 
+AL 
+      00h   si la operación tuvo éxito 
+      FFh   si la operación no tuvo éxito  
+Modifica todas las ocurrencias encontradas del primer nombre de archivo en el directorio actual por el segundo nombre (en 
+DS:DX + 11). Al trabajar en una red requiere derechos de creación 
+18h 
+Reservada 
+ 
+ 
+19h 
+Retorna la unidad de disco actual. 
+AH : 19h 
+Retorna: 
+AL : Número por defecto de la unidad (A=0, B=1, etc.) 
+El número de unidad retornado por esta función es uno menos que el usado por muchas funciones, las cuales utilizan el 0 
+para la unidad de discos por defecto y comienzan con A=1. 
+ 
+ 
+
+===== [PDF pag 13] =====
+       Universidad Tecnológica Nacional - Facultad RegionalMendoza 
+Cartilla de Interrupciones 
+ 
+U.T.N.                                                                                     
+ 
+1Ah 
+Coloca la DTA (Disk Transfer Address) 
+del disco 
+AH : 1Ah 
+DS:DX : Dirección del DTA 
+Sin retorno. 
+Coloca la dirección de transferencia de disco en DS:DX 
+Esta función es usada con las operaciones FCB de lectura y escritura. 
+1Bh 
+Retorna información de la FAT del 
+disco actual 
+AH : 1Bh 
+Retorna: 
+AL : Número de sectores por cluster 
+CX: Tamaño de Sector en bytes 
+DX : Número total de cluster de disco 
+DX:BX : Puntero al byte descriptor del medio (FAT ID byte) 
+1Ch 
+Retorna información de la FAT para 
+una unidad de disco dada 
+AH : 1Ch 
+DL : Número de disco (0=por defecto,  1=A, 
+2=B, etc.) 
+Retorna: 
+AL : Número de sectores por cluster 
+CX: Tamaño de sector en bytes 
+DX : Número total de clusters de disco 
+DX:BX : Puntero al byte descriptor del medio (FAT ID byte) 
+1Dh 
+Reservada 
+ 
+ 
+1Eh 
+Reservada 
+ 
+ 
+1Fh 
+Reservada 
+ 
+ 
+20h 
+Reservada 
+ 
+ 
+21h 
+Lectura aleatoria, usando FCB 
+AH : 21h 
+DS:DX : Puntero a un FCB abierto 
+Retorna: 
+AL 
+      00h   si la lectura pudo ser realizada 
+      01h   si la marca EOF fue encontrada y ningún dato fue leído 
+      02h   si el DTA (Disk Transfer Address) es demasiado pequeño 
+      03h   si la marca EOF fue encontrada y se produjo una lectura parcial del registro 
+Lee la grabación direccionada por el bloque actual y registra los campos en el área de memoria, correspondiente al DTA 
+Al trabajar en una red requiere derechos de lectura 
+22h 
+Escritura aleatoria, usando FCB 
+AH : 22h 
+DS:DX : Puntero a un FCB abierto 
+Retorna: 
+AL 
+      00h   si la escritura pudo ser realizada 
+      01h   si el disco está lleno 
+      02h   si el DTA (Disk Transfer Address) es demasiado pequeño 
+Escribe el registro especificado en el FCB. El dato a ser escrito es tomado del DTA actual. 
+Al trabajar en una red requiere derechos de escritura 
+23h 
+Retorna el tamaño el archivo, usando 
+FCB 
+AH : 23h 
+DS:DX : Puntero a un FCB cerrado 
+Retorna: 
+AL : 
+       00h   Si un archivo coincidente fue encontrado 
+       FFh   En caso contrario 
+Busca en el directorio una entrada coincidente, según DS:DX, y retorna el tamaño de un archivo como un número de 
+registros (redondeados) en el offset 21h del FCB. 
+24h 
+Establece el campo de registro relativo, 
+usando FCB 
+AH : 24h 
+DS:DX : Puntero a un FCB abierto 
+Sin retorno 
+Coloca el campo de registro relativo en la misma dirección que el bloque actual y los campos del registro 
+
+===== [PDF pag 14] =====
+       Universidad Tecnológica Nacional - Facultad RegionalMendoza 
+Cartilla de Interrupciones 
+ 
+U.T.N.                                                                                     
+ 
+25h 
+Coloca el vector de interrupción 
+AH : 25h 
+AL : Número de interrupción 
+DS:DX : Dirección del vector de interrupción 
+Sin retorno 
+ 
+26h 
+Crea un nuevo Segmento de Programa 
+AH : 26h 
+DX : Dirección de Segmento del nuevo PSP 
+CS:0 : PSP para copiar la información 
+Sin retorno 
+Crea un nuevo PSP (Prefijo de Segmento de Programa). 
+Esta función nunca debe utilizarse 
+27h 
+Lectura de bloque aleatorio, usando 
+FCB 
+AH : 27h 
+CX : Número de registros a ser leídos 
+DS:DX : Puntero a un FCB abierto 
+Retorna: 
+AL 
+      00h   si la lectura pudo ser realizada 
+      01h   si la marca EOF fue encontrada y el último registro fue leído completamente 
+      02h   si el DTA (Disk Transfer Address) es demasiado pequeño 
+      03h   si la marca EOF fue encontrada y se produjo una lectura parcial del último registro 
+CX : Número de registros leídos 
+Lee la cantidad de registros en CX, desde DS:DX, en DTA 
+Al trabajar en una red requiere derechos de lectura 
+28h 
+Escritura de bloque aleatorio, usando 
+FCB 
+AH : 28h 
+CX : Número de registros a escribir 
+DS:DX : Puntero a un FCB abierto 
+Retorna: 
+AL 
+      00h   si la escritura pudo ser realizada 
+      01h   si el disco está lleno 
+      02h   si el DTA (Disk Transfer Address) es demasiado pequeño 
+CX : Número de registros escritos 
+Escribe uno o más registros desde el DTA actual a un archivo 
+Al trabajar en una red requiere derechos de escritura 
+29h 
+Analiza el nombre del archivo 
+AH : 29h 
+AL : Bandera de análisis 
+DS:SI : Puntero a la cadena a ser analizada 
+ES:DI : Puntero al FCB 
+Retorna: 
+AL : 
+       FFh   Si la función no tuvo éxito 
+       00h   Si la función tuvo éxito y no se encontraron comodines 
+       01h   Si la función tuvo éxito y se encontraron comodines 
+2Ah 
+Obtiene la fecha del sistema 
+AH : 2Ah 
+Retorna: 
+AL : Día de la semana (0 – 6; 0 = Domingo) 
+CX : Año (1980 - 2099) 
+DH : Mes (1 - 12) 
+DL : Día (1 – 31) 
+2Bh 
+Establece la fecha del sistema 
+AH : 2Bh 
+CX : Año (1980 - 2099) 
+DH : Mes (1 - 12) 
+DL : Día (1 - 31) 
+Retorna: 
+AL : 
+       00h   Si una fecha válida ha sido especificada 
+       FFh   Si una fecha no válida ha sido especificada 
+ 
+ 
+ 
+
+===== [PDF pag 15] =====
+       Universidad Tecnológica Nacional - Facultad RegionalMendoza 
+Cartilla de Interrupciones 
+ 
+U.T.N.                                                                                     
+ 
+2Ch 
+Obtiene la hora del sistema 
+AH : 2Ch 
+Retorna: 
+CH : Hora (0 - 23) 
+CL : Minutos (0 - 59) 
+DH : Segundos (0 - 59) 
+DL : Centésimas de segundo (0 - 99) 
+2Dh 
+Establece la hora del sistema 
+AH : 2Dh 
+CH : Hora (0 - 23) 
+CL : Minutos (0 - 59) 
+DH : Segundos (0 - 59) 
+DL : Centésimas de segundo (0 - 99) 
+Retorna: 
+AL : 
+       00h   Si la operación tuvo éxito 
+       FFh   Si la operación no tuvo éxito 
+2Eh 
+Activa / desactiva verificación 
+AH : 2Eh 
+AL : 
+       00h Desactiva verificación 
+       01h Activa verificación 
+DL : 00h 
+Sin retorno. 
+Cuando se encuentra activada, DOS realiza la verificación para cada operación de escritura en disco. 
+2Fh 
+Obtiene el DTA (Disk Transfer 
+Address) 
+AH : 2Fh 
+Retorna: 
+ES:BX : Dirección del DTA. 
+30h 
+Obtiene la versión de DOS 
+AH : 30h 
+Retorna: 
+AL : Número superior de la versión 
+AH : Número inferior de la versión. 
+31h 
+Terminar el proceso / permanecer 
+residente 
+AH : 31h 
+AL : Código de retorno 
+DX : Tamaño de la porción residente 
+Sin retorno. 
+32h 
+Reservada 
+ 
+ 
+33h 
+Obtiene o Establece el estado  
+Ctrl.-Break 
+AH : 33h 
+AL : 
+       00h   Obtiene el estado BREAK 
+       01h   Establece el estado BREAK 
+DL :  
+       00h   Desactiva el estado BREAK 
+       01h   Activa el estado BREAK 
+Retorna: 
+DL :  
+       00h   BREAK desactivado 
+       01h   BREAK activado 
+34h 
+Reservada 
+ 
+ 
+35h 
+Obtiene el vector de Interrupción 
+AH : 35h 
+AL : Número de interrupción 
+Retorna: 
+ES:BX : Puntero a la rutina de manejo de interrupción. 
+Regresa en ES:BX el puntero para la interrupción especificada en AL. 
+36h 
+Retorna el espacio libre en disco 
+AH : 36h 
+DL : Número de disco (0=default, 1=A, 2=B,etc.) 
+Retorna: 
+AX : Sectores por cluster (FFFFh si la unidad especificada no es válida) 
+BX : Espacios (en cluster) disponibles 
+CX : Bytes por sector 
+DX : Número de cluster por unidad de disco. 
+
+===== [PDF pag 16] =====
+       Universidad Tecnológica Nacional - Facultad RegionalMendoza 
+Cartilla de Interrupciones 
+ 
+U.T.N.                                                                                     
+ 
+37h 
+Reservada 
+ 
+ 
+38h 
+Obtiene o establece la información 
+dependiente del país 
+AH : 38h 
+AL : Código de país (00h = país actual) 
+BX : Código de país de 16-bits (si AL=FFh) 
+DS:DX : Puntero a un buffer de memoria 
+Retorna: 
+AX : Código de error, si el CF (Carry Flag) está activado 
+BX : Código de país 
+DS:DX : Información dependiente del país. 
+NOTA: Los parámetros varían de acuerdo a la versión de DOS, para mayor información referirse al Manual de Referencia 
+Técnica de DOS. 
+39h 
+Crea Directorio (MKDIR) 
+AH : 39h 
+DS:DX : Puntero a la cadena ASCIIZ, la cual 
+contiene la unidad de disco y la ruta del directorio 
+a ser creado 
+Retorna: 
+AX : Código de error, si el CF  está activado 
+       3 : Camino no encontrado 
+       5 : Acceso denegado, o el directorio ya existe 
+Al trabajar en una red requiere derechos de escritura        
+3Ah 
+Elimina Directorio (RMDIR) 
+AH : 3Ah 
+DS:DX : Puntero a la cadena ASCIIZ, la cual 
+contiene la unidad de disco y la ruta del directorio 
+a ser eliminado 
+Retorna: 
+AX : Código de error, si el CF  está activado 
+       3 : Camino no encontrado 
+       5 : Acceso denegado (directorio no vacío) 
+      16 : No se puede eliminar el directorio actual. 
+Al trabajar en una red requiere derechos de escritura.        
+3Bh 
+Cambio de directorio (CHDIR) 
+AH : 3Bh 
+DS:DX : Puntero a la cadena ASCIIZ, la cual 
+contiene la unidad de disco y la ruta del directorio 
+a ser eliminado 
+Retorna: 
+AX : Código de error, si el CF  está activado 
+       3 : Camino no encontrado 
+3Ch 
+Crea archivo (CREATE) 
+AH : 3Ch 
+CX : Atributo del archivo 
+DS:DX : Puntero a la cadena ASCIIZ, la cual 
+contiene la unidad de disco, la ruta del directorio 
+y el nombre del archivo a ser creado 
+Retorna: 
+AX: Handle del archivo, si CF está desactivado, o el código de error en caso contrario 
+Códigos de error: 
+       3 : Camino no encontrado 
+       4 : No se encontró handle disponible 
+       5 : Acceso denegado (El archivo es de sólo lectura, o el directorio raíz está lleno) 
+Al trabajar en una red requiere derechos de acceso. 
+Si el archivo no existe, se abre un nuevo archivo 
+3Dh 
+Abre un archivo 
+AH : 3Dh 
+AL : Modo de apertura 
+DS:DX : Puntero a la cadena ASCIIZ, la cual  
+               contiene el nombre del archivo 
+Retorna: 
+AX: Handle del archivo, si CF está desactivado, o el código de error en caso contrario 
+Códigos de error: 
+       1 : Número de función inválido 
+       2 : Archivo no encontrado 
+       3 : Camino no encontrado 
+       4 : No se encontró handle disponible 
+       5 : Acceso denegado 
+       6 : Modo de apertura inválido 
+
+===== [PDF pag 17] =====
+       Universidad Tecnológica Nacional - Facultad RegionalMendoza 
+Cartilla de Interrupciones 
+ 
+U.T.N.                                                                                     
+ 
+ 
+3Eh 
+Cerrar un handle (manejador de 
+archivo) 
+AH : 3Eh 
+BX : Handle del archivo 
+Retorna: 
+AX: Código de error, si CF está activado 
+Código de error: 
+       6 : Handle inválido 
+3Fh 
+Lectura de un archivo o dispositivo, 
+usando un handle 
+AH : 3Fh 
+BX : Handle del archivo 
+CX : Número de bytes a ser leídos 
+DS:DX : Dirección del buffer a ser cargado 
+Retorna: 
+AX: Número de bytes leídos, si CF está desactivado, o el código de error en caso contrario 
+Códigos de error: 
+       5 : Acceso denegado 
+       6 : Handle inválido 
+40h 
+Escribe un archivo o dispositivo, usando 
+un handle 
+AH : 40h 
+BX : Handle del archivo 
+CX : Número de bytes a escribir 
+DS:DX : Dirección del buffer 
+Retorna: 
+AX: Número de bytes escritos, si CF está desactivado, o el código de error en caso contrario 
+Códigos de error: 
+       5 : Acceso denegado 
+       6 : Handle inválido 
+41h 
+Borra un archivo 
+AH : 41h 
+DS:DX : Puntero a la cadena ASCIIZ, la cual 
+contiene la especificación del archivo 
+Retorna: 
+AX: Código de Error, si CF está activado 
+Códigos de error: 
+       2 : Archivo no encontrado 
+       3 : Camino no encontrado 
+       5 : Acceso denegado 
+42h 
+Mueve el puntero de lectura / escritura 
+del archivo 
+AH : 42h 
+BX : Handle del archivo 
+CX:DX : Offset, en bytes (enteros signados de  
+               32-bits) 
+AL : Código de Modo 
+       0 : Mueve el puntero CX:DX bytes desde el     
+            principio del archivo 
+       1 : Mueve el puntero CX:DX bytes desde la     
+            posición actual 
+       2 : Mueve el puntero CX:DX bytes desde el     
+            final del archivo 
+Retorna: 
+DX:AX  / AX : Nueva ubicación del puntero (enteros signados de 32-bits) / Código de error, si CF está activado 
+Códigos de Error: 
+    1 : Código de modo inválido 
+    2 : Handle inválido 
+
+===== [PDF pag 18] =====
+       Universidad Tecnológica Nacional - Facultad RegionalMendoza 
+Cartilla de Interrupciones 
+ 
+U.T.N.                                                                                     
+ 
+ 
+43h 
+Obtiene o establece los atributos de un 
+archivo 
+AH : 43h 
+DS:DX : Puntero a la especificación del archivo 
+               (cadena ASCIIZ) 
+Para obtener                      Para establecer 
+AL : 00h                              AL : 01h 
+                                            CX : Atributo deseado
+Atributos: 
+00h : Normal                  04h : Archivo de Sistema 
+01h : Sólo lectura           20h : Archivo 
+02h : Oculto 
+Nota: Para combinar atributos, sumar los valores 
+Retorna: 
+Para obtener                                                                 Para establecer 
+CX : Atributo del archivo                                        AX Código de error, si CF está activado 
+AX Código de error, si CF está activado 
+ 
+Códigos de Error: 
+    1 : Código de función inválido 
+    2 : Archivo no encontrado 
+    3 : Camino no encontrado 
+    5 : Acceso denegado 
+44h 
+Control de I/O para dispositivos 
+(IOCTL) 
+  AH : 44h 
+  AL : Subfunción 
+  BX : Handle del archivo 
+ó BL : Número de Unidad (0=defecto, 1=A, etc.) 
+  CX : Número de bytes a ser leídos o escritos 
+  DS:DX : Dato o buffer 
+NOTA :  Para obtener información  acerca de las subfunciones referirse al Manual de Referencia Técnica de DOS
+45h 
+Duplicar un handle de archivo (DUP) 
+AH : 45h 
+BX : Handle de archivo 
+Retorna: 
+AX : Handle de archivo duplicado o Código de error si CF está activado 
+Códigos de Error: 
+  4 : No existe un handle disponible 
+  6 : Handle inválido 
+46h 
+Fuerza la duplicación del handle del 
+archivo 
+AH : 46h 
+BX : Primer handle del archivo 
+CX : Handle a ser modificado 
+Fuerza a que el handle en CX se refiera al mismo archivo en la misma posición que el handle en BX (los dos deben existir) 
+Retorna: 
+AX : Código de Error, si CF está activado 
+Códigos de Error: 
+  4 : No existe un handle disponible 
+  6 : Handle inválido 
+47h 
+Obtiene el directorio actual 
+AH : 47h 
+DL : Número de disco (0=defecto, 1=A, etc.) 
+DS:SI : Puntero a un buffer de 64-bytes 
+Retorna: 
+AX : Código de error si CF está activado 
+Código de Error: 
+  15 : Especificación de unidad inválida 
+ 
+ 
+ 
+ 
+ 
+ 
+
+===== [PDF pag 19] =====
+       Universidad Tecnológica Nacional - Facultad RegionalMendoza 
+Cartilla de Interrupciones 
+ 
+U.T.N.                                                                                     
+ 
+48h 
+Asigna memoria 
+AH : 48h 
+BX : Número de párrafos de memoria a ser  
+         asignados 
+Asigna un número específico de párrafos de memoria 
+Retorna: 
+AX : Dirección de segmento de la memoria asignada ó código de error, si CF está activado 
+BX : Tamaño del bloque más grande disponible (CF activado) 
+Códigos de Error: 
+  7 : Bloques de control de memoria destruidos 
+  8 : Memoria insuficiente 
+49h 
+Libera la memoria asignada 
+AH : 49h 
+ES : Dirección de segmento de la memoria a ser 
+        liberada 
+Libera la memoria asignada con la función 48h 
+Retorna: 
+AX : Código de error, si CF está activado 
+Códigos de Error: 
+  7 : Bloques de control de memoria destruidos 
+  9 : Dirección de bloque de memoria inválida 
+4Ah 
+Modifica los bloques de memoria 
+asignada (SETBLOCK) 
+AH : 4Ah 
+BX : Nuevo tamaño de bloque, en párrafos 
+ES : Dirección del segmento del bloque de  
+        memoria a ser modificado 
+Retorna: 
+BX : Máxima memoria disponible, si CF está activado y fue hecho un requerimiento para expandir el bloque de memoria. 
+AX : Código de Error, si CF está activado 
+Códigos de Error: 
+    7 : Bloques de control  de memoria destruidos 
+    8 : Memoria insuficiente 
+    9 : Dirección inválida de bloque 
+4Bh 
+Carga / Ejecuta un programa (EXEC) 
+AH : 4Bh 
+AL : 
+       00h  Carga y ejecuta el programa 
+       03h  Carga el programa pero no lo ejecuta 
+DS:DX : Puntero a una cadena ASCIIZ, la cual  
+               contiene el camino y nombre del  
+               programa a ejecutar 
+ES:BX : Puntero a un bloque de parámetros 
+Retorna: 
+AX : Código de Error si CF está activado 
+Códigos de Error: 
+    1 : Número de función inválido 
+    2 : Archivo no encontrado 
+    3 : Camino no encontrado 
+    5 : Acceso denegado 
+    8 : Memoria insuficiente 
+   10 : Entorno inválido 
+   11 : Formato inválido 
+4Ch 
+Termina un proceso 
+AH : 4Ch 
+AL Código de retorno 
+Sin retorno 
+Finaliza un programa y retorna un código al proceso que lo invocó (usualmente el COMMAND.COM), el Código de 
+Retorno puede ser verificado por medio de la función 4Dh o a través del comando DOS ERRORLEVEL 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+===== [PDF pag 20] =====
+       Universidad Tecnológica Nacional - Facultad RegionalMendoza 
+Cartilla de Interrupciones 
+ 
+U.T.N.                                                                                     
+ 
+4Dh 
+Obtiene el código de retorno de un 
+subproceso (WAIT) 
+AH : 4Dh 
+Retorna: 
+AX : Código de retorno 
+Obtiene el Código de retorno de un proceso finalizado, el cual está dividido en dos partes: 
+    AL : Informa el código de retorno emitido por el programa finalizado 
+    AH : Informa el modo en que fue finalizado, los posibles valores son: 
+             00h  Finalización normal 
+             01h  Finalizado mediante Ctrl-Break o Ctrl-C 
+             02h  Finalizado por DOS debido a un error crítico de un dispositivo 
+             03h  Finalizado mediante la función 31h, Finalizar y permanecer Residente 
+4Eh 
+Encuentra el primer archivo 
+especificado (FIND FIRST) 
+AH : 4Eh 
+CX : Atributos del archivo 
+DS:DX : Puntero a la especificación del archivo 
+               (cadena ASCIIZ) 
+Encuentra el primer nombre de archivo que coincida con la especificación apuntada por DS:DX y retorna información acerca 
+del mismo en el DTA actual. 
+Retorna: 
+Códigos de Error: 
+AX : Código de error, si CF está activado 
+    2 : Archivo no encontrado 
+    3 : Camino no encontrado 
+   18 : No han sido encontrados más archivos 
+4Fh 
+Encuentra la siguiente coincidencia del 
+archivo especificado (FIND NEXT) 
+AH : 4Fh 
+Encuentra el siguiente archivo coincidente (luego de haber invocado a las funciones 4Eh ó 4Fh) y retorna información acerca 
+del mismo en el DTA actual. 
+Retorna: 
+AX : Código de error, si CF está activado 
+Código de Error: 
+   18 : No han sido encontrados más archivos 
+50h 
+Reservada 
+ 
+ 
+51h 
+Reservada 
+ 
+ 
+52h 
+Reservada 
+ 
+ 
+53h 
+Reservada 
+ 
+ 
+54h 
+Obtiene el estado de verificación 
+AH : 54h 
+Obtiene el estado actual del VERIFY flag del sistema 
+Retorna: 
+AL :  
+       00h : Si VERIFY está desactivado 
+       01h : Si VERIFY está activado 
+55h 
+Reservada 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+===== [PDF pag 21] =====
+       Universidad Tecnológica Nacional - Facultad RegionalMendoza 
+Cartilla de Interrupciones 
+ 
+U.T.N.                                                                                     
+ 
+56h 
+Renombra un archivo 
+AH : 56h 
+DS:DX : Puntero a una cadena ASCIIZ, la cual  
+               contiene el camino original y el nombre  
+               del archivo 
+ES:DI : Puntero a una cadena ASCIIZ, la cual  
+               contiene el nuevo camino y nombre  
+               del archivo 
+Modifica y / o mueve a un directorio diferente en el mismo disco al archivo especificado en DS:DX por el especificado en 
+ES:DI 
+Retorna: 
+AX : Código de error, si CF está activado 
+  2 : Archivo no encontrado 
+  3 : Camino no encontrado 
+  5 : Acceso denegado 
+ 17 : No es el mismo dispositivo 
+57h 
+Obtener / Establecer fecha y hora de un 
+archivo 
+AH : 57h 
+BX : Handle del archivo (en ambos casos) 
+Para Obtener                  Para Establecer 
+  AL : 00h                         AL : 01h 
+                                         CX : Hora 
+                                         DX : Fecha 
+Retorna: 
+AX : Código de Error, si CF está activado   (en ambos casos) 
+Para Obtener 
+   CX : Hora 
+   BX : Fecha 
+Códigos de Error: 
+    1 : Número de función inválida en AL 
+    2 : Handle inválido 
+59h 
+Obtiene información de error extendido 
+AH : 59h 
+BX : 0000h para DOS 3.0 y superiores 
+Proporciona información adicional de un error 
+Retorna: 
+AX : Código de Error Extendido 
+BH : Clase de Error 
+BL : Acción sugerida 
+CH : Fuente del error 
+NOTA :  Para mayor detalle, referirse al Manual de Referencia Técnica de DOS 
+5Ah 
+Crea un archivo único 
+AH : 5Ah 
+CX : Atributos del archivo 
+DS:DX : Puntero al camino ( la ruta debe 
+               finalizar con \ ) (Cadena ASCIIZ) 
+Retorna: 
+DS:DX : Puntero al nombre del archivo (Cadena ASCIIZ) 
+AX : Código de Error, si CF está activado 
+Códigos de Error: 
+    3 : Camino no encontrado 
+    5 : Acceso denegado 
+5Bh 
+Crea un nuevo archivo 
+AH : 5Bh 
+CX : Atributos del archivo 
+DS:DX : Puntero al camino finalizado en (Cadena 
+               ASCIIZ) 
+Crea el archivo solamente si este no existe 
+Retorna: 
+AX : Handle o Código de Error, si CF está activado 
+Códigos de Error: 
+   3 : Camino no encontrado 
+   4 : Handle  no disponible 
+   5 : Acceso denegado 
+ 80 : El archivo ya existe 
+ 
+ 
+ 
+
+===== [PDF pag 22] =====
+       Universidad Tecnológica Nacional - Facultad RegionalMendoza 
+Cartilla de Interrupciones 
+ 
+U.T.N.                                                                                     
+ 
+5Ch 
+Bloquear / Desbloquear el acceso a un 
+archivo 
+AH : 5Ch 
+AL :  
+       00h  Bloquea el archivo 
+       01h  Desbloquea el archivo 
+BX : Handle del archivo 
+CX : Byte más significativo del desplazamiento 
+CX : Byte menos significativo del  
+         desplazamiento 
+SI : Parte más significativa 
+DI : Parte menos significativa 
+AX : Código de Error, si CF está activado 
+Códigos de Error: 
+    1 : Código de función inválido 
+    6 : Handle inválido 
+  33 : Violación de bloqueo de archivo (la región especificada ya se encuentra bloqueada) 
+5Dh 
+Reservada 
+ 
+ 
+5E00h 
+Obtiene el nombre de la máquina 
+AH : 5Eh 
+AL : 00h 
+DS:DX : Puntero al buffer de memoria (16  bytes)
+               donde el nombre será retornado 
+Retorna: 
+CH : 0 : Nombre no definido, otro valor : Nombre definido 
+CL : número del nombre NETBIOS (si CH es distinto de 0) 
+DS:DX : Puntero al nombre retornado (cadena ASCIIZ) 
+AX : Código de Error, si CF está activado 
+Código de Error: 
+    1 : Red no disponible 
+5E02h 
+Inicialización de la impresora 
+AH : 5Eh 
+AL : 02h 
+BX : Indice de lista redireccionada 
+CX : Longitud de la cadena de inicialización 
+DS:SI : Puntero al buffer de memoria que  
+             contiene la cadena que será colocada 
+             delante de todos los archivos a  
+             imprimirse 
+Retorna: 
+AX : Código de Error, si CF está activado 
+Código de Error: 
+    1 : Red no disponible 
+5E03h 
+Obtiene el estado de la impresora 
+AH : 5Eh 
+AL : 03h 
+BX : Indice de la lista redireccionada 
+ES:DI : Puntero al buffer de memoria de 64-bytes 
+Retorna: 
+CX : Longitud de la cadena de inicialización 
+ES:DI : Puntero al buffer de memoria que contiene el estado de la impresora 
+AX : Código de Error, si CF está activado 
+Código de Error: 
+1: Red  no disponible 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+===== [PDF pag 23] =====
+       Universidad Tecnológica Nacional - Facultad RegionalMendoza 
+Cartilla de Interrupciones 
+ 
+U.T.N.                                                                                     
+ 
+5F02h 
+Obtiene la entrada de la lista 
+redireccionada 
+AH : 5Fh 
+AL : 02h 
+BX : Indice en la lista redireccionada 
+DS:SI : Puntero a un buffer de 128-bytes para  
+             nombres de dispositivos locales 
+ES:SI : Puntero a un buffer de 128-bytes para  
+             nombres de dispositivos de red 
+Retorna: 
+BH : Bandera de estado del dispositivo 
+        Bit 0 = 0    si es un dispositivo válido 
+                    1    si no es un dispositivo válido 
+BL : Tipo de dispositivo (3 = impresora, 4 = disco) 
+CX : Parámetro salvado a través de la función 5F03h 
+AX : Código de Error, si CF está activado 
+Código de Error: 
+    1 : Red no disponible 
+  18 : No se encuentran más archivos 
+Los registros DX y BP resultan modificados 
+5F03h 
+Redirecciona un dispositivo 
+AH : 5Fh 
+AL : 03h 
+BL : Tipo de dispositivo (3 = impresora,  
+         4 = disco) 
+CX : Parámetro salvado 
+DS:SI : Puntero a una cadena ASCIIZ para 
+             nombres de dispositivos locales 
+ES:SI : Puntero a una cadena ASCIIZ para  
+             nombres de dispositivos de red 
+Redirecciona la I / O desde una impresora o disco local a un dispositivo de red 
+Retorna: 
+AX : Código de Error, si CF está activado 
+Código de Error: 
+    1 : Red no disponible 
+    3 : Camino no encontrado 
+    5 : Acceso denegado 
+    8 : Memoria insuficiente 
+5F04h 
+Cancela la redirección 
+AH : 5Fh 
+AL : 04h 
+DS:SI : Puntero a una cadena ASCIIZ para 
+             nombres de dispositivos locales o un  
+             dispositivo de red  
+Retorna: 
+AX : Código de Error, si CF está activado 
+60h 
+Reservada 
+ 
+ 
+61h 
+Reservada 
+ 
+ 
+62h 
+Obtiene una dirección PSP 
+AH : 62h 
+Retorna la dirección de segmento del PSP (Program Segment Prefix) para el proceso actual 
+Retorna: 
+BX : Segmento del PSP 
+ 
+ 
+ 
+ 
+
+===== [PDF pag 24] =====
+       Universidad Tecnológica Nacional - Facultad RegionalMendoza 
+Cartilla de Interrupciones 
+ 
+U.T.N.                                                                                     
+ 
+ 

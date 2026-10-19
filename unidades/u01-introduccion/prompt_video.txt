@@ -1,0 +1,16 @@
+Video Explainer en español rioplatense, para un estudiante que prepara el final de Sistemas Operativos. Tono de profesor particular: claro y directo.
+
+Seguí el orden del programa:
+
+1. Qué es un sistema operativo: máquina extendida y administrador de recursos. Multiplexaje en tiempo y en espacio.
+2. Hardware: ciclo de la CPU, registros contador de programa, apuntador de pila y PSW, y la diferencia entre modo kernel y modo usuario.
+3. Jerarquía de memoria y caché.
+4. Prioritario: las tres formas de hacer entrada/salida, programada con espera ocupada, por interrupciones y con DMA.
+5. Arranque: BIOS, sector de booteo de 512 bytes, tabla de particiones y cargador secundario.
+6. Llamadas al sistema: la instrucción TRAP, los once pasos de read, y las llamadas POSIX principales.
+7. Historia por generaciones, breve: por qué aparecen el procesamiento por lotes, la multiprogramación, el spooling y el tiempo compartido.
+8. Tipos de sistemas operativos y las cinco estructuras: monolítica, por capas, microkernel, cliente-servidor y máquinas virtuales.
+
+Explicá visualmente la arquitectura con el bus, la jerarquía de memoria, el salto de la interrupción y su retorno, y los once pasos de la llamada al sistema cruzando la frontera usuario-kernel.
+
+Resolvé en pantalla, paso a paso y con los números a la vista, dos ejemplos: el costo en CPU de las tres formas de E/S para 1000 bytes a 100 microsegundos por byte, con interrupciones de 5 microsegundos; y el aprovechamiento de CPU según 1 menos p elevado a la n, con p igual a 0,8, para 1, 4 y 10 procesos.
