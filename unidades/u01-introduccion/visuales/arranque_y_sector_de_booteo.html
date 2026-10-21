@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>El arranque: del BIOS al sistema operativo</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#fff; --borde:#d9dde3; --texto:#1b1f24; --suave:#5b6572;
+    --acento:#6b4fd8; --ok:#2e9e5b; --mal:#d64545; --mbr:#e08a2e; --activo:#2e9e5b;
+    --apagado:#aeb6c0; --sombra:0 1px 3px rgba(0,0,0,.08);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#14171c; --panel:#1c2026; --borde:#2d333c; --texto:#e6e9ed; --suave:#9aa4b2;
+      --acento:#8d75f0; --ok:#3fbb72; --mal:#e05c5c; --mbr:#f0a040; --activo:#3fbb72;
+      --apagado:#4a525e; --sombra:0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0; padding:24px 16px 60px; background:var(--bg); color:var(--texto);
+       font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:1000px; margin:0 auto}
+  h1{font-size:1.45rem; margin:0 0 4px; letter-spacing:-.01em}
+  .sub{color:var(--suave); margin:0 0 20px}
+  .caja{background:var(--panel); border:1px solid var(--borde); border-radius:10px;
+        padding:16px 18px; margin-bottom:16px; box-shadow:var(--sombra)}
+  h2{font-size:.8rem; margin:0 0 12px; text-transform:uppercase; letter-spacing:.06em; color:var(--suave)}
+
+  /* cadena de eslabones */
+  .cadena{display:flex; align-items:stretch; gap:0; flex-wrap:wrap}
+  .eslabon{
+    flex:1 1 150px; min-width:140px; border:2px solid var(--borde); border-radius:9px;
+    padding:11px 12px; background:var(--bg); opacity:.4; transition:all .25s;
+  }
+  .eslabon.on{opacity:1; border-color:var(--acento); background:var(--panel)}
+  .eslabon.hecho{opacity:1; border-color:var(--ok)}
+  .eslabon.falla{opacity:1; border-color:var(--mal); background:color-mix(in srgb, var(--mal) 12%, var(--panel))}
+  .eslabon b{display:block; font-size:.92rem; margin-bottom:3px}
+  .eslabon small{color:var(--suave); font-size:.76rem; line-height:1.35; display:block}
+  .flecha{align-self:center; color:var(--suave); padding:0 6px; font-size:1.1rem; opacity:.5}
+  .flecha.on{opacity:1; color:var(--acento)}
+
+  /* disco */
+  .disco{display:flex; border:1px solid var(--borde); border-radius:7px; overflow:hidden; min-height:92px}
+  .mbrbox{
+    width:118px; flex-shrink:0; background:color-mix(in srgb, var(--mbr) 18%, var(--panel));
+    border-right:2px dashed var(--borde); padding:8px; font-size:.72rem; transition:all .25s;
+  }
+  .mbrbox.lee{background:color-mix(in srgb, var(--mbr) 42%, var(--panel)); border-right-color:var(--mbr)}
+  .mbrbox b{display:block; font-size:.78rem; margin-bottom:4px}
+  .parts{display:flex; flex:1}
+  .part{
+    flex:1; border-right:1px solid var(--borde); padding:8px 9px; font-size:.78rem;
+    position:relative; transition:all .25s; cursor:pointer; background:var(--panel);
+  }
+  .part:last-child{border-right:none}
+  .part:hover{background:var(--bg)}
+  .part b{display:block; font-size:.84rem; margin-bottom:2px}
+  .part small{color:var(--suave); font-size:.72rem}
+  .part.activa{background:color-mix(in srgb, var(--activo) 16%, var(--panel))}
+  .part.saltando{background:color-mix(in srgb, var(--acento) 22%, var(--panel)); box-shadow:inset 0 0 0 2px var(--acento)}
+  .estrella{position:absolute; top:6px; right:8px; font-size:.9rem}
+  .part.activa .estrella{color:var(--activo)}
+
+  /* tabla de particiones */
+  table{width:100%; border-collapse:collapse; font-size:.84rem; font-variant-numeric:tabular-nums}
+  th,td{padding:6px 9px; border-bottom:1px solid var(--borde); text-align:left}
+  th{font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave)}
+  tbody tr.es-activa{background:color-mix(in srgb, var(--activo) 12%, transparent); font-weight:600}
+  tbody tr:last-child td{border-bottom:none}
+
+  .botones{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+  button{padding:8px 15px; border:1px solid var(--borde); border-radius:6px; background:var(--panel);
+         color:var(--texto); font:inherit; cursor:pointer}
+  button:hover{border-color:var(--acento)}
+  button.primario{background:var(--acento); border-color:var(--acento); color:#fff}
+  button:disabled{opacity:.4; cursor:default}
+  .paso{
+    border-left:3px solid var(--acento); padding:11px 15px; background:var(--bg);
+    border-radius:0 7px 7px 0; min-height:74px;
+  }
+  .paso b{display:block; margin-bottom:4px}
+  .paso.falla{border-left-color:var(--mal)}
+  .contador{margin-left:auto; color:var(--suave); font-size:.85rem; font-variant-numeric:tabular-nums}
+  .bytes{display:flex; height:30px; border:1px solid var(--borde); border-radius:5px; overflow:hidden; margin-top:8px}
+  .bytes div{display:flex; align-items:center; justify-content:center; font-size:.7rem; color:#fff; font-weight:600}
+  .nota{font-size:.86rem; color:var(--suave)}
+  ul{margin:8px 0; padding-left:20px} li{margin:4px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>El arranque, paso a paso</h1>
+  <p class="sub">Del BIOS al sistema operativo &mdash; Unidad 1, Sistemas Operativos</p>
+
+  <div class="caja">
+    <h2>Cómo se usa</h2>
+    <p style="margin:0 0 8px">
+      Apretá <strong>Siguiente paso</strong> y seguí la cadena. Cada eslabón es más grande y más capaz que el anterior,
+      y existe únicamente para poder cargar al siguiente.
+    </p>
+    <p class="nota" style="margin:0">
+      <strong>Hacé clic en cualquier partición</strong> para marcarla como activa y ver cómo cambia el arranque.
+      Hacé clic en la que ya está activa para <strong>desactivarla</strong> y ver qué pasa cuando ninguna lo está.
+    </p>
+  </div>
+
+  <div class="caja">
+    <h2>La cadena de arranque</h2>
+    <div class="cadena" id="cadena"></div>
+  </div>
+
+  <div class="caja">
+    <h2>El disco</h2>
+    <div class="disco">
+      <div class="mbrbox" id="mbrbox">
+        <b>Sector 0: MBR</b>
+        <span style="color:var(--suave)">512 bytes</span>
+        <div class="bytes">
+          <div style="flex:446; background:var(--acento)">446 código</div>
+          <div style="flex:64; background:var(--mbr)">64</div>
+          <div style="flex:2; background:var(--mal)"></div>
+        </div>
+      </div>
+      <div class="parts" id="parts"></div>
+    </div>
+    <p class="nota" style="margin-top:10px">
+      Las "paredes" entre particiones no existen físicamente: el disco es una tira continua de sectores.
+      Las paredes son solamente los renglones anotados en la tabla de particiones del MBR.
+    </p>
+  </div>
+
+  <div class="caja">
+    <h2>Tabla de particiones (los 64 bytes del MBR)</h2>
+    <table>
+      <thead>
+        <tr><th>#</th><th>Activa</th><th>Tipo</th><th>Sector inicio</th><th>Cantidad de sectores</th></tr>
+      </thead>
+      <tbody id="tablaPart"></tbody>
+    </table>
+    <p class="nota" style="margin-bottom:0">4 renglones &times; 16 bytes cada uno = 64 bytes. Por eso solo hay 4 particiones primarias.</p>
+  </div>
+
+  <div class="caja">
+    <h2>Qué está pasando</h2>
+    <div class="paso" id="paso"></div>
+    <div class="botones" style="margin-top:14px">
+      <button id="bNext" class="primario">Siguiente paso</button>
+      <button id="bPrev">Atrás</button>
+      <button id="bReset">Reiniciar</button>
+      <span class="contador" id="contador"></span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var particiones = [
+    { nom:"Windows", fs:"NTFS",  ini:2048,     sec:409600000, activa:false },
+    { nom:"Linux",   fs:"ext4",  ini:409602048, sec:300000000, activa:true  },
+    { nom:"Datos",   fs:"FAT32", ini:709602048, sec:150000000, activa:false },
+    { nom:"(vacía)", fs:"—",     ini:0,         sec:0,         activa:false }
+  ];
+
+  var ESLABONES = [
+    { b:"BIOS",               s:"chip en la placa. No depende del disco." },
+    { b:"MBR",                s:"sector 0. 446 bytes de código." },
+    { b:"Cargador secundario",s:"1er sector de la partición activa." },
+    { b:"Sistema operativo",  s:"un archivo dentro de la partición." }
+  ];
+
+  // cada paso: {esl: indice de eslabon activo, mbr: resalta MBR, salto: partición resaltada, txt: html}
+  function guion(){
+    var act = particiones.findIndex(function(p){ return p.activa; });
+    var hayActiva = act >= 0;
+    var pasos = [
+      { esl:-1, txt:"<b>Máquina apagada</b>Todavía no pasó nada. El sistema operativo está en el disco, pero nadie sabe leer el disco todavía." },
+      { esl:0,  txt:"<b>1. Encendés. Arranca el BIOS</b>La CPU empieza a ejecutar desde una dirección fija, cableada de fábrica. Ahí está el BIOS, en un chip de la placa madre. Por eso el BIOS no puede estar en el disco: sería el problema del huevo y la gallina." },
+      { esl:0,  txt:"<b>2. El BIOS se autoexamina</b>Cuenta la RAM, verifica el teclado, explora los buses ISA y PCI y registra los dispositivos que encuentra. Después consulta la memoria CMOS para saber cuál es el disco de arranque." },
+      { esl:1, mbr:true, txt:"<b>3. Lee el sector 0 y lo ejecuta a ciegas</b>Es lo único que el BIOS sabe hacer con un disco: leer 512 bytes del primer sector, cargarlos en memoria y ejecutarlos. No sabe qué es un archivo, ni qué es NTFS o ext4." },
+      { esl:1, mbr:true, txt:"<b>4. El código del MBR mira su propia tabla</b>Los 446 bytes de código hacen una sola cosa: leer los 64 bytes de la tabla de particiones que tienen al lado y buscar cuál renglón está marcado como activo. En 446 bytes no entra nada más." }
+    ];
+
+    if (hayActiva){
+      var p = particiones[act];
+      pasos.push({ esl:1, mbr:true, salto:act,
+        txt:"<b>5. Encuentra la partición activa: la " + (act+1) + ", " + p.nom + "</b>El renglón " + (act+1) +
+            " tiene la marca de activa. El MBR salta al sector " + p.ini.toLocaleString("es-AR") +
+            ", que es el primer sector de esa partición." });
+      pasos.push({ esl:2, salto:act,
+        txt:"<b>6. Se ejecuta el cargador secundario</b>En el primer sector de la partición activa hay otro cargador, por ejemplo GRUB. Este ya no está encerrado en 446 bytes: puede ocupar lo que necesite. Y como es grande, sabe entender " + p.fs + ", sabe buscar archivos y puede mostrar un menú." });
+      pasos.push({ esl:3, salto:act,
+        txt:"<b>7. El cargador busca el kernel y se lo pasa</b>Recorre el sistema de archivos " + p.fs + " de la partición, encuentra el archivo del kernel, lo carga en memoria y le entrega el control." });
+      pasos.push({ esl:3, salto:act, fin:true,
+        txt:"<b>8. El sistema operativo toma el mando</b>Consulta al BIOS la configuración, comprueba que tenga el driver de cada dispositivo y los carga en el kernel, inicializa sus tablas, crea los procesos de segundo plano y arranca el login o la interfaz gráfica. Recién acá existe el sistema operativo." });
+    } else {
+      pasos.push({ esl:1, mbr:true, falla:true,
+        txt:"<b>5. No hay ninguna partición activa. Se rompe la cadena.</b>El código del MBR recorre los 4 renglones y ninguno tiene la marca de activa. No sabe a dónde saltar, así que no puede cargar el cargador secundario. La máquina muestra un mensaje del tipo <em>\"No bootable device\"</em> o <em>\"Missing operating system\"</em> y se queda ahí.<br><br>Lo llamativo: los 4 sistemas operativos están perfectos e intactos en el disco. Lo único que falta es <strong>un bit</strong> en la tabla de particiones." });
+    }
+    return pasos;
+  }
+
+  var pasos = guion();
+  var i = 0;
+
+  var el = {
+    cadena:   document.getElementById("cadena"),
+    parts:    document.getElementById("parts"),
+    tablaPart:document.getElementById("tablaPart"),
+    mbrbox:   document.getElementById("mbrbox"),
+    paso:     document.getElementById("paso"),
+    contador: document.getElementById("contador"),
+    bNext:    document.getElementById("bNext"),
+    bPrev:    document.getElementById("bPrev"),
+    bReset:   document.getElementById("bReset")
+  };
+
+  function construirCadena(){
+    el.cadena.innerHTML = "";
+    ESLABONES.forEach(function(e, k){
+      if (k > 0){
+        var f = document.createElement("div");
+        f.className = "flecha"; f.id = "fl-" + k; f.textContent = "→";
+        el.cadena.appendChild(f);
+      }
+      var d = document.createElement("div");
+      d.className = "eslabon"; d.id = "esl-" + k;
+      d.innerHTML = "<b>" + e.b + "</b><small>" + e.s + "</small>";
+      el.cadena.appendChild(d);
+    });
+  }
+
+  function construirDisco(){
+    el.parts.innerHTML = "";
+    particiones.forEach(function(p, k){
+      var d = document.createElement("div");
+      d.className = "part"; d.id = "part-" + k;
+      d.innerHTML = "<b>Partición " + (k+1) + "</b><small>" + p.nom + "<br>" + p.fs + "</small>" +
+                    '<span class="estrella" id="est-' + k + '"></span>';
+      d.title = "Clic para marcarla como activa (o para desactivarla si ya lo está)";
+      d.addEventListener("click", function(){
+        var estaba = p.activa;
+        particiones.forEach(function(q){ q.activa = false; });
+        p.activa = !estaba;
+        pasos = guion();
+        if (i >= pasos.length) i = pasos.length - 1;
+        render();
+      });
+      el.parts.appendChild(d);
+    });
+  }
+
+  function render(){
+    var p = pasos[i];
+
+    // cadena
+    ESLABONES.forEach(function(_, k){
+      var d = document.getElementById("esl-" + k);
+      d.className = "eslabon";
+      if (p.esl >= 0){
+        if (k < p.esl) d.classList.add("hecho");
+        else if (k === p.esl) d.classList.add(p.falla ? "falla" : "on");
+      }
+      var f = document.getElementById("fl-" + k);
+      if (f) f.className = "flecha" + (p.esl >= k ? " on" : "");
+    });
+
+    // disco
+    el.mbrbox.className = "mbrbox" + (p.mbr ? " lee" : "");
+    particiones.forEach(function(q, k){
+      var d = document.getElementById("part-" + k);
+      d.className = "part" + (q.activa ? " activa" : "") + (p.salto === k ? " saltando" : "");
+      document.getElementById("est-" + k).textContent = q.activa ? "★" : "";
+    });
+
+    // tabla
+    el.tablaPart.innerHTML = "";
+    particiones.forEach(function(q, k){
+      var tr = document.createElement("tr");
+      if (q.activa) tr.className = "es-activa";
+      tr.innerHTML =
+        "<td>" + (k+1) + "</td>" +
+        "<td>" + (q.activa ? "★ Sí" : "no") + "</td>" +
+        "<td>" + q.fs + "</td>" +
+        "<td>" + (q.sec ? q.ini.toLocaleString("es-AR") : "—") + "</td>" +
+        "<td>" + (q.sec ? q.sec.toLocaleString("es-AR") : "—") + "</td>";
+      el.tablaPart.appendChild(tr);
+    });
+
+    el.paso.className = "paso" + (p.falla ? " falla" : "");
+    el.paso.innerHTML = p.txt;
+    el.contador.textContent = "paso " + i + " de " + (pasos.length - 1);
+    el.bPrev.disabled = (i === 0);
+    el.bNext.disabled = (i >= pasos.length - 1);
+  }
+
+  el.bNext.addEventListener("click", function(){ if (i < pasos.length-1){ i++; render(); } });
+  el.bPrev.addEventListener("click", function(){ if (i > 0){ i--; render(); } });
+  el.bReset.addEventListener("click", function(){ i = 0; render(); });
+
+  construirCadena();
+  construirDisco();
+  render();
+})();
+</script>
+</body>
+</html>

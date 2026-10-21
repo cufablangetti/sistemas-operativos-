@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E/S programada, por interrupciones y con DMA</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#ffffff; --borde:#d9dde3; --texto:#1b1f24; --suave:#5b6572;
+    --cpu-es:#d64545;      /* CPU gastada en la E/S */
+    --cpu-libre:#2e9e5b;   /* CPU disponible para otros procesos */
+    --disp:#3a7bd5;        /* dispositivo trabajando */
+    --acento:#6b4fd8;
+    --sombra:0 1px 3px rgba(0,0,0,.08);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#14171c; --panel:#1c2026; --borde:#2d333c; --texto:#e6e9ed; --suave:#9aa4b2;
+      --cpu-es:#e05c5c; --cpu-libre:#3fbb72; --disp:#5a95e8; --acento:#8d75f0;
+      --sombra:0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:24px 16px 60px; background:var(--bg); color:var(--texto);
+    font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  .wrap{max-width:1040px; margin:0 auto}
+  h1{font-size:1.45rem; margin:0 0 4px; letter-spacing:-.01em}
+  .sub{color:var(--suave); margin:0 0 20px}
+  .caja{background:var(--panel); border:1px solid var(--borde); border-radius:10px; padding:16px 18px; margin-bottom:16px; box-shadow:var(--sombra)}
+  h2{font-size:1rem; margin:0 0 12px; text-transform:uppercase; letter-spacing:.06em; color:var(--suave)}
+  .params{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px}
+  label{display:block; font-size:.82rem; color:var(--suave); margin-bottom:4px}
+  input[type=number]{
+    width:100%; padding:7px 9px; border:1px solid var(--borde); border-radius:6px;
+    background:var(--bg); color:var(--texto); font:inherit; font-variant-numeric:tabular-nums;
+  }
+  .botones{display:flex; flex-wrap:wrap; gap:8px; margin-top:14px}
+  button{
+    padding:8px 15px; border:1px solid var(--borde); border-radius:6px; background:var(--panel);
+    color:var(--texto); font:inherit; cursor:pointer;
+  }
+  button:hover{border-color:var(--acento)}
+  button.primario{background:var(--acento); border-color:var(--acento); color:#fff}
+  button:disabled{opacity:.45; cursor:default}
+  .reloj{
+    font-variant-numeric:tabular-nums; font-weight:600; margin-left:auto;
+    align-self:center; color:var(--suave); font-size:.88rem;
+  }
+  .metodo{margin-bottom:22px}
+  .metodo:last-child{margin-bottom:0}
+  .mtitulo{display:flex; align-items:baseline; gap:10px; margin-bottom:6px; flex-wrap:wrap}
+  .mtitulo strong{font-size:1rem}
+  .mtitulo em{font-style:normal; color:var(--suave); font-size:.85rem}
+  .pista{
+    position:relative; height:34px; background:var(--bg); border:1px solid var(--borde);
+    border-radius:5px; overflow:hidden; margin-bottom:5px;
+  }
+  .pista .seg{position:absolute; top:0; bottom:0}
+  .pista .etq{
+    position:absolute; left:8px; top:50%; transform:translateY(-50%);
+    font-size:.74rem; font-weight:600; color:var(--suave); z-index:3; pointer-events:none;
+    text-transform:uppercase; letter-spacing:.05em;
+  }
+  .cursor{position:absolute; top:0; bottom:0; width:2px; background:var(--texto); z-index:4}
+  .leyenda{display:flex; gap:16px; flex-wrap:wrap; font-size:.82rem; color:var(--suave); margin-top:10px}
+  .leyenda span{display:flex; align-items:center; gap:6px}
+  .sw{width:13px; height:13px; border-radius:3px; display:inline-block}
+  table{width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; font-size:.9rem}
+  th,td{text-align:right; padding:8px 10px; border-bottom:1px solid var(--borde)}
+  th:first-child,td:first-child{text-align:left}
+  th{font-size:.76rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave); font-weight:600}
+  tbody tr:last-child td{border-bottom:none}
+  .destacado{font-weight:700}
+  .nota{font-size:.88rem; color:var(--suave); margin-top:12px}
+  .conclu{
+    border-left:3px solid var(--acento); padding:10px 14px; margin-top:14px;
+    background:var(--bg); border-radius:0 6px 6px 0; font-size:.92rem;
+  }
+  ol,ul{margin:8px 0; padding-left:20px}
+  li{margin:4px 0}
+  code{background:var(--bg); padding:1px 5px; border-radius:4px; font-size:.88em}
+  .aviso{color:var(--cpu-es); font-size:.84rem; margin-top:8px; min-height:1.2em}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Las tres formas de hacer entrada/salida</h1>
+  <p class="sub">E/S programada con espera ocupada &middot; E/S por interrupciones &middot; E/S con DMA &mdash; Unidad 1, Sistemas Operativos</p>
+
+  <div class="caja">
+    <h2>Qué muestra y cómo se usa</h2>
+    <p style="margin-top:0">
+      Los tres métodos transfieren los mismos datos y <strong>tardan exactamente lo mismo</strong>, porque la duración
+      la impone el dispositivo, no la CPU. Lo que cambia radicalmente es <strong>cuánta CPU se gasta</strong> mientras tanto.
+      Cambiá los parámetros y mirá cómo se llenan las tres líneas de tiempo.
+    </p>
+    <ul style="margin-bottom:0">
+      <li><strong>Rojo</strong>: la CPU está ocupada con esta operación de E/S. Tiempo perdido para todo lo demás.</li>
+      <li><strong>Verde</strong>: la CPU quedó libre y el sistema operativo puede ejecutar otros procesos.</li>
+      <li><strong>Azul</strong>: el dispositivo está trabajando. Es igual en los tres métodos.</li>
+    </ul>
+  </div>
+
+  <div class="caja">
+    <h2>Parámetros</h2>
+    <div class="params">
+      <div>
+        <label for="nBytes">Bytes a transferir</label>
+        <input type="number" id="nBytes" value="20" min="1" max="5000" step="1">
+      </div>
+      <div>
+        <label for="tByte">Microsegundos por byte (dispositivo)</label>
+        <input type="number" id="tByte" value="100" min="1" max="10000" step="1">
+      </div>
+      <div>
+        <label for="tInt">Microsegundos por interrupción (CPU)</label>
+        <input type="number" id="tInt" value="5" min="0" max="10000" step="0.1">
+      </div>
+      <div>
+        <label for="tSetup">Setup del DMA, en microsegundos</label>
+        <input type="number" id="tSetup" value="0" min="0" max="10000" step="0.1">
+      </div>
+    </div>
+    <div class="botones">
+      <button id="bPaso" class="primario">Avanzar un byte</button>
+      <button id="bPlay">Reproducir</button>
+      <button id="bFin">Ir al final</button>
+      <button id="bReset">Reiniciar</button>
+      <span class="reloj" id="reloj">t = 0 &micro;s</span>
+    </div>
+    <div class="aviso" id="aviso"></div>
+  </div>
+
+  <div class="caja">
+    <h2>Líneas de tiempo</h2>
+    <div id="metodos"></div>
+    <div class="leyenda">
+      <span><i class="sw" style="background:var(--cpu-es)"></i> CPU ocupada en la E/S</span>
+      <span><i class="sw" style="background:var(--cpu-libre)"></i> CPU libre para otros procesos</span>
+      <span><i class="sw" style="background:var(--disp)"></i> Dispositivo transfiriendo</span>
+    </div>
+  </div>
+
+  <div class="caja">
+    <h2>Resultados</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Método</th>
+          <th>Interrupciones</th>
+          <th>CPU gastada (&micro;s)</th>
+          <th>% de CPU</th>
+          <th>CPU libre (&micro;s)</th>
+        </tr>
+      </thead>
+      <tbody id="tabla"></tbody>
+    </table>
+    <div class="conclu" id="conclu"></div>
+    <p class="nota" id="notaDur"></p>
+  </div>
+
+  <div class="caja">
+    <h2>Cómo se calcula</h2>
+    <ol style="margin-top:0">
+      <li><strong>Duración total</strong> = bytes &times; microsegundos por byte. Es la misma en los tres métodos.</li>
+      <li><strong>E/S programada</strong>: la CPU sondea al dispositivo durante toda la transferencia, así que gasta el 100 % del tiempo total. Esto es la <em>espera ocupada</em>.</li>
+      <li><strong>Por interrupciones</strong>: una interrupción por byte. CPU gastada = bytes &times; microsegundos por interrupción.</li>
+      <li><strong>Con DMA</strong>: el chip DMA hace la transferencia solo. CPU gastada = setup + una única interrupción al final.</li>
+    </ol>
+    <p class="nota" style="margin-bottom:0">
+      Probá esto: poné <code>5</code> &micro;s por byte y <code>5</code> &micro;s por interrupción. Vas a ver que el método
+      por interrupciones deja de servir, porque atender la interrupción cuesta tanto como transferir el dato.
+      Ese es exactamente el motivo por el que los dispositivos rápidos usan DMA y no interrupciones por byte.
+    </p>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var METODOS = [
+    { id:"prog", nombre:"E/S programada (espera ocupada)",
+      detalle:"la CPU sondea al dispositivo sin parar" },
+    { id:"intr", nombre:"E/S por interrupciones",
+      detalle:"una interrupción por cada byte transferido" },
+    { id:"dma",  nombre:"E/S con DMA",
+      detalle:"el chip DMA transfiere y avisa una sola vez al final" }
+  ];
+
+  var el = {
+    nBytes: document.getElementById("nBytes"),
+    tByte:  document.getElementById("tByte"),
+    tInt:   document.getElementById("tInt"),
+    tSetup: document.getElementById("tSetup"),
+    metodos:document.getElementById("metodos"),
+    tabla:  document.getElementById("tabla"),
+    reloj:  document.getElementById("reloj"),
+    conclu: document.getElementById("conclu"),
+    notaDur:document.getElementById("notaDur"),
+    aviso:  document.getElementById("aviso"),
+    bPaso:  document.getElementById("bPaso"),
+    bPlay:  document.getElementById("bPlay"),
+    bFin:   document.getElementById("bFin"),
+    bReset: document.getElementById("bReset")
+  };
+
+  var paso = 0;        // bytes ya transferidos
+  var timer = null;
+
+  // ---- modelo (identico a _trabajo/verificar_es.js) ----
+  function parametros(){
+    var n  = Math.max(1, Math.min(5000, Math.round(num(el.nBytes, 20))));
+    var tB = Math.max(1, num(el.tByte, 100));
+    var tI = Math.max(0, num(el.tInt, 5));
+    var tS = Math.max(0, num(el.tSetup, 0));
+    return { n:n, tB:tB, tI:tI, tS:tS, total:n*tB };
+  }
+  function num(input, porDefecto){
+    var v = parseFloat(input.value);
+    return isFinite(v) ? v : porDefecto;
+  }
+  function cpuGastada(metodo, p, bytesHechos){
+    // costo acumulado hasta los bytes ya transferidos
+    if (metodo === "prog") return bytesHechos * p.tB;          // sondea todo el tiempo
+    if (metodo === "intr") return bytesHechos * p.tI;          // una interrupcion por byte
+    // dma: el setup se paga al principio; la interrupcion, al terminar
+    var c = bytesHechos > 0 ? p.tS : 0;
+    if (bytesHechos >= p.n) c += p.tI;
+    return c;
+  }
+
+  // ---- dibujo ----
+  function construir(){
+    el.metodos.innerHTML = "";
+    METODOS.forEach(function(m){
+      var div = document.createElement("div");
+      div.className = "metodo";
+      div.innerHTML =
+        '<div class="mtitulo"><strong>' + m.nombre + '</strong><em>' + m.detalle + '</em></div>' +
+        '<div class="pista" id="cpu-' + m.id + '"><span class="etq">CPU</span></div>' +
+        '<div class="pista" id="dis-' + m.id + '"><span class="etq">Dispositivo</span></div>';
+      el.metodos.appendChild(div);
+    });
+  }
+
+  function seg(izq, ancho, color, z){
+    var s = document.createElement("div");
+    s.className = "seg";
+    s.style.left = izq + "%";
+    s.style.width = Math.max(0, ancho) + "%";
+    s.style.background = color;
+    s.style.opacity = ".85";
+    if (z) s.style.zIndex = z;
+    return s;
+  }
+
+  function pintar(){
+    var p = parametros();
+    var hechos = Math.min(paso, p.n);
+    var tActual = hechos * p.tB;                 // tiempo transcurrido
+    var pctAvance = 100 * tActual / p.total;
+
+    METODOS.forEach(function(m){
+      var cpu = document.getElementById("cpu-" + m.id);
+      var dis = document.getElementById("dis-" + m.id);
+      limpiar(cpu); limpiar(dis);
+
+      // pista del dispositivo: identica en los tres
+      dis.appendChild(seg(0, pctAvance, "var(--disp)"));
+
+      // pista de la CPU
+      if (m.id === "prog"){
+        // toda la franja transcurrida es CPU quemada en sondeo
+        cpu.appendChild(seg(0, pctAvance, "var(--cpu-es)"));
+      } else if (m.id === "intr"){
+        // por cada byte: una rebanada roja proporcional a tInt dentro de su ranura de tB
+        var anchoRanura = 100 / p.n;
+        var fracInt = Math.min(1, p.tI / p.tB);
+        // el resto de la ranura queda libre
+        cpu.appendChild(seg(0, pctAvance, "var(--cpu-libre)"));
+        var dibujar = Math.min(hechos, 400);     // tope de nodos para no trabar el navegador
+        for (var i = 0; i < dibujar; i++){
+          var base = (i + 1) * anchoRanura;      // la interrupcion llega al final de cada byte
+          cpu.appendChild(seg(base - anchoRanura * fracInt, anchoRanura * fracInt, "var(--cpu-es)", 2));
+        }
+      } else {
+        // dma: setup al inicio, interrupcion al final, todo lo demas libre
+        cpu.appendChild(seg(0, pctAvance, "var(--cpu-libre)"));
+        if (hechos > 0 && p.tS > 0){
+          cpu.appendChild(seg(0, 100 * p.tS / p.total, "var(--cpu-es)", 2));
+        }
+        if (hechos >= p.n && p.tI > 0){
+          var w = 100 * p.tI / p.total;
+          cpu.appendChild(seg(Math.max(0, 100 - w), w, "var(--cpu-es)", 2));
+        }
+      }
+
+      // cursor de tiempo
+      [cpu, dis].forEach(function(pista){
+        var c = document.createElement("div");
+        c.className = "cursor";
+        c.style.left = pctAvance + "%";
+        pista.appendChild(c);
+      });
+    });
+
+    actualizarTabla(p, hechos, tActual);
+  }
+
+  function limpiar(pista){
+    var hijos = Array.prototype.slice.call(pista.children);
+    hijos.forEach(function(h){ if (!h.classList.contains("etq")) pista.removeChild(h); });
+  }
+
+  function actualizarTabla(p, hechos, tActual){
+    el.reloj.textContent = "t = " + fmt(tActual) + " µs de " + fmt(p.total) + " µs";
+    el.tabla.innerHTML = "";
+
+    var filas = [];
+    METODOS.forEach(function(m){
+      var cpu  = cpuGastada(m.id, p, hechos);
+      var ints = m.id === "prog" ? 0 : (m.id === "intr" ? hechos : (hechos >= p.n ? 1 : 0));
+      var pct  = tActual > 0 ? 100 * cpu / tActual : 0;
+      filas.push({ m:m, cpu:cpu, ints:ints, pct:pct, libre:Math.max(0, tActual - cpu) });
+    });
+
+    filas.forEach(function(f){
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        "<td>" + f.m.nombre + "</td>" +
+        "<td>" + fmt(f.ints) + "</td>" +
+        "<td>" + fmt(f.cpu) + "</td>" +
+        '<td class="destacado">' + f.pct.toFixed(3) + " %</td>" +
+        "<td>" + fmt(f.libre) + "</td>";
+      el.tabla.appendChild(tr);
+    });
+
+    var cProg = cpuGastada("prog", p, p.n);
+    var cIntr = cpuGastada("intr", p, p.n);
+    var cDma  = cpuGastada("dma",  p, p.n);
+    el.notaDur.textContent =
+      "La transferencia completa dura " + fmt(p.total) + " µs (" + fmt(p.total/1000) +
+      " ms) en los tres métodos: la duración la impone el dispositivo, no la CPU.";
+
+    var vecesIntr = cIntr > 0 ? (cProg / cIntr) : Infinity;
+    var vecesDma  = cDma  > 0 ? (cProg / cDma)  : Infinity;
+    el.conclu.innerHTML =
+      "Al terminar la transferencia completa: la E/S programada gasta <strong>" + (100*cProg/p.total).toFixed(2) +
+      " %</strong> de la CPU, la de interrupciones <strong>" + (100*cIntr/p.total).toFixed(2) +
+      " %</strong> y la de DMA <strong>" + (100*cDma/p.total).toFixed(3) + " %</strong>. " +
+      "Pasar a interrupciones ahorra " + (isFinite(vecesIntr) ? vecesIntr.toFixed(1) + "×" : "todo") +
+      " de CPU, y pasar a DMA ahorra " + (isFinite(vecesDma) ? vecesDma.toFixed(1) + "×" : "todo") + ".";
+
+    el.aviso.textContent = (p.tI >= p.tB && p.n > 1)
+      ? "Atención: atender una interrupción cuesta tanto o más que transferir un byte. El método por interrupciones deja de convenir."
+      : "";
+  }
+
+  function fmt(x){
+    if (!isFinite(x)) return "∞";
+    if (x === Math.round(x)) return String(Math.round(x));
+    return x.toFixed(3).replace(/0+$/,"").replace(/\.$/,"");
+  }
+
+  // ---- controles ----
+  function avanzar(){
+    var p = parametros();
+    if (paso < p.n){ paso++; pintar(); }
+    if (paso >= p.n) detener();
+  }
+  function detener(){
+    if (timer){ clearInterval(timer); timer = null; }
+    el.bPlay.textContent = "Reproducir";
+  }
+  function reiniciar(){
+    detener(); paso = 0; pintar();
+  }
+
+  el.bPaso.addEventListener("click", avanzar);
+  el.bFin.addEventListener("click", function(){
+    detener(); paso = parametros().n; pintar();
+  });
+  el.bReset.addEventListener("click", reiniciar);
+  el.bPlay.addEventListener("click", function(){
+    if (timer){ detener(); return; }
+    var p = parametros();
+    if (paso >= p.n) paso = 0;
+    el.bPlay.textContent = "Pausar";
+    timer = setInterval(avanzar, Math.max(30, Math.min(300, 2000 / p.n)));
+  });
+
+  [el.nBytes, el.tByte, el.tInt, el.tSetup].forEach(function(i){
+    i.addEventListener("input", reiniciar);
+  });
+
+  construir();
+  pintar();
+})();
+</script>
+</body>
+</html>

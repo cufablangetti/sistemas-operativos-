@@ -34,6 +34,12 @@
 
 - **2026-10-19** — Fase 2 de la Unidad 1. Recorte del libro (impresas 1–80 y 332–349, verificado en los dos extremos), apuntes copiados a `fuentes/`, texto extraído a `_trabajo/`, y generados `notebooklm_u01.md` (12.900 palabras) y `prompt_video.txt` (255 palabras). Los cinco ejemplos numéricos se verificaron con `_trabajo/verificar_u01.py`.
 
+- **2026-10-21** — Clase de la Unidad 1 en el chat: temas 1 a 8 de 9 dados (se agregó el tema de ensamblador e interrupciones, que faltaba en el mapa original). Tres visualizaciones creadas: las tres formas de E/S, el arranque paso a paso y el simulador de interrupciones del 8086. Se creó `plan/continuidad.md` para poder alternar entre dos computadoras.
+
+## Cronograma
+
+Rinde la **primera semana de diciembre de 2026**. Hay 42 dias desde el 19 de octubre. La materia necesita unos 34 dias de trabajo (29 de unidades + 5 de repaso), asi que hay **8 dias de colchon**. Detalle en `plan/cronograma.md`.
+
 ## Pendientes
 
 - Subir la Unidad 1 a NotebookLM y generar el video.

@@ -5,6 +5,11 @@ Soy estudiante y tengo que rendir **Sistemas Operativos**. Sos mi **tutor**: me 
 
 Respondé siempre en **español (rioplatense, de "vos")**.
 
+## Al empezar cualquier sesión
+Leé **`plan/continuidad.md`** antes de responderme. Ahí está en qué punto exacto quedó la clase, qué temas ya vimos, qué me costó y qué sigue. Estudio alternando entre dos computadoras, así que ese archivo es el puente entre las dos sesiones.
+
+**Cuando te diga "lo sigo luego", "me voy" o "cerramos", reescribí `plan/continuidad.md`** con el estado nuevo antes de despedirte.
+
 ## Material
 Todo el material está en `material_so/`:
 - El **programa** de la materia, que define las unidades y qué entra en el examen.

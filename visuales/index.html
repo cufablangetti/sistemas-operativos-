@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Visualizaciones — Sistemas Operativos</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#fff; --borde:#d9dde3; --texto:#1b1f24; --suave:#5b6572; --acento:#6b4fd8;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#14171c; --panel:#1c2026; --borde:#2d333c; --texto:#e6e9ed; --suave:#9aa4b2; --acento:#8d75f0;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0; padding:36px 16px 60px; background:var(--bg); color:var(--texto);
+       font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:760px; margin:0 auto}
+  h1{font-size:1.5rem; margin:0 0 4px; letter-spacing:-.01em}
+  .sub{color:var(--suave); margin:0 0 28px}
+  h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.07em; color:var(--suave);
+     margin:28px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--borde)}
+  a.item{
+    display:block; background:var(--panel); border:1px solid var(--borde); border-radius:9px;
+    padding:14px 16px; margin-bottom:10px; text-decoration:none; color:inherit;
+  }
+  a.item:hover{border-color:var(--acento)}
+  a.item strong{display:block; margin-bottom:3px}
+  a.item span{color:var(--suave); font-size:.88rem}
+  .vacio{color:var(--suave); font-style:italic; font-size:.9rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Visualizaciones interactivas</h1>
+  <p class="sub">Sistemas Operativos &mdash; UTN FRM &mdash; preparación del final</p>
+
+  <h2>Unidad 1 &mdash; Introducción, hardware y estructura</h2>
+  <a class="item" href="../unidades/u01-introduccion/visuales/es_programada_interrupciones_dma.html">
+    <strong>Las tres formas de hacer entrada/salida</strong>
+    <span>E/S programada con espera ocupada, por interrupciones y con DMA. Línea de tiempo paso a paso y costo de CPU calculado.</span>
+  </a>
+
+  <a class="item" href="../unidades/u01-introduccion/visuales/arranque_y_sector_de_booteo.html">
+    <strong>El arranque, paso a paso</strong>
+    <span>Del BIOS al sistema operativo: MBR, tabla de particiones, partición activa y cargador secundario. Se puede cambiar cuál partición está activa.</span>
+  </a>
+
+  <a class="item" href="../unidades/u01-introduccion/visuales/interrupciones_8086.html">
+    <strong>Simulador de interrupciones del 8086</strong>
+    <span>INT 10h, 16h, 17h y 21h. Elegís la función, cargás los registros y ves el código generado y el resultado en una pantalla de DOS. Detecta los errores típicos de la cátedra.</span>
+  </a>
+
+  <h2>Unidad 2 &mdash; Procesos, hilos y planificación</h2>
+  <p class="vacio">Todavía no hay visualizaciones de esta unidad.</p>
+</div>
+</body>
+</html>

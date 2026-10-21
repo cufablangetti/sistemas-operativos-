@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulador de interrupciones del 8086 — INT 10h, 16h, 17h y 21h</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#fff; --borde:#d9dde3; --texto:#1b1f24; --suave:#5b6572;
+    --acento:#6b4fd8; --ok:#2e9e5b; --mal:#d64545; --aviso:#e08a2e;
+    --dos-bg:#0a0a0a; --dos-fg:#c8c8c8;
+    --sombra:0 1px 3px rgba(0,0,0,.08);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#14171c; --panel:#1c2026; --borde:#2d333c; --texto:#e6e9ed; --suave:#9aa4b2;
+      --acento:#8d75f0; --ok:#3fbb72; --mal:#e05c5c; --aviso:#f0a040;
+      --sombra:0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0; padding:24px 16px 60px; background:var(--bg); color:var(--texto);
+       font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:1060px; margin:0 auto}
+  h1{font-size:1.45rem; margin:0 0 4px; letter-spacing:-.01em}
+  .sub{color:var(--suave); margin:0 0 20px}
+  .caja{background:var(--panel); border:1px solid var(--borde); border-radius:10px;
+        padding:16px 18px; margin-bottom:16px; box-shadow:var(--sombra)}
+  h2{font-size:.8rem; margin:0 0 12px; text-transform:uppercase; letter-spacing:.06em; color:var(--suave)}
+  .cols{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media (max-width:820px){ .cols{grid-template-columns:1fr} }
+
+  label{display:block; font-size:.8rem; color:var(--suave); margin:0 0 4px}
+  select,input[type=text]{
+    width:100%; padding:8px 10px; border:1px solid var(--borde); border-radius:6px;
+    background:var(--bg); color:var(--texto); font:inherit;
+  }
+  .campo{margin-bottom:12px}
+  .regs{display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:10px}
+  .reg{border:1px solid var(--borde); border-radius:7px; padding:8px 10px; background:var(--bg); transition:all .2s}
+  .reg.usado{border-color:var(--acento); background:color-mix(in srgb, var(--acento) 10%, var(--bg))}
+  .reg.sobra{opacity:.45}
+  .reg b{display:block; font-size:.78rem; color:var(--suave); margin-bottom:3px; letter-spacing:.04em}
+  .reg input{
+    width:100%; border:none; background:transparent; color:var(--texto);
+    font:600 .95rem ui-monospace,SFMono-Regular,Menlo,monospace; padding:0; outline:none;
+  }
+  .reg small{display:block; font-size:.68rem; color:var(--suave); margin-top:3px; min-height:1em}
+
+  pre.cod{
+    background:var(--bg); border:1px solid var(--borde); border-radius:7px; padding:12px 14px;
+    font:13px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace; overflow-x:auto; margin:0;
+    white-space:pre;
+  }
+  .pantalla{
+    background:var(--dos-bg); color:var(--dos-fg); border-radius:7px; padding:14px;
+    font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; min-height:132px;
+    white-space:pre-wrap; word-break:break-all; border:1px solid #333;
+  }
+  .cur{background:var(--dos-fg); color:var(--dos-bg)}
+  .botones{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px}
+  button{padding:8px 15px; border:1px solid var(--borde); border-radius:6px; background:var(--panel);
+         color:var(--texto); font:inherit; cursor:pointer}
+  button:hover{border-color:var(--acento)}
+  button.primario{background:var(--acento); border-color:var(--acento); color:#fff}
+  .msg{margin-top:12px; padding:10px 14px; border-radius:0 7px 7px 0; border-left:3px solid var(--borde);
+       background:var(--bg); font-size:.9rem; min-height:46px}
+  .msg.ok{border-left-color:var(--ok)}
+  .msg.mal{border-left-color:var(--mal)}
+  .msg.aviso{border-left-color:var(--aviso)}
+  .msg b{display:block; margin-bottom:3px}
+  table{width:100%; border-collapse:collapse; font-size:.84rem}
+  th,td{padding:6px 9px; border-bottom:1px solid var(--borde); text-align:left; vertical-align:top}
+  th{font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave)}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr.sel{background:color-mix(in srgb, var(--acento) 12%, transparent)}
+  code{background:var(--bg); padding:1px 5px; border-radius:4px;
+       font:.88em ui-monospace,SFMono-Regular,Menlo,monospace}
+  .nota{font-size:.86rem; color:var(--suave)}
+  .reto{border:1px dashed var(--acento); border-radius:8px; padding:12px 14px; background:var(--bg)}
+  ul{margin:8px 0; padding-left:20px} li{margin:3px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Simulador de interrupciones del 8086</h1>
+  <p class="sub">INT 10h, 16h, 17h y 21h &mdash; Unidad 1, Sistemas Operativos</p>
+
+  <div class="caja">
+    <h2>Cómo se usa</h2>
+    <p style="margin:0 0 8px">
+      Elegí la interrupción y la función. El simulador te resalta <strong>qué registros usa esa función</strong>
+      y atenúa los que no sirven. Cargá los valores, ejecutá, y mirá qué pasa en la pantalla de DOS.
+    </p>
+    <p class="nota" style="margin:0">
+      Probá a propósito los errores típicos: poner la cadena en <code>DL</code>, olvidarte el <code>$</code>,
+      o usar <code>AH=02h</code> para mostrar una cadena entera. El simulador te explica por qué falla.
+    </p>
+  </div>
+
+  <div class="cols">
+    <div>
+      <div class="caja">
+        <h2>1. Elegí el servicio</h2>
+        <div class="campo">
+          <label for="selInt">Interrupción (la familia)</label>
+          <select id="selInt"></select>
+        </div>
+        <div class="campo" style="margin-bottom:0">
+          <label for="selFun">AH &mdash; función dentro de esa familia</label>
+          <select id="selFun"></select>
+        </div>
+      </div>
+
+      <div class="caja">
+        <h2>2. Cargá los registros</h2>
+        <div class="regs" id="regs"></div>
+        <div class="campo" style="margin:14px 0 0">
+          <label for="txtCadena">Contenido en memoria (lo que apunta DS:DX o ES:BP)</label>
+          <input type="text" id="txtCadena" value="SISTEMAS OPERATIVOS$">
+        </div>
+        <div class="botones">
+          <button id="bEjec" class="primario">Ejecutar INT</button>
+          <button id="bLimpiar">Limpiar pantalla</button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="caja">
+        <h2>Código generado</h2>
+        <pre class="cod" id="codigo"></pre>
+      </div>
+      <div class="caja">
+        <h2>Pantalla</h2>
+        <div class="pantalla" id="pantalla"></div>
+        <div class="msg" id="msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="caja">
+    <h2>Funciones de esta interrupción</h2>
+    <table>
+      <thead><tr><th>AH</th><th>Qué hace</th><th>Registros que usa</th></tr></thead>
+      <tbody id="tablaFun"></tbody>
+    </table>
+  </div>
+
+  <div class="caja">
+    <h2>Para practicar</h2>
+    <div class="reto">
+      <p style="margin:0 0 8px"><strong>Reproducí el ejercicio del final práctica de la cátedra:</strong></p>
+      <pre class="cod" style="margin-bottom:8px">ORG 100h
+JMP MAIN
+MSG  DB  ______________
+MAIN:
+     MOV DX, MSG
+     MOV AH, ____
+     INT 21
+     RET</pre>
+      <p class="nota" style="margin:0">
+        Completá los dos huecos acá arriba en el simulador y comprobalo. Después probá estas tres variantes
+        y fijate qué pasa en cada una:
+      </p>
+      <ul class="nota" style="margin-bottom:0">
+        <li>sacale el <code>$</code> al final de la cadena</li>
+        <li>usá <code>AH = 02h</code> en lugar de <code>09h</code></li>
+        <li>con <code>AH = 09h</code>, poné la cadena pero dejá <code>DS</code> sin cargar</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---- catalogo de servicios (segun la cartilla de la catedra) ----
+  var SERVICIOS = {
+    "21h": {
+      nombre:"INT 21h — Funciones de DOS",
+      fun:{
+        "01h":{ d:"Leer un carácter del teclado CON eco", usa:[], ret:"AL", tipo:"leer" },
+        "02h":{ d:"Mostrar UN carácter", usa:["DL"], tipo:"charDL" },
+        "07h":{ d:"Leer un carácter SIN eco", usa:[], ret:"AL", tipo:"leer" },
+        "08h":{ d:"Leer sin eco, controlando Ctrl-Break", usa:[], ret:"AL", tipo:"leer" },
+        "09h":{ d:"Mostrar una CADENA terminada en $", usa:["DS","DX"], tipo:"cadena$" },
+        "0Ah":{ d:"Leer una cadena del teclado a un buffer", usa:["DS","DX"], tipo:"leerCad" },
+        "0Bh":{ d:"Consultar si hay entrada disponible", usa:[], ret:"AL", tipo:"consulta" },
+        "2Ah":{ d:"Obtener la fecha", usa:[], ret:"CX año, DH mes, DL día", tipo:"fecha" },
+        "2Ch":{ d:"Obtener la hora", usa:[], ret:"CH:CL:DH", tipo:"hora" },
+        "3Fh":{ d:"Leer de un archivo", usa:["BX","CX","DS","DX"], tipo:"archivo" },
+        "40h":{ d:"Escribir en un archivo", usa:["BX","CX","DS","DX"], tipo:"archivo" },
+        "4Ch":{ d:"Terminar el proceso y volver a DOS", usa:["AL"], tipo:"fin" }
+      }
+    },
+    "10h": {
+      nombre:"INT 10h — Video (BIOS)",
+      fun:{
+        "00h":{ d:"Inicializar el modo de video", usa:["AL"], tipo:"modo" },
+        "02h":{ d:"Posicionar el cursor", usa:["BH","DH","DL"], tipo:"cursor" },
+        "09h":{ d:"Carácter CON atributo — NO avanza el cursor", usa:["AL","BH","BL","CX"], tipo:"char09" },
+        "0Ah":{ d:"Carácter sin atributo nuevo — NO avanza el cursor", usa:["AL","BH","CX"], tipo:"char0A" },
+        "0Eh":{ d:"Carácter y SÍ avanza el cursor", usa:["AL"], tipo:"char0E" },
+        "13h":{ d:"Mostrar una cadena (longitud en CX)", usa:["ES","BP","CX","BL","DH","DL"], tipo:"cadena13" }
+      }
+    },
+    "16h": {
+      nombre:"INT 16h — Teclado (BIOS)",
+      fun:{
+        "00h":{ d:"Leer tecla — ESPERA hasta que haya una", usa:[], ret:"AL ASCII, AH scan code", tipo:"leerBios" },
+        "01h":{ d:"Consultar si hay tecla — NO espera", usa:[], ret:"ZF", tipo:"consultaBios" },
+        "02h":{ d:"Estado de Shift, Ctrl, Alt, Caps", usa:[], ret:"AL", tipo:"shift" }
+      }
+    },
+    "17h": {
+      nombre:"INT 17h — Impresora",
+      fun:{
+        "00h":{ d:"Imprimir un carácter", usa:["AL","DX"], tipo:"imprimir" },
+        "01h":{ d:"Inicializar la impresora", usa:["DX"], tipo:"impIni" },
+        "02h":{ d:"Obtener el estado de la impresora", usa:["DX"], ret:"AH", tipo:"impEstado" }
+      }
+    }
+  };
+
+  var REGS = ["AL","BH","BL","CX","DH","DL","DX","BX","DS","ES","BP"];
+  var valores = { AL:"'A'", BH:"00h", BL:"07h", CX:"5", DH:"10", DL:"'A'", DX:"MSG", BX:"0", DS:"@data", ES:"@data", BP:"MSG" };
+
+  var el = {
+    selInt:document.getElementById("selInt"),
+    selFun:document.getElementById("selFun"),
+    regs:document.getElementById("regs"),
+    codigo:document.getElementById("codigo"),
+    pantalla:document.getElementById("pantalla"),
+    msg:document.getElementById("msg"),
+    tablaFun:document.getElementById("tablaFun"),
+    txtCadena:document.getElementById("txtCadena"),
+    bEjec:document.getElementById("bEjec"),
+    bLimpiar:document.getElementById("bLimpiar")
+  };
+
+  var salida = "";
+
+  function intActual(){ return el.selInt.value; }
+  function funActual(){ return el.selFun.value; }
+  function datos(){ return SERVICIOS[intActual()].fun[funActual()]; }
+
+  function llenarInt(){
+    el.selInt.innerHTML = "";
+    Object.keys(SERVICIOS).forEach(function(k){
+      var o = document.createElement("option");
+      o.value = k; o.textContent = SERVICIOS[k].nombre;
+      el.selInt.appendChild(o);
+    });
+  }
+  function llenarFun(){
+    var fs = SERVICIOS[intActual()].fun;
+    el.selFun.innerHTML = "";
+    Object.keys(fs).forEach(function(k){
+      var o = document.createElement("option");
+      o.value = k; o.textContent = "AH = " + k + "  —  " + fs[k].d;
+      el.selFun.appendChild(o);
+    });
+  }
+
+  function construirRegs(){
+    el.regs.innerHTML = "";
+    REGS.forEach(function(r){
+      var d = document.createElement("div");
+      d.className = "reg"; d.id = "reg-" + r;
+      d.innerHTML = "<b>" + r + "</b><input id='in-" + r + "' value='" + valores[r] + "'><small id='ay-" + r + "'></small>";
+      el.regs.appendChild(d);
+      d.querySelector("input").addEventListener("input", function(e){
+        valores[r] = e.target.value; pintarCodigo();
+      });
+    });
+  }
+
+  var AYUDA = {
+    AL:"carácter / modo", BH:"página", BL:"atributo (color)", CX:"cantidad o longitud",
+    DH:"fila", DL:"columna o carácter", DX:"desplazamiento / puerto", BX:"handle de archivo",
+    DS:"segmento de datos", ES:"segmento extra", BP:"desplazamiento de la cadena"
+  };
+
+  function pintarRegs(){
+    var usa = datos().usa;
+    REGS.forEach(function(r){
+      var d = document.getElementById("reg-" + r);
+      var a = document.getElementById("ay-" + r);
+      var activo = usa.indexOf(r) >= 0;
+      d.className = "reg " + (activo ? "usado" : "sobra");
+      a.textContent = activo ? (AYUDA[r] || "") : "no la usa";
+    });
+  }
+
+  function pintarCodigo(){
+    var i = intActual(), f = funActual(), d = datos();
+    var L = [];
+    if (d.usa.indexOf("DS") >= 0){
+      L.push("MOV AX, " + valores.DS);
+      L.push("MOV DS, AX        ; DS no admite valor inmediato");
+    }
+    d.usa.forEach(function(r){
+      if (r === "DS") return;
+      L.push("MOV " + r + ", " + valores[r]);
+    });
+    L.push("MOV AH, " + f);
+    L.push("INT " + i.replace("h",""));
+    el.codigo.textContent = L.join("\n");
+  }
+
+  function pintarTabla(){
+    var fs = SERVICIOS[intActual()].fun;
+    el.tablaFun.innerHTML = "";
+    Object.keys(fs).forEach(function(k){
+      var tr = document.createElement("tr");
+      if (k === funActual()) tr.className = "sel";
+      var usa = fs[k].usa.length ? fs[k].usa.join(", ") : "—";
+      if (fs[k].ret) usa += "   → retorna en " + fs[k].ret;
+      tr.innerHTML = "<td><code>" + k + "</code></td><td>" + fs[k].d + "</td><td>" + usa + "</td>";
+      el.tablaFun.appendChild(tr);
+    });
+  }
+
+  function escribir(txt){ salida += txt; render(); }
+  function render(){
+    el.pantalla.innerHTML = escapar(salida) + '<span class="cur"> </span>';
+  }
+  function escapar(s){
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+  function aviso(clase, titulo, cuerpo){
+    el.msg.className = "msg " + clase;
+    el.msg.innerHTML = "<b>" + titulo + "</b>" + cuerpo;
+  }
+
+  function literalChar(v){
+    var m = /^'(.)'$/.exec(v.trim());
+    if (m) return m[1];
+    var n = parseInt(v.replace(/h$/i,""), /h$/i.test(v) ? 16 : 10);
+    if (isFinite(n) && n >= 32 && n < 127) return String.fromCharCode(n);
+    return v.trim().charAt(0) || "?";
+  }
+
+  function ejecutar(){
+    var i = intActual(), f = funActual(), d = datos();
+    var cad = el.txtCadena.value;
+
+    // --- INT 21h ---
+    if (i === "21h"){
+      if (f === "09h"){
+        var dsOk = /@?data/i.test(valores.DS) && valores.DS.trim() !== "";
+        if (!dsOk){
+          aviso("mal","Error: DS sin cargar",
+            "La función 09h busca la cadena en <code>DS:DX</code>. Si DS no apunta al segmento de datos, " +
+            "la dirección señala cualquier lado y se muestra basura. Es uno de los cuatro errores típicos de la cátedra.");
+          escribir("░▒▓?░▒ "); return;
+        }
+        var fin = cad.indexOf("$");
+        if (fin < 0){
+          aviso("mal","Error: falta el $ final",
+            "La 09h recorre la memoria desde DS:DX y solo se detiene cuando encuentra un <code>$</code>. " +
+            "Sin él sigue mostrando basura de memoria hasta toparse con un $ por casualidad.");
+          escribir(cad + "▒░▓▒░?▓▒ "); return;
+        }
+        escribir(cad.slice(0, fin));
+        aviso("ok","Correcto",
+          "<code>AH=09h</code> + <code>INT 21h</code>: DOS recorrió la memoria desde DS:DX y mostró " +
+          (fin) + " caracteres, deteniéndose en el <code>$</code>. El <code>$</code> no se imprime.");
+        return;
+      }
+      if (f === "02h"){
+        var c = literalChar(valores.DL);
+        escribir(c);
+        if (cad.replace("$","").length > 1 && valores.DL.trim() === "MSG"){
+          aviso("aviso","Ojo: 02h muestra UN SOLO carácter",
+            "Pusiste lo que parece una cadena, pero <code>AH=02h</code> toma <strong>un único carácter desde DL</strong>. " +
+            "Para una cadena entera hay que usar <code>AH=09h</code> con <code>DS:DX</code>. Error típico número cuatro.");
+        } else {
+          aviso("ok","Correcto",
+            "<code>AH=02h</code> mostró el carácter que estaba en <code>DL</code>. Recordá: " +
+            "un carácter va en DL; una cadena va en DS:DX con 09h.");
+        }
+        return;
+      }
+      if (f === "4Ch"){
+        escribir("\n[proceso terminado, código de retorno " + valores.AL + "]\n");
+        aviso("ok","Programa terminado",
+          "<code>AH=4Ch</code> devuelve el control a DOS. Equivale a <code>MOV AX, 4C00h</code> + <code>INT 21h</code>. " +
+          "Todo programa .EXE tiene que terminar así.");
+        return;
+      }
+      if (d.tipo === "leer"){
+        var t = (f === "01h") ? "A" : "";
+        escribir(t);
+        aviso("ok","Lectura de teclado",
+          "Se leyó una tecla; el carácter queda en <code>AL</code>. " +
+          (f === "01h" ? "La 01h <strong>sí</strong> hace eco en pantalla." : "Esta función <strong>no</strong> hace eco: no se ve nada en pantalla."));
+        return;
+      }
+      if (f === "0Ah"){
+        aviso("ok","Lectura de cadena a buffer",
+          "<code>DS:DX</code> apunta a un buffer cuya estructura es: byte 0 = capacidad máxima, " +
+          "byte 1 = cantidad realmente leída, byte 2 en adelante = los caracteres.");
+        return;
+      }
+      if (f === "2Ah" || f === "2Ch"){
+        aviso("ok","Fecha u hora",
+          f === "2Ah" ? "Retorna <code>CX</code>=año, <code>DH</code>=mes, <code>DL</code>=día, <code>AL</code>=día de la semana."
+                      : "Retorna <code>CH</code>=hora, <code>CL</code>=minutos, <code>DH</code>=segundos, <code>DL</code>=centésimas.");
+        return;
+      }
+      aviso("ok","Operación de archivo",
+        "Regla fija para las funciones 3Ch a 42h: <code>BX</code> = handle, <code>CX</code> = cantidad de bytes, " +
+        "<code>DS:DX</code> = buffer.");
+      return;
+    }
+
+    // --- INT 10h ---
+    if (i === "10h"){
+      var ch = literalChar(valores.AL);
+      var n = Math.max(1, parseInt(valores.CX,10) || 1);
+      if (f === "0Eh"){
+        escribir(ch);
+        aviso("ok","0Eh: muestra y avanza",
+          "Puso el carácter y <strong>el cursor avanzó</strong>. Es la cómoda para escribir caracteres uno detrás de otro.");
+        return;
+      }
+      if (f === "09h" || f === "0Ah"){
+        escribir(new Array(n+1).join(ch));
+        aviso("aviso", f + ": muestra pero NO avanza el cursor",
+          "Repitió el carácter <code>" + ch + "</code> " + n + " veces (según <code>CX</code>), pero <strong>el cursor no se movió</strong>. " +
+          (f === "09h" ? "La 09h además aplica el atributo de color de <code>BL</code>." : "La 0Ah no recibe atributo nuevo en BL.") +
+          " Esta es la diferencia que más se confunde con la 0Eh.");
+        return;
+      }
+      if (f === "13h"){
+        var l = parseInt(valores.CX,10);
+        var txt = cad.replace("$","");
+        escribir(isFinite(l) ? txt.slice(0,l) : txt);
+        aviso("ok","13h: cadena por longitud",
+          "La 13h usa <code>ES:BP</code> para la dirección y <strong><code>CX</code> para la longitud</strong>. " +
+          "A diferencia de la 09h de DOS, <strong>no depende de un <code>$</code> final</strong>.");
+        return;
+      }
+      if (f === "02h"){
+        aviso("ok","Cursor reposicionado",
+          "Fila <code>DH</code> = " + valores.DH + ", columna <code>DL</code> = " + valores.DL +
+          ", página <code>BH</code> = " + valores.BH + ".");
+        return;
+      }
+      salida = ""; render();
+      aviso("ok","Modo de video inicializado","El modo va en <code>AL</code>. La pantalla se limpia.");
+      return;
+    }
+
+    // --- INT 16h ---
+    if (i === "16h"){
+      if (f === "00h") aviso("ok","00h: lee y BLOQUEA",
+        "Espera hasta que haya una tecla. Retorna <code>AL</code> = código ASCII y <code>AH</code> = scan code. " +
+        "Para teclas especiales AL puede valer 00h y lo importante queda en AH.");
+      else if (f === "01h") aviso("ok","01h: consulta sin bloquear",
+        "No espera. Informa en el flag de cero: <code>ZF=0</code> hay tecla, <code>ZF=1</code> no hay. " +
+        "Es el equivalente a un sondeo (polling), igual que la E/S programada del tema 3.");
+      else aviso("ok","02h: estado de las teclas modificadoras",
+        "Devuelve en <code>AL</code> el estado de Shift, Ctrl, Alt, Caps Lock y Num Lock.");
+      return;
+    }
+
+    // --- INT 17h ---
+    aviso("ok","Impresora",
+      "<code>DX=0</code> es LPT1 y <code>DX=1</code> es LPT2. " +
+      (funActual() === "02h" ? "La 02h retorna en <code>AH</code> si está ocupada, sin papel, seleccionada, con error o timeout."
+                             : "El carácter a imprimir va en <code>AL</code>."));
+  }
+
+  function refrescar(){ pintarRegs(); pintarCodigo(); pintarTabla(); }
+
+  el.selInt.addEventListener("change", function(){ llenarFun(); refrescar(); });
+  el.selFun.addEventListener("change", refrescar);
+  el.bEjec.addEventListener("click", ejecutar);
+  el.bLimpiar.addEventListener("click", function(){ salida = ""; render(); el.msg.className="msg"; el.msg.innerHTML=""; });
+
+  llenarInt(); llenarFun(); construirRegs(); refrescar(); render();
+  el.selFun.value = "09h"; refrescar();
+})();
+</script>
+</body>
+</html>
