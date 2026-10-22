@@ -18,7 +18,7 @@
 
 | # | Unidad | Preparada (F2) | Clase (F3) | Cuestionario (F4) | Nota (F5) | Temas débiles |
 |---|---|---|---|---|---|---|
-| 1 | Introducción, hardware y estructura de los SO | ✅ | — | — | — | — |
+| 1 | Introducción, hardware y estructura de los SO | ✅ | ✅ | — | — | — |
 | 2 | Procesos, hilos, concurrencia y planificación | — | — | — | — | — |
 | 3 | Administración de memoria | — | — | — | — | — |
 | 4 | Sistemas de archivos | — | — | — | — | — |
@@ -35,6 +35,8 @@
 - **2026-10-19** — Fase 2 de la Unidad 1. Recorte del libro (impresas 1–80 y 332–349, verificado en los dos extremos), apuntes copiados a `fuentes/`, texto extraído a `_trabajo/`, y generados `notebooklm_u01.md` (12.900 palabras) y `prompt_video.txt` (255 palabras). Los cinco ejemplos numéricos se verificaron con `_trabajo/verificar_u01.py`.
 
 - **2026-10-21** — Clase de la Unidad 1 en el chat: temas 1 a 8 de 9 dados (se agregó el tema de ensamblador e interrupciones, que faltaba en el mapa original). Tres visualizaciones creadas: las tres formas de E/S, el arranque paso a paso y el simulador de interrupciones del 8086. Se creó `plan/continuidad.md` para poder alternar entre dos computadoras.
+
+- **2026-10-22** — **Clase de la Unidad 1 terminada**: los 9 temas y el cierre. Cuarta visualización creada (las cinco estructuras de SO, con simulación de falla de driver). Sigue el cuestionario de la Unidad 1.
 
 ## Cronograma
 

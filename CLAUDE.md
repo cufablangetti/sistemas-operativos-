@@ -142,7 +142,11 @@ Ideas según el tema:
 ---
 
 ## Fase 4 — Cuestionario: "cuestionario unidad N"
-Generá `cuestionario.md` (sin respuestas) y `respuestas.md` aparte.
+
+**Antes del cuestionario, siempre: el PDF de repaso.**
+Al terminar la clase de cada unidad, generá `unidades/uNN-.../repaso_uNN.pdf` con **todo el contenido que vimos en el chat**: los temas en orden, los esquemas, los ejemplos resueltos, las referencias y el cierre. Es para que yo lo lea antes de rendir. No es el `notebooklm_uNN.md` (ese es para la IA): este es para mí, con el mismo formato y los mismos diagramas de la clase.
+
+Después sí, generá `cuestionario.md` (sin respuestas) y `respuestas.md` aparte.
 
 **El cuestionario, difícil, de nivel final o superior:**
 - 20–25 preguntas numeradas, con puntaje.

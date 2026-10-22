@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Las cinco estructuras de sistemas operativos</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#fff; --borde:#d9dde3; --texto:#1b1f24; --suave:#5b6572;
+    --acento:#6b4fd8; --ok:#2e9e5b; --mal:#d64545; --aviso:#e08a2e;
+    --kernel:#d64545; --usuario:#3a7bd5;
+    --sombra:0 1px 3px rgba(0,0,0,.08);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#14171c; --panel:#1c2026; --borde:#2d333c; --texto:#e6e9ed; --suave:#9aa4b2;
+      --acento:#8d75f0; --ok:#3fbb72; --mal:#e05c5c; --aviso:#f0a040;
+      --kernel:#e05c5c; --usuario:#5a95e8; --sombra:0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0; padding:24px 16px 60px; background:var(--bg); color:var(--texto);
+       font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:1040px; margin:0 auto}
+  h1{font-size:1.45rem; margin:0 0 4px; letter-spacing:-.01em}
+  .sub{color:var(--suave); margin:0 0 20px}
+  .caja{background:var(--panel); border:1px solid var(--borde); border-radius:10px;
+        padding:16px 18px; margin-bottom:16px; box-shadow:var(--sombra)}
+  h2{font-size:.8rem; margin:0 0 12px; text-transform:uppercase; letter-spacing:.06em; color:var(--suave)}
+
+  .tabs{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:4px}
+  .tab{padding:8px 14px; border:1px solid var(--borde); border-radius:7px; background:var(--panel);
+       cursor:pointer; font:inherit; font-size:.9rem; color:var(--texto)}
+  .tab:hover{border-color:var(--acento)}
+  .tab.on{background:var(--acento); border-color:var(--acento); color:#fff}
+
+  .diagrama{min-height:320px}
+  .zona{border:2px solid var(--borde); border-radius:9px; padding:10px 12px; margin-bottom:10px; position:relative}
+  .zona.usuario{border-color:var(--usuario); background:color-mix(in srgb, var(--usuario) 7%, var(--panel))}
+  .zona.kernel{border-color:var(--kernel); background:color-mix(in srgb, var(--kernel) 9%, var(--panel))}
+  .zona.hw{border-color:var(--suave); background:var(--bg)}
+  .zona > .rot{position:absolute; top:-10px; left:12px; background:var(--panel); padding:0 7px;
+               font-size:.7rem; text-transform:uppercase; letter-spacing:.07em; font-weight:700}
+  .zona.usuario > .rot{color:var(--usuario)}
+  .zona.kernel > .rot{color:var(--kernel)}
+  .zona.hw > .rot{color:var(--suave)}
+  .fila{display:flex; gap:8px; flex-wrap:wrap; margin-top:6px}
+  .mod{
+    flex:1 1 112px; min-width:100px; border:1px solid var(--borde); border-radius:7px; padding:9px 10px;
+    background:var(--panel); font-size:.82rem; text-align:center; transition:all .3s; position:relative;
+  }
+  .mod small{display:block; color:var(--suave); font-size:.68rem; margin-top:2px}
+  .mod.driver{border-style:dashed}
+  .mod.roto{background:color-mix(in srgb, var(--mal) 30%, var(--panel)); border-color:var(--mal);
+            color:var(--mal); font-weight:700; animation:temblar .4s}
+  .mod.muerto{opacity:.3; text-decoration:line-through}
+  @keyframes temblar{ 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+  .bloque{border:1px solid var(--borde); border-radius:7px; padding:10px 12px; background:var(--panel);
+          font-size:.86rem; text-align:center; transition:all .3s}
+  .bloque.roto{background:color-mix(in srgb, var(--mal) 30%, var(--panel)); border-color:var(--mal);
+               color:var(--mal); font-weight:700; animation:temblar .4s}
+  .capas .bloque{margin-bottom:5px; text-align:left}
+  .vms{display:flex; gap:8px; flex-wrap:wrap}
+  .vm{flex:1 1 150px; border:2px solid var(--borde); border-radius:8px; overflow:hidden; transition:all .3s}
+  .vm .so{background:color-mix(in srgb, var(--usuario) 14%, var(--panel)); padding:8px; font-size:.84rem;
+          text-align:center; font-weight:600}
+  .vm .hwv{background:var(--bg); padding:6px; font-size:.7rem; text-align:center; color:var(--suave)}
+  .vm.roto{border-color:var(--mal); background:color-mix(in srgb, var(--mal) 18%, var(--panel))}
+  .vm.roto .so{color:var(--mal)}
+
+  .botones{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px}
+  button.acc{padding:8px 15px; border:1px solid var(--borde); border-radius:6px; background:var(--panel);
+             color:var(--texto); font:inherit; cursor:pointer}
+  button.acc:hover{border-color:var(--acento)}
+  button.acc.peligro{border-color:var(--mal); color:var(--mal)}
+  button.acc.peligro:hover{background:color-mix(in srgb, var(--mal) 12%, var(--panel))}
+
+  .resultado{margin-top:12px; padding:11px 15px; border-radius:0 7px 7px 0; border-left:3px solid var(--borde);
+             background:var(--bg); font-size:.9rem; min-height:68px}
+  .resultado.ok{border-left-color:var(--ok)}
+  .resultado.mal{border-left-color:var(--mal)}
+  .resultado b{display:block; margin-bottom:4px}
+
+  .medidor{display:flex; gap:14px; flex-wrap:wrap; margin-top:12px}
+  .med{flex:1 1 180px}
+  .med span{font-size:.76rem; color:var(--suave); display:block; margin-bottom:4px}
+  .barra{height:9px; background:var(--bg); border:1px solid var(--borde); border-radius:5px; overflow:hidden}
+  .barra i{display:block; height:100%; transition:width .4s}
+
+  table{width:100%; border-collapse:collapse; font-size:.85rem}
+  th,td{padding:7px 9px; border-bottom:1px solid var(--borde); text-align:left}
+  th{font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave)}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr.sel{background:color-mix(in srgb, var(--acento) 12%, transparent); font-weight:600}
+  .nota{font-size:.86rem; color:var(--suave)}
+  .desc{margin:0 0 10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Las cinco estructuras de sistemas operativos</h1>
+  <p class="sub">¿Quién corre en modo kernel? &mdash; Unidad 1, Sistemas Operativos</p>
+
+  <div class="caja">
+    <h2>Cómo se usa</h2>
+    <p class="desc" style="margin-bottom:8px">
+      Elegí una estructura y mirá <strong>qué corre en modo kernel</strong> (rojo) y qué en modo usuario (azul).
+      Después apretá <strong>"Hacer fallar el driver de video"</strong> y compará qué pasa en cada una.
+    </p>
+    <p class="nota" style="margin:0">
+      Los drivers son la causa más frecuente de caídas: son código de terceros con menos control de calidad que el kernel.
+      Ahí está toda la discusión entre rendimiento y confiabilidad.
+    </p>
+  </div>
+
+  <div class="caja">
+    <div class="tabs" id="tabs"></div>
+  </div>
+
+  <div class="caja">
+    <h2 id="tituloEst"></h2>
+    <p class="desc" id="descEst"></p>
+    <div class="diagrama" id="diagrama"></div>
+    <div class="botones">
+      <button class="acc peligro" id="bFalla">Hacer fallar el driver de video</button>
+      <button class="acc" id="bReset">Reiniciar</button>
+    </div>
+    <div class="resultado" id="resultado"></div>
+    <div class="medidor">
+      <div class="med">
+        <span>Rendimiento</span>
+        <div class="barra"><i id="barRend" style="background:var(--ok)"></i></div>
+      </div>
+      <div class="med">
+        <span>Confiabilidad</span>
+        <div class="barra"><i id="barConf" style="background:var(--usuario)"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="caja">
+    <h2>Comparación</h2>
+    <table>
+      <thead><tr><th>Estructura</th><th>En modo kernel</th><th>Ventaja</th><th>Desventaja</th><th>Ejemplo</th></tr></thead>
+      <tbody id="tabla"></tbody>
+    </table>
+    <p class="nota" style="margin-bottom:0">
+      Linux hace trampa, y es la respuesta inteligente: es monolítico, pero con <strong>módulos cargables</strong>
+      que se insertan y se quitan del kernel en caliente, sin reiniciar. Un término medio entre el monolito rígido y el microkernel.
+    </p>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var EST = {
+    mono:{
+      nombre:"Monolítica",
+      desc:"Todo el sistema operativo es un solo programa binario enorme que corre en modo kernel. Cualquier procedimiento puede llamar a cualquier otro directamente, con una simple llamada a procedimiento.",
+      kernel:"Todo el SO", ventaja:"Rendimiento", desventaja:"Un error en cualquier módulo derriba todo",
+      ejemplo:"Linux, UNIX clásico", rend:95, conf:35,
+      cae:true,
+      alFallar:"<b>El sistema entero se cae.</b>El driver de video corría en modo kernel, con todos los privilegios y en el mismo espacio de direcciones que el resto del SO. Al fallar, corrompió estructuras del kernel y se llevó puesto todo: pantalla azul o kernel panic. Hay que reiniciar la máquina."
+    },
+    capas:{
+      nombre:"Por capas",
+      desc:"Sigue estando todo en modo kernel, pero organizado como una jerarquía donde cada capa solo puede usar los servicios de la capa inmediatamente inferior. El primer ejemplo fue el sistema THE, con seis capas. MULTICS lo generalizó con anillos concéntricos.",
+      kernel:"Todo, pero ordenado en capas", ventaja:"Claridad y depuración ordenada",
+      desventaja:"No todo se deja ordenar en capas estrictas, y atravesarlas cuesta",
+      ejemplo:"THE, MULTICS", rend:80, conf:45,
+      cae:true,
+      alFallar:"<b>El sistema se cae igual, pero se sabe dónde.</b>El driver sigue estando en modo kernel, así que la falla tumba el sistema. La ventaja de las capas no es la tolerancia a fallas: es que al estar todo ordenado por niveles, se depura mucho más fácil y se sabe exactamente qué capa rompió."
+    },
+    micro:{
+      nombre:"Microkernel",
+      desc:"Solo el microkernel corre en modo kernel. Todo lo demás, incluidos los drivers de dispositivos, corre como procesos de usuario ordinarios, sin privilegios. La regla de diseño es: mecanismo en el kernel, política en el espacio de usuario.",
+      kernel:"Solo el microkernel", ventaja:"Confiabilidad: un driver que falla no tumba el sistema",
+      desventaja:"Rendimiento: paso de mensajes en lugar de llamadas a procedimiento",
+      ejemplo:"MINIX 3, QNX", rend:45, conf:95,
+      cae:false,
+      alFallar:"<b>El sistema sigue funcionando.</b>El driver de video era un proceso de usuario común, sin privilegios. Al fallar, solo corrompió sus propios datos: no pudo tocar el kernel ni los otros módulos. El sistema lo detecta, lo mata y lo reinicia al instante, sin reiniciar la máquina. Se pierde el video un momento, nada más. <strong>Esta es toda la razón de ser del microkernel.</strong>"
+    },
+    cliser:{
+      nombre:"Cliente-servidor",
+      desc:"Variación leve del microkernel. Se distinguen dos clases de procesos: los servidores, que proveen un servicio, y los clientes, que lo usan. La comunicación es por paso de mensajes. Lo interesante: el cliente no sabe si el servidor está en la misma máquina o del otro lado de la red.",
+      kernel:"El microkernel y el transporte de mensajes", ventaja:"Se extiende naturalmente a una red",
+      desventaja:"Latencia de la comunicación", ejemplo:"Base de los sistemas distribuidos",
+      rend:40, conf:90,
+      cae:false,
+      alFallar:"<b>El sistema sigue funcionando.</b>Igual que en el microkernel: el servidor de video es un proceso más. El cliente que le pedía algo recibe un error de comunicación, como si el servidor estuviera caído del otro lado de la red. Y ahí está la gracia del modelo: <strong>un servidor caído y un servidor remoto se manejan igual</strong>. Por eso este modelo es la base de los sistemas distribuidos."
+    },
+    vm:{
+      nombre:"Máquinas virtuales",
+      desc:"El monitor o hipervisor corre sobre el hardware y no ofrece una máquina cómoda, sino copias exactas del hardware real, con su modo kernel, su modo usuario y sus interrupciones. Sobre cada copia se instala el sistema operativo que uno quiera.",
+      kernel:"El monitor o hipervisor", ventaja:"Aislamiento total entre sistemas operativos completos",
+      desventaja:"Sobrecarga de la virtualización", ejemplo:"VM/370, hipervisores actuales",
+      rend:55, conf:85,
+      cae:false,
+      alFallar:"<b>Se cae UNA máquina virtual. Las otras siguen intactas.</b>Dentro de la máquina virtual de Linux el driver corría en modo kernel, así que ese sistema operativo se cayó entero. Pero el hipervisor lo mantiene encerrado en su copia del hardware: Windows y MINIX ni se enteraron. <strong>Es aislamiento, no tolerancia a fallas:</strong> adentro de cada máquina virtual sigue valiendo la estructura que tenga ese sistema operativo."
+    }
+  };
+
+  var ORDEN = ["mono","capas","micro","cliser","vm"];
+  var actual = "mono";
+  var fallado = false;
+
+  var el = {
+    tabs:document.getElementById("tabs"),
+    titulo:document.getElementById("tituloEst"),
+    desc:document.getElementById("descEst"),
+    diagrama:document.getElementById("diagrama"),
+    resultado:document.getElementById("resultado"),
+    tabla:document.getElementById("tabla"),
+    barRend:document.getElementById("barRend"),
+    barConf:document.getElementById("barConf"),
+    bFalla:document.getElementById("bFalla"),
+    bReset:document.getElementById("bReset")
+  };
+
+  function tabs(){
+    el.tabs.innerHTML = "";
+    ORDEN.forEach(function(k){
+      var b = document.createElement("button");
+      b.className = "tab" + (k === actual ? " on" : "");
+      b.textContent = EST[k].nombre;
+      b.addEventListener("click", function(){ actual = k; fallado = false; render(); });
+      el.tabs.appendChild(b);
+    });
+  }
+
+  function mod(nombre, sub, clases){
+    return '<div class="mod ' + (clases||"") + '">' + nombre +
+           (sub ? "<small>" + sub + "</small>" : "") + "</div>";
+  }
+
+  function diagrama(){
+    var roto = fallado ? "roto" : "";
+    var muerto = (fallado && !EST[actual].cae) ? "muerto" : "";
+
+    if (actual === "mono"){
+      return '' +
+      '<div class="zona usuario"><span class="rot">Modo usuario</span>' +
+        '<div class="fila">' + mod("Programas","de usuario") + mod("Shell","") + mod("Editor","") + '</div>' +
+      '</div>' +
+      '<div class="zona kernel"><span class="rot">Modo kernel</span>' +
+        '<div class="bloque ' + roto + '" style="margin-bottom:8px">' +
+          (fallado ? "SISTEMA CAÍDO — kernel panic" : "TODO el sistema operativo, un solo binario") + '</div>' +
+        '<div class="fila">' + mod("Planificador") + mod("Memoria") + mod("Archivos") +
+          mod("Driver video","", "driver " + roto) + mod("Driver disco","", "driver") + '</div>' +
+      '</div>' +
+      '<div class="zona hw"><span class="rot">Hardware</span></div>';
+    }
+
+    if (actual === "capas"){
+      var capas = ["5 — El operador","4 — Programas de usuario","3 — Administración de E/S  (acá viven los drivers)",
+                   "2 — Comunicación operador-proceso","1 — Administración de memoria","0 — Asignación del procesador"];
+      var html = '<div class="zona kernel capas"><span class="rot">Modo kernel, en capas</span>';
+      if (fallado) html += '<div class="bloque roto" style="margin-bottom:8px">SISTEMA CAÍDO — falló en la capa 3</div>';
+      capas.forEach(function(c, idx){
+        var r = (fallado && idx === 2) ? "roto" : "";
+        html += '<div class="bloque ' + r + '">' + c + '</div>';
+      });
+      html += '</div><div class="zona hw"><span class="rot">Hardware</span></div>';
+      return html;
+    }
+
+    if (actual === "micro" || actual === "cliser"){
+      var etiqueta = actual === "micro" ? "Microkernel" : "Microkernel + mensajes";
+      var nomV = actual === "micro" ? "Driver video" : "Servidor video";
+      var extra = actual === "cliser"
+        ? mod("Cliente","pide servicios") + mod("Servidor red","¿local o remoto?")
+        : mod("Servidor archivos") + mod("Servidor red");
+      return '' +
+      '<div class="zona usuario"><span class="rot">Modo usuario — acá está casi todo el SO</span>' +
+        '<div class="fila">' +
+          mod(nomV, fallado ? "falló y lo reiniciaron" : "", "driver " + roto + " " + muerto) +
+          mod("Driver disco","","driver") + extra +
+        '</div>' +
+        '<div class="fila">' + mod("Programas","de usuario") + mod("Shell") + '</div>' +
+      '</div>' +
+      '<div class="zona kernel"><span class="rot">Modo kernel</span>' +
+        '<div class="bloque">' + etiqueta + ' &mdash; chiquito' +
+        (fallado ? ' &nbsp;·&nbsp; <strong style="color:var(--ok)">intacto</strong>' : '') + '</div>' +
+      '</div>' +
+      '<div class="zona hw"><span class="rot">Hardware</span></div>';
+    }
+
+    // vm
+    var vms = [
+      { n:"Linux",   r:fallado },
+      { n:"Windows", r:false },
+      { n:"MINIX 3", r:false }
+    ];
+    var h = '<div class="zona usuario" style="border-color:var(--borde)"><span class="rot">Máquinas virtuales</span><div class="vms">';
+    vms.forEach(function(v){
+      h += '<div class="vm ' + (v.r ? "roto" : "") + '">' +
+             '<div class="so">' + v.n + (v.r ? " — CAÍDO" : "") + '</div>' +
+             '<div class="hwv">copia exacta del hardware</div>' +
+           '</div>';
+    });
+    h += '</div></div>' +
+      '<div class="zona kernel"><span class="rot">Modo kernel</span>' +
+        '<div class="bloque">Monitor / Hipervisor' +
+        (fallado ? ' &nbsp;·&nbsp; <strong style="color:var(--ok)">intacto, aisló la falla</strong>' : '') + '</div>' +
+      '</div>' +
+      '<div class="zona hw"><span class="rot">Hardware real</span></div>';
+    return h;
+  }
+
+  function render(){
+    var e = EST[actual];
+    tabs();
+    el.titulo.textContent = e.nombre;
+    el.desc.textContent = e.desc;
+    el.diagrama.innerHTML = diagrama();
+    el.barRend.style.width = e.rend + "%";
+    el.barConf.style.width = e.conf + "%";
+
+    if (fallado){
+      el.resultado.className = "resultado " + (e.cae ? "mal" : "ok");
+      el.resultado.innerHTML = e.alFallar;
+    } else {
+      el.resultado.className = "resultado";
+      el.resultado.innerHTML = "<b>Sistema funcionando</b>Apretá el botón de abajo para hacer fallar el driver de video y ver qué pasa con esta estructura.";
+    }
+
+    el.tabla.innerHTML = "";
+    ORDEN.forEach(function(k){
+      var x = EST[k];
+      var tr = document.createElement("tr");
+      if (k === actual) tr.className = "sel";
+      tr.innerHTML = "<td>" + x.nombre + "</td><td>" + x.kernel + "</td><td>" + x.ventaja +
+                     "</td><td>" + x.desventaja + "</td><td>" + x.ejemplo + "</td>";
+      tr.style.cursor = "pointer";
+      tr.addEventListener("click", function(){ actual = k; fallado = false; render(); });
+      el.tabla.appendChild(tr);
+    });
+  }
+
+  el.bFalla.addEventListener("click", function(){ fallado = true; render(); });
+  el.bReset.addEventListener("click", function(){ fallado = false; render(); });
+
+  render();
+})();
+</script>
+</body>
+</html>
