@@ -19,7 +19,7 @@
 | # | Unidad | Preparada (F2) | Clase (F3) | Cuestionario (F4) | Nota (F5) | Temas débiles |
 |---|---|---|---|---|---|---|
 | 1 | Introducción, hardware y estructura de los SO | ✅ | ✅ | — | — | — |
-| 2 | Procesos, hilos, concurrencia y planificación | — | — | — | — | — |
+| 2 | Procesos, hilos, concurrencia y planificación | ✅ | — | — | — | — |
 | 3 | Administración de memoria | — | — | — | — | — |
 | 4 | Sistemas de archivos | — | — | — | — | — |
 | 5 | Entrada/salida | — | — | — | — | — |
@@ -37,6 +37,10 @@
 - **2026-10-21** — Clase de la Unidad 1 en el chat: temas 1 a 8 de 9 dados (se agregó el tema de ensamblador e interrupciones, que faltaba en el mapa original). Tres visualizaciones creadas: las tres formas de E/S, el arranque paso a paso y el simulador de interrupciones del 8086. Se creó `plan/continuidad.md` para poder alternar entre dos computadoras.
 
 - **2026-10-22** — **Clase de la Unidad 1 terminada**: los 9 temas y el cierre. Cuarta visualización creada (las cinco estructuras de SO, con simulación de falla de driver). Sigue el cuestionario de la Unidad 1.
+
+- **2026-10-23** — Cuestionario de la Unidad 1 **empezado y pausado**: partes A y B respondidas, 23/28 (ver `unidades/u01-introduccion/correcciones/avance_cuestionario_u01.md`). Faltan las partes C, D, E y F. Preparada la **Unidad 2** (Fase 2): recorte del libro, apuntes, `notebooklm_u02.md` (16.500 palabras) y `prompt_video.txt`. Los algoritmos de planificación se verificaron con `_trabajo/verificar_planificacion.js`.
+
+- **2026-10-26** — Clase de la Unidad 2 en curso: **6 de 10 temas** (procesos, estados y BCP, hilos, implementación de hilos, condiciones de carrera, exclusión mutua con espera ocupada). Dos visualizaciones nuevas: diagrama de estados interactivo y el spooler con la condición de carrera paso a paso. Se explicaron aparte, a pedido: qué es la pila, qué es un descriptor de archivo y qué es una transición.
 
 ## Cronograma
 

@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Condición de carrera — el spooler de impresión</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#fff; --borde:#d9dde3; --texto:#1b1f24; --suave:#5b6572;
+    --acento:#6b4fd8; --ok:#2e9e5b; --mal:#d64545; --aviso:#e08a2e;
+    --pa:#3a7bd5; --pb:#e08a2e;
+    --sombra:0 1px 3px rgba(0,0,0,.08);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#14171c; --panel:#1c2026; --borde:#2d333c; --texto:#e6e9ed; --suave:#9aa4b2;
+      --acento:#8d75f0; --ok:#3fbb72; --mal:#e05c5c; --aviso:#f0a040;
+      --pa:#5a95e8; --pb:#f0a040; --sombra:0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0; padding:24px 16px 60px; background:var(--bg); color:var(--texto);
+       font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:1080px; margin:0 auto}
+  h1{font-size:1.45rem; margin:0 0 4px; letter-spacing:-.01em}
+  .sub{color:var(--suave); margin:0 0 20px}
+  .caja{background:var(--panel); border:1px solid var(--borde); border-radius:10px;
+        padding:16px 18px; margin-bottom:16px; box-shadow:var(--sombra)}
+  h2{font-size:.8rem; margin:0 0 12px; text-transform:uppercase; letter-spacing:.06em; color:var(--suave)}
+
+  .modo{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:4px}
+  .modo button{flex:1 1 200px}
+  button{padding:9px 15px; border:1px solid var(--borde); border-radius:7px; background:var(--panel);
+         color:var(--texto); font:inherit; font-size:.9rem; cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--acento)}
+  button:disabled{opacity:.4; cursor:not-allowed}
+  button.on{background:var(--acento); border-color:var(--acento); color:#fff}
+  button.primario{background:var(--acento); border-color:var(--acento); color:#fff}
+
+  .cols{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  @media (max-width:800px){ .cols{grid-template-columns:1fr} }
+
+  .proc{border:2px solid var(--borde); border-radius:9px; padding:12px 14px; transition:all .3s}
+  .proc.activo{border-color:var(--acento); background:color-mix(in srgb,var(--acento) 7%,var(--panel))}
+  .proc h3{margin:0 0 8px; font-size:.95rem}
+  .proc.a h3{color:var(--pa)} .proc.b h3{color:var(--pb)}
+  .cod{font:12.5px/1.75 ui-monospace,SFMono-Regular,Menlo,monospace; margin:0}
+  .cod div{padding:2px 7px; border-radius:4px; transition:all .25s}
+  .cod div.hecha{opacity:.42}
+  .cod div.ahora{background:color-mix(in srgb,var(--acento) 22%,transparent); font-weight:700}
+  .local{margin-top:9px; font:12.5px ui-monospace,monospace; color:var(--suave)}
+  .local b{color:var(--texto)}
+
+  .mem{display:flex; gap:18px; flex-wrap:wrap; align-items:flex-start}
+  .var{border:1px solid var(--borde); border-radius:7px; padding:8px 14px; background:var(--bg);
+       font:13px ui-monospace,monospace; text-align:center; transition:all .3s}
+  .var.cambio{border-color:var(--aviso); background:color-mix(in srgb,var(--aviso) 20%,var(--bg))}
+  .var b{display:block; font-size:1.25rem; margin-top:2px}
+  .var span{font-size:.72rem; color:var(--suave)}
+
+  .ranuras{display:flex; gap:4px; flex-wrap:wrap; margin-top:4px}
+  .ran{width:74px; border:1px solid var(--borde); border-radius:6px; padding:5px 3px; text-align:center;
+       font:11px ui-monospace,monospace; background:var(--panel); transition:all .3s}
+  .ran .n{color:var(--suave); font-size:.68rem}
+  .ran .v{font-weight:700; min-height:15px; font-size:.72rem}
+  .ran.ocupada{background:color-mix(in srgb,var(--ok) 13%,var(--panel)); border-color:var(--ok)}
+  .ran.deA{background:color-mix(in srgb,var(--pa) 24%,var(--panel)); border-color:var(--pa)}
+  .ran.deB{background:color-mix(in srgb,var(--pb) 24%,var(--panel)); border-color:var(--pb)}
+  .ran.pisada{border-color:var(--mal); border-width:2px; animation:parpadeo .5s 3}
+  @keyframes parpadeo{50%{background:color-mix(in srgb,var(--mal) 40%,var(--panel))}}
+
+  .msg{margin-top:12px; padding:11px 15px; border-radius:0 7px 7px 0; border-left:3px solid var(--borde);
+       background:var(--bg); font-size:.9rem; min-height:72px}
+  .msg.ok{border-left-color:var(--ok)}
+  .msg.mal{border-left-color:var(--mal)}
+  .msg.aviso{border-left-color:var(--aviso)}
+  .msg b{display:block; margin-bottom:4px}
+
+  .barra{display:flex; gap:6px; align-items:center; margin-top:12px; flex-wrap:wrap}
+  .reloj{margin-left:auto; font:13px ui-monospace,monospace; color:var(--suave)}
+  .cpu{font-size:.82rem; padding:3px 10px; border-radius:20px; font-weight:700}
+  .cpu.a{background:color-mix(in srgb,var(--pa) 25%,transparent); color:var(--pa)}
+  .cpu.b{background:color-mix(in srgb,var(--pb) 25%,transparent); color:var(--pb)}
+  .cpu.fin{background:color-mix(in srgb,var(--ok) 25%,transparent); color:var(--ok)}
+  .nota{font-size:.86rem; color:var(--suave)}
+  ul{margin:8px 0; padding-left:20px} li{margin:3px 0}
+  code{background:var(--bg); padding:1px 5px; border-radius:4px; font-size:.88em}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Condición de carrera: el spooler de impresión</h1>
+  <p class="sub">El ejemplo clásico del Tanenbaum &mdash; Unidad 2, Sistemas Operativos</p>
+
+  <div class="caja">
+    <h2>Qué muestra</h2>
+    <p style="margin:0 0 8px">
+      Dos procesos quieren encolar un archivo para imprimir. Los dos ejecutan <strong>exactamente el mismo
+      código, que es correcto</strong>. Lo único que cambia es <strong>en qué momento el planificador los conmuta</strong>.
+    </p>
+    <p class="nota" style="margin:0">
+      Probá las dos secuencias y compará el resultado. En una no pasa nada; en la otra se pierde un archivo
+      y nadie se entera.
+    </p>
+  </div>
+
+  <div class="caja">
+    <h2>Elegí la secuencia</h2>
+    <div class="modo">
+      <button id="m-bien" class="on">Conmutación en buen momento</button>
+      <button id="m-mal">Conmutación en el PEOR momento</button>
+    </div>
+    <div class="barra">
+      <button id="bPaso" class="primario">Siguiente paso</button>
+      <button id="bTodo">Ejecutar todo</button>
+      <button id="bReset">Reiniciar</button>
+      <span class="cpu" id="cpu">CPU: —</span>
+      <span class="reloj" id="reloj">paso 0</span>
+    </div>
+  </div>
+
+  <div class="caja">
+    <h2>Memoria compartida</h2>
+    <div class="mem">
+      <div class="var" id="v-ent"><span>ent — próxima ranura libre</span><b>4</b></div>
+      <div class="var" id="v-sal"><span>sal — próximo a imprimir</span><b>0</b></div>
+    </div>
+    <div style="margin-top:14px">
+      <span class="nota">Directorio del spooler</span>
+      <div class="ranuras" id="ranuras"></div>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div class="caja proc a" id="p-a">
+      <h3>Proceso A &mdash; quiere imprimir <code>informe.doc</code></h3>
+      <div class="cod" id="cod-a"></div>
+      <div class="local" id="loc-a"></div>
+    </div>
+    <div class="caja proc b" id="p-b">
+      <h3>Proceso B &mdash; quiere imprimir <code>tesis.pdf</code></h3>
+      <div class="cod" id="cod-b"></div>
+      <div class="local" id="loc-b"></div>
+    </div>
+  </div>
+
+  <div class="caja">
+    <h2>Qué está pasando</h2>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="caja">
+    <h2>Lo que hay que llevarse</h2>
+    <ul style="margin-top:0; margin-bottom:0" class="nota">
+      <li>El código de A es correcto. El de B es correcto. <strong>El problema es la intercalación.</strong></li>
+      <li>La secuencia peligrosa es <strong>leer → modificar → escribir</strong> sobre una variable compartida:
+          si te interrumpen en el medio, trabajás con un valor viejo.</li>
+      <li>El directorio queda <strong>internamente consistente</strong>: nadie detecta el error.</li>
+      <li>La solución es la <strong>exclusión mutua</strong>: que nunca haya dos procesos dentro de su región crítica.</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var LINEAS = [
+    "1  local = ent",
+    "2  ranura[local] = mi_archivo",
+    "3  ent = local + 1"
+  ];
+
+  // guiones: cada paso dice que proceso ejecuta que linea
+  var GUIONES = {
+    bien: [
+      { p:"A", l:0 }, { p:"A", l:1 }, { p:"A", l:2 },
+      { p:"B", l:0 }, { p:"B", l:1 }, { p:"B", l:2 }
+    ],
+    mal: [
+      { p:"A", l:0 },                      // A lee ent = 4
+      { p:"B", l:0 }, { p:"B", l:1 }, { p:"B", l:2 },   // B hace TODO
+      { p:"A", l:1 }, { p:"A", l:2 }       // A retoma con el valor viejo
+    ]
+  };
+
+  var modo = "bien", paso = 0, est, timer = null;
+
+  function inicial(){
+    return {
+      ent: 4, sal: 0,
+      ranuras: ["a.c","b.c","c.c","d.c",null,null,null],
+      duenio:  [null,null,null,null,null,null,null],
+      local: { A:null, B:null },
+      linea: { A:-1, B:-1 },
+      hechas:{ A:[], B:[] },
+      pisada: -1,
+      cambio: null
+    };
+  }
+
+  var el = id => document.getElementById(id);
+  var ARCH = { A:"informe.doc", B:"tesis.pdf" };
+
+  function reset(){
+    if (timer){ clearInterval(timer); timer = null; }
+    paso = 0; est = inicial();
+    render();
+    aviso("", "Listo para empezar",
+      modo === "bien"
+        ? "El planificador va a conmutar entre A y B en un momento inofensivo: A termina sus tres líneas y recién después entra B."
+        : "El planificador va a conmutar <strong>justo entre la línea 1 y la 2 de A</strong>. Mirá lo que pasa.");
+  }
+
+  function guion(){ return GUIONES[modo]; }
+
+  function avanzar(){
+    var g = guion();
+    if (paso >= g.length) return false;
+    var ac = g[paso];
+    var P = ac.p, L = ac.l;
+    est.cambio = null; est.pisada = -1;
+
+    // conmutacion?
+    var anterior = paso > 0 ? g[paso-1].p : null;
+    var conmuto = anterior && anterior !== P;
+
+    if (L === 0){
+      est.local[P] = est.ent;
+      aviso(conmuto ? "aviso" : "", "Proceso " + P + " — línea 1: lee la variable compartida",
+        (conmuto ? "<strong>⏰ El planificador acaba de conmutar a " + P + ".</strong><br>" : "") +
+        P + " lee <code>ent</code> y obtiene <strong>" + est.ent + "</strong>. Lo guarda en su variable local. " +
+        "<strong>Todavía no escribió nada.</strong> Este es el punto peligroso: si lo interrumpen acá, " +
+        "cuando vuelva va a seguir creyendo que la ranura libre es la " + est.ent + ".");
+    }
+    else if (L === 1){
+      var r = est.local[P];
+      var habia = est.ranuras[r];
+      var deOtro = est.duenio[r] && est.duenio[r] !== P;
+      est.ranuras[r] = ARCH[P];
+      est.duenio[r] = P;
+      if (deOtro){
+        est.pisada = r;
+        aviso("mal", "Proceso " + P + " — línea 2: ★ PISA el archivo de " + (P === "A" ? "B" : "A"),
+          (conmuto ? "<strong>⏰ Conmutó a " + P + ".</strong> " : "") +
+          P + " retomó con su variable local, que vale <strong>" + r + "</strong> — un valor que leyó " +
+          "<strong>antes</strong> de que el otro proceso escribiera. Acaba de sobrescribir " +
+          "<code>" + habia + "</code> con <code>" + ARCH[P] + "</code>.<br><br>" +
+          "<strong>El archivo de " + (P === "A" ? "B" : "A") + " desapareció y nadie se enteró.</strong>");
+      } else {
+        aviso(conmuto ? "aviso" : "", "Proceso " + P + " — línea 2: escribe en la ranura " + r,
+          (conmuto ? "<strong>⏰ El planificador conmutó a " + P + ".</strong><br>" : "") +
+          P + " escribe <code>" + ARCH[P] + "</code> en la ranura <strong>" + r + "</strong>, " +
+          "que es la que le dijo su variable local.");
+      }
+    }
+    else {
+      est.ent = est.local[P] + 1;
+      est.cambio = "ent";
+      aviso("", "Proceso " + P + " — línea 3: actualiza ent",
+        P + " pone <code>ent = " + est.ent + "</code>. Desde su punto de vista, el trabajo salió perfecto: " +
+        "escribió su archivo y dejó la variable apuntando a la siguiente ranura.");
+    }
+
+    est.linea[P] = L;
+    est.hechas[P].push(L);
+    paso++;
+
+    if (paso >= guion().length) finalizar();
+    return true;
+  }
+
+  function finalizar(){
+    var perdidos = [];
+    ["A","B"].forEach(function(P){
+      if (est.duenio.indexOf(P) < 0) perdidos.push(P);
+    });
+    if (perdidos.length){
+      aviso("mal", "Resultado: se perdió el archivo de " + perdidos.join(" y "),
+        "El directorio quedó <strong>internamente consistente</strong>: <code>ent</code> vale " + est.ent +
+        ", no hay ranuras rotas, y el demonio de impresión no va a notar absolutamente nada raro.<br><br>" +
+        "Pero <code>" + ARCH[perdidos[0]] + "</code> <strong>nunca se va a imprimir</strong>, y el proceso " +
+        perdidos[0] + " <strong>jamás se va a enterar</strong>. Nadie reportó un error.<br><br>" +
+        "Y lo más incómodo: <strong>el código de los dos procesos es correcto</strong>. Lo único que falló " +
+        "fue el momento en que el planificador conmutó.");
+    } else {
+      aviso("ok", "Resultado: los dos archivos quedaron encolados",
+        "Acá no pasó nada malo: A completó sus tres líneas <strong>sin que lo interrumpieran en el medio</strong>, " +
+        "y recién después entró B, que leyó <code>ent</code> ya actualizada.<br><br>" +
+        "<strong>Atención: esto no significa que el programa sea correcto.</strong> Significa que esta vez tuvo suerte. " +
+        "Por eso las condiciones de carrera son tan difíciles de depurar: el programa anda bien casi siempre.");
+    }
+  }
+
+  function aviso(clase, titulo, cuerpo){
+    el("msg").className = "msg " + clase;
+    el("msg").innerHTML = "<b>" + titulo + "</b>" + cuerpo;
+  }
+
+  function render(){
+    // variables
+    el("v-ent").className = "var" + (est.cambio === "ent" ? " cambio" : "");
+    el("v-ent").innerHTML = "<span>ent — próxima ranura libre</span><b>" + est.ent + "</b>";
+    el("v-sal").innerHTML = "<span>sal — próximo a imprimir</span><b>" + est.sal + "</b>";
+
+    // ranuras
+    var cont = el("ranuras"); cont.innerHTML = "";
+    est.ranuras.forEach(function(v, i){
+      var d = document.createElement("div");
+      var cls = "ran";
+      if (v) cls += " ocupada";
+      if (est.duenio[i] === "A") cls += " deA";
+      if (est.duenio[i] === "B") cls += " deB";
+      if (est.pisada === i) cls += " pisada";
+      d.className = cls;
+      d.innerHTML = '<div class="n">' + i + '</div><div class="v">' + (v || "—") + "</div>";
+      cont.appendChild(d);
+    });
+
+    // procesos
+    var g = guion();
+    var actual = paso > 0 && paso <= g.length ? g[paso-1].p : null;
+    ["A","B"].forEach(function(P){
+      el("p-" + P.toLowerCase()).className = "caja proc " + P.toLowerCase() + (actual === P ? " activo" : "");
+      var c = el("cod-" + P.toLowerCase()); c.innerHTML = "";
+      LINEAS.forEach(function(t, i){
+        var d = document.createElement("div");
+        var hecha = est.hechas[P].indexOf(i) >= 0;
+        var ahora = actual === P && est.linea[P] === i;
+        d.className = ahora ? "ahora" : (hecha ? "hecha" : "");
+        d.textContent = t.replace("mi_archivo", ARCH[P]);
+        c.appendChild(d);
+      });
+      el("loc-" + P.toLowerCase()).innerHTML = "variable local: <b>" +
+        (est.local[P] === null ? "(sin valor)" : est.local[P]) + "</b>";
+    });
+
+    el("cpu").className = "cpu " + (paso >= g.length ? "fin" : (actual ? actual.toLowerCase() : ""));
+    el("cpu").textContent = paso >= g.length ? "terminó" : (actual ? "CPU: proceso " + actual : "CPU: —");
+    el("reloj").textContent = "paso " + paso + " de " + g.length;
+    el("bPaso").disabled = paso >= g.length;
+    el("bTodo").disabled = paso >= g.length;
+  }
+
+  el("bPaso").addEventListener("click", function(){ avanzar(); render(); });
+  el("bTodo").addEventListener("click", function(){
+    if (timer) return;
+    timer = setInterval(function(){
+      if (!avanzar()){ clearInterval(timer); timer = null; }
+      render();
+    }, 1100);
+  });
+  el("bReset").addEventListener("click", reset);
+  el("m-bien").addEventListener("click", function(){
+    modo = "bien"; this.classList.add("on"); el("m-mal").classList.remove("on"); reset();
+  });
+  el("m-mal").addEventListener("click", function(){
+    modo = "mal"; this.classList.add("on"); el("m-bien").classList.remove("on"); reset();
+  });
+
+  reset();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estados de un proceso y cambio de contexto</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#fff; --borde:#d9dde3; --texto:#1b1f24; --suave:#5b6572;
+    --acento:#6b4fd8; --ok:#2e9e5b; --mal:#d64545; --aviso:#e08a2e;
+    --ejec:#2e9e5b; --listo:#3a7bd5; --bloq:#d64545;
+    --sombra:0 1px 3px rgba(0,0,0,.08);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#14171c; --panel:#1c2026; --borde:#2d333c; --texto:#e6e9ed; --suave:#9aa4b2;
+      --acento:#8d75f0; --ok:#3fbb72; --mal:#e05c5c; --aviso:#f0a040;
+      --ejec:#3fbb72; --listo:#5a95e8; --bloq:#e05c5c; --sombra:0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0; padding:24px 16px 60px; background:var(--bg); color:var(--texto);
+       font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:1060px; margin:0 auto}
+  h1{font-size:1.45rem; margin:0 0 4px; letter-spacing:-.01em}
+  .sub{color:var(--suave); margin:0 0 20px}
+  .caja{background:var(--panel); border:1px solid var(--borde); border-radius:10px;
+        padding:16px 18px; margin-bottom:16px; box-shadow:var(--sombra)}
+  h2{font-size:.8rem; margin:0 0 12px; text-transform:uppercase; letter-spacing:.06em; color:var(--suave)}
+  .cols{display:grid; grid-template-columns:1.15fr .85fr; gap:16px}
+  @media (max-width:860px){ .cols{grid-template-columns:1fr} }
+
+  svg{width:100%; height:auto; display:block}
+  .nodo rect{transition:all .3s}
+  .nodo text{font:600 13px system-ui,sans-serif; fill:#fff; pointer-events:none}
+  .nodo .cant{font:700 11px ui-monospace,monospace; fill:#fff; opacity:.85}
+  .tr{cursor:pointer}
+  .tr line, .tr path{transition:all .25s}
+  .tr text{font:600 11px system-ui,sans-serif; fill:var(--suave); transition:fill .25s}
+  .tr:hover text{fill:var(--acento)}
+  .tr.off{opacity:.3; cursor:not-allowed}
+  .tr.off:hover text{fill:var(--suave)}
+
+  .procs{display:flex; flex-wrap:wrap; gap:7px; margin-top:4px; min-height:34px}
+  .p{
+    border:2px solid var(--borde); border-radius:7px; padding:5px 10px; font-size:.84rem;
+    font-weight:600; cursor:pointer; background:var(--panel); transition:all .2s;
+  }
+  .p:hover{border-color:var(--acento)}
+  .p.sel{box-shadow:0 0 0 2px var(--acento)}
+  .p.ejec{border-color:var(--ejec); background:color-mix(in srgb,var(--ejec) 16%,var(--panel))}
+  .p.listo{border-color:var(--listo); background:color-mix(in srgb,var(--listo) 16%,var(--panel))}
+  .p.bloq{border-color:var(--bloq); background:color-mix(in srgb,var(--bloq) 16%,var(--panel))}
+  .p small{display:block; font-weight:400; font-size:.68rem; color:var(--suave)}
+
+  .grupo{margin-bottom:12px}
+  .grupo > b{font-size:.76rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave)}
+  .cola{font-size:.78rem; color:var(--suave); font-family:ui-monospace,monospace}
+
+  .botones{display:flex; gap:7px; flex-wrap:wrap; margin-top:10px}
+  button{padding:7px 13px; border:1px solid var(--borde); border-radius:6px; background:var(--panel);
+         color:var(--texto); font:inherit; font-size:.88rem; cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--acento)}
+  button:disabled{opacity:.35; cursor:not-allowed}
+  button.primario{background:var(--acento); border-color:var(--acento); color:#fff}
+
+  .msg{margin-top:12px; padding:10px 14px; border-radius:0 7px 7px 0; border-left:3px solid var(--borde);
+       background:var(--bg); font-size:.89rem; min-height:60px}
+  .msg.ok{border-left-color:var(--ok)}
+  .msg.mal{border-left-color:var(--mal)}
+  .msg b{display:block; margin-bottom:3px}
+
+  .bcp{font-size:.8rem; font-family:ui-monospace,monospace; line-height:1.7}
+  .bcp div{display:flex; justify-content:space-between; border-bottom:1px solid var(--borde); padding:2px 0}
+  .bcp span:first-child{color:var(--suave)}
+  .bcp span:last-child{font-weight:600}
+  .log{font-size:.8rem; font-family:ui-monospace,monospace; max-height:190px; overflow-y:auto;
+       background:var(--bg); border:1px solid var(--borde); border-radius:6px; padding:9px 11px}
+  .log div{padding:1px 0; border-bottom:1px solid transparent}
+  .log .t{color:var(--suave)}
+  .nota{font-size:.85rem; color:var(--suave)}
+  ul{margin:8px 0; padding-left:20px} li{margin:3px 0}
+  code{background:var(--bg); padding:1px 5px; border-radius:4px; font-size:.88em}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Estados de un proceso</h1>
+  <p class="sub">Las cuatro transiciones y el cambio de contexto &mdash; Unidad 2, Sistemas Operativos</p>
+
+  <div class="caja">
+    <h2>Cómo se usa</h2>
+    <p style="margin:0 0 8px">
+      Elegí un proceso de las listas de abajo y después hacé clic en una <strong>flecha del diagrama</strong> para
+      aplicarle esa transición. Si la transición no corresponde para el estado en que está, el simulador te explica por qué.
+    </p>
+    <p class="nota" style="margin:0">
+      Probá hacer clic en la flecha punteada que va de <strong>Bloqueado directamente a En ejecución</strong>.
+      Esa transición no existe, y es lo que más se pregunta del tema.
+    </p>
+  </div>
+
+  <div class="cols">
+    <div>
+      <div class="caja">
+        <h2>Diagrama de estados</h2>
+        <svg viewBox="0 0 520 340" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="fl" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+              <polygon points="0 0, 9 3.5, 0 7" fill="var(--suave)"/>
+            </marker>
+            <marker id="flx" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+              <polygon points="0 0, 9 3.5, 0 7" fill="var(--mal)"/>
+            </marker>
+          </defs>
+
+          <!-- nodo EN EJECUCION -->
+          <g class="nodo">
+            <rect id="n-ejec" x="175" y="20" width="170" height="54" rx="9" fill="var(--ejec)"/>
+            <text x="260" y="42" text-anchor="middle">EN EJECUCIÓN</text>
+            <text class="cant" id="c-ejec" x="260" y="60" text-anchor="middle">0 procesos</text>
+          </g>
+
+          <!-- nodo BLOQUEADO -->
+          <g class="nodo">
+            <rect id="n-bloq" x="20" y="240" width="170" height="54" rx="9" fill="var(--bloq)"/>
+            <text x="105" y="262" text-anchor="middle">BLOQUEADO</text>
+            <text class="cant" id="c-bloq" x="105" y="280" text-anchor="middle">0 procesos</text>
+          </g>
+
+          <!-- nodo LISTO -->
+          <g class="nodo">
+            <rect id="n-listo" x="330" y="240" width="170" height="54" rx="9" fill="var(--listo)"/>
+            <text x="415" y="262" text-anchor="middle">LISTO</text>
+            <text class="cant" id="c-listo" x="415" y="280" text-anchor="middle">0 procesos</text>
+          </g>
+
+          <!-- 1: ejecucion -> bloqueado -->
+          <g class="tr" id="t1">
+            <path d="M 200 70 L 110 236" stroke="var(--suave)" stroke-width="2.5" fill="none" marker-end="url(#fl)"/>
+            <text x="92" y="150" text-anchor="end">① se bloquea</text>
+            <text x="92" y="164" text-anchor="end">esperando E/S</text>
+          </g>
+
+          <!-- 2: ejecucion -> listo -->
+          <g class="tr" id="t2">
+            <path d="M 300 74 L 390 236" stroke="var(--suave)" stroke-width="2.5" fill="none" marker-end="url(#fl)"/>
+            <text x="432" y="128" >② el planificador</text>
+            <text x="432" y="142" >elige a otro</text>
+          </g>
+
+          <!-- 3: listo -> ejecucion -->
+          <g class="tr" id="t3">
+            <path d="M 430 236 L 340 74" stroke="var(--suave)" stroke-width="2.5" fill="none" marker-end="url(#fl)"/>
+            <text x="432" y="186" >③ el planificador</text>
+            <text x="432" y="200" >lo elige</text>
+          </g>
+
+          <!-- 4: bloqueado -> listo -->
+          <g class="tr" id="t4">
+            <line x1="194" y1="267" x2="326" y2="267" stroke="var(--suave)" stroke-width="2.5" marker-end="url(#fl)"/>
+            <text x="260" y="258" text-anchor="middle">④ llegó el dato</text>
+            <text x="260" y="290" text-anchor="middle">(interrupción)</text>
+          </g>
+
+          <!-- X: bloqueado -> ejecucion (NO EXISTE) -->
+          <g class="tr" id="tx">
+            <path d="M 120 236 L 200 78" stroke="var(--mal)" stroke-width="2.5" fill="none"
+                  stroke-dasharray="7 5" marker-end="url(#flx)" opacity=".55"/>
+            <text x="150" y="170" fill="var(--mal)" opacity=".8">✗ no existe</text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="caja">
+        <h2>Los procesos</h2>
+        <div class="grupo">
+          <b style="color:var(--ejec)">En ejecución</b>
+          <div class="procs" id="l-ejec"></div>
+        </div>
+        <div class="grupo">
+          <b style="color:var(--listo)">Listos</b> <span class="cola" id="orden-listo"></span>
+          <div class="procs" id="l-listo"></div>
+        </div>
+        <div class="grupo" style="margin-bottom:0">
+          <b style="color:var(--bloq)">Bloqueados</b>
+          <div class="procs" id="l-bloq"></div>
+        </div>
+        <div class="botones">
+          <button id="bAuto" class="primario">Simular un ciclo típico</button>
+          <button id="bReset">Reiniciar</button>
+        </div>
+        <div class="msg" id="msg"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="caja">
+        <h2>BCP del proceso seleccionado</h2>
+        <div class="bcp" id="bcp"></div>
+        <p class="nota" style="margin:10px 0 0">
+          Esto es lo que el sistema operativo guarda y restaura en cada cambio de contexto.
+          En Linux se puede ver algo parecido con <code>cat /proc/PID/status</code>.
+        </p>
+      </div>
+
+      <div class="caja">
+        <h2>Bitácora</h2>
+        <div class="log" id="log"></div>
+      </div>
+
+      <div class="caja">
+        <h2>Para fijar</h2>
+        <ul style="margin-top:0; margin-bottom:0" class="nota">
+          <li><strong>Bloqueado</strong> = no puede por lógica, le falta un dato.</li>
+          <li><strong>Listo</strong> = sí podría, solo le falta la CPU.</li>
+          <li>La ① la provoca <strong>el propio proceso</strong>.</li>
+          <li>La ② y la ③, <strong>el planificador</strong>.</li>
+          <li>La ④, <strong>un evento externo</strong> (interrupción).</li>
+          <li>De bloqueado <strong>siempre</strong> se pasa por listo.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var PROCS = [
+    { id:"A", pid:1842, prog:"navegador",  cpu:0, estado:"ejec",  espera:"" },
+    { id:"B", pid:1907, prog:"compilador", cpu:0, estado:"listo", espera:"" },
+    { id:"C", pid:2031, prog:"editor",     cpu:0, estado:"listo", espera:"" },
+    { id:"D", pid:2114, prog:"respaldo",   cpu:0, estado:"bloq",  espera:"lectura de disco" }
+  ];
+
+  var procs, sel, log, reloj, pasoAuto;
+
+  function reset(){
+    procs = PROCS.map(p => ({ ...p }));
+    sel = "A"; log = []; reloj = 0; pasoAuto = 0;
+    anotar("sistema iniciado");
+    render();
+    aviso("", "Elegí un proceso y hacé clic en una flecha",
+      "Las flechas aplican la transición al proceso seleccionado. Si no corresponde, te explico por qué.");
+  }
+
+  function anotar(txt){
+    log.unshift({ t: reloj, txt: txt });
+    if (log.length > 40) log.pop();
+  }
+
+  var el = id => document.getElementById(id);
+
+  function porEstado(e){ return procs.filter(p => p.estado === e); }
+  function seleccionado(){ return procs.find(p => p.id === sel); }
+
+  function render(){
+    ["ejec","listo","bloq"].forEach(function(e){
+      var cont = el("l-" + e); cont.innerHTML = "";
+      var lista = porEstado(e);
+      el("c-" + e).textContent = lista.length + (lista.length === 1 ? " proceso" : " procesos");
+      lista.forEach(function(p){
+        var d = document.createElement("div");
+        d.className = "p " + e + (p.id === sel ? " sel" : "");
+        d.innerHTML = p.id + " <small>" + p.prog + (p.espera ? " · " + p.espera : "") + "</small>";
+        d.addEventListener("click", function(){ sel = p.id; render(); });
+        cont.appendChild(d);
+      });
+      if (!lista.length){
+        var v = document.createElement("div");
+        v.className = "nota"; v.style.fontStyle = "italic"; v.style.fontSize = ".82rem";
+        v.textContent = "(ninguno)";
+        cont.appendChild(v);
+      }
+    });
+
+    el("orden-listo").textContent = porEstado("listo").length
+      ? "cola: " + porEstado("listo").map(p => p.id).join(" → ") : "";
+
+    var p = seleccionado();
+    var nom = { ejec:"En ejecución", listo:"Listo", bloq:"Bloqueado" }[p.estado];
+    el("bcp").innerHTML =
+      fila("PID", p.pid) + fila("PPID", 1) + fila("programa", p.prog) +
+      fila("ESTADO", nom) + fila("contador de prog.", "0x" + (0x400000 + p.cpu * 16).toString(16)) +
+      fila("apuntador de pila", "0x7ffd" + (2000 + p.cpu).toString(16)) +
+      fila("tiempo de CPU", p.cpu + " ms") +
+      fila("prioridad", 20) + fila("archivos abiertos", 3);
+
+    el("log").innerHTML = log.map(function(l){
+      return '<div><span class="t">t=' + String(l.t).padStart(3) + '</span>  ' + l.txt + "</div>";
+    }).join("");
+  }
+
+  function fila(k, v){ return "<div><span>" + k + "</span><span>" + v + "</span></div>"; }
+
+  function aviso(clase, titulo, cuerpo){
+    el("msg").className = "msg " + clase;
+    el("msg").innerHTML = "<b>" + titulo + "</b>" + cuerpo;
+  }
+
+  // ---- transiciones ----
+  function transicion(n){
+    var p = seleccionado();
+    reloj += 1;
+
+    if (n === 1){
+      if (p.estado !== "ejec") return rechazar(p, "①",
+        "La transición ① sale de <strong>En ejecución</strong>. Un proceso solo puede bloquearse mientras está usando la CPU, porque es él mismo el que pide algo que no está disponible.");
+      p.estado = "bloq"; p.espera = "lectura de disco";
+      anotar(p.id + ": ① ejecución → bloqueado (pidió E/S)");
+      return aviso("ok", "① El proceso se bloqueó solo",
+        "<strong>" + p.id + "</strong> ejecutó una llamada al sistema y el dato no estaba disponible. " +
+        "Esta transición <strong>la provoca el propio proceso</strong>, no el planificador. " +
+        "La CPU quedó libre: conviene usar la ③ para que entre otro.");
+    }
+
+    if (n === 2){
+      if (p.estado !== "ejec") return rechazar(p, "②",
+        "La transición ② sale de <strong>En ejecución</strong>: es el planificador sacando de la CPU al que la está usando.");
+      p.estado = "listo";
+      anotar(p.id + ": ② ejecución → listo (se le agotó el quantum)");
+      return aviso("ok", "② El planificador lo sacó de la CPU",
+        "A <strong>" + p.id + "</strong> se le agotó el quantum o llegó alguien de mayor prioridad. " +
+        "Fijate que <strong>no se bloqueó</strong>: puede ejecutarse perfectamente, solo que le tocó ceder el turno. " +
+        "Pasa al final de la cola de listos.");
+    }
+
+    if (n === 3){
+      if (p.estado !== "listo") return rechazar(p, "③",
+        "La transición ③ sale de <strong>Listo</strong>. Solo puede entrar a la CPU un proceso que ya esté listo para ejecutarse.");
+      if (porEstado("ejec").length){
+        return aviso("mal", "La CPU está ocupada",
+          "Ya hay un proceso en ejecución. En un sistema de una sola CPU <strong>solo puede haber uno</strong>. " +
+          "Primero sacá al que está (② o ①) y después metés a " + p.id + ".");
+      }
+      p.estado = "ejec"; p.cpu += 10;
+      anotar(p.id + ": ③ listo → ejecución (el planificador lo eligió)");
+      return aviso("ok", "③ El planificador lo puso a ejecutar",
+        "<strong>" + p.id + "</strong> estaba listo y le tocó el turno. Se restauran sus registros y su contador " +
+        "de programa desde el BCP, y continúa <strong>exactamente donde había quedado</strong>.");
+    }
+
+    if (n === 4){
+      if (p.estado !== "bloq") return rechazar(p, "④",
+        "La transición ④ sale de <strong>Bloqueado</strong>: es el evento externo que desbloquea al proceso que lo esperaba.");
+      p.estado = "listo"; p.espera = "";
+      anotar(p.id + ": ④ bloqueado → listo (llegó la interrupción)");
+      return aviso("ok", "④ Llegó el dato que esperaba",
+        "El dispositivo terminó y generó una <strong>interrupción</strong>. <strong>" + p.id + "</strong> pasa a listo. " +
+        "<strong>Atención: todavía NO se ejecuta.</strong> Queda en la cola esperando que el planificador lo elija (③). " +
+        "Esta es la parte que más se confunde.");
+    }
+
+    // transicion inexistente
+    reloj -= 1;
+    anotar("✗ se intentó bloqueado → ejecución: NO EXISTE");
+    return aviso("mal", "Esa transición no existe",
+      "Un proceso bloqueado <strong>nunca pasa directamente a ejecutarse</strong>. Cuando llega el dato que esperaba, " +
+      "pasa a <strong>Listo</strong> (④) y ahí espera a que el planificador lo elija (③).<br><br>" +
+      "El motivo: que tu dato haya llegado no significa que la CPU esté libre. Puede haber otro proceso usándola " +
+      "y diez más esperando antes que vos. <strong>Desbloquearse te deja en la fila, no en la CPU.</strong>");
+  }
+
+  function rechazar(p, flecha, porque){
+    reloj -= 1;
+    var nom = { ejec:"En ejecución", listo:"Listo", bloq:"Bloqueado" }[p.estado];
+    aviso("mal", "No se puede aplicar " + flecha + " a " + p.id,
+      p.id + " está en <strong>" + nom + "</strong>. " + porque);
+  }
+
+  [1,2,3,4].forEach(function(n){
+    el("t" + n).addEventListener("click", function(){ transicion(n); render(); });
+  });
+  el("tx").addEventListener("click", function(){ transicion(0); render(); });
+
+  // ---- ciclo automatico ----
+  var GUION = [
+    { n:1, p:"A", txt:"A pide leer del disco y se bloquea" },
+    { n:3, p:"B", txt:"el planificador pone a B en la CPU" },
+    { n:4, p:"A", txt:"el disco terminó: A pasa a listo, pero NO se ejecuta" },
+    { n:2, p:"B", txt:"a B se le agota el quantum" },
+    { n:3, p:"A", txt:"recién ahora A vuelve a la CPU" }
+  ];
+  el("bAuto").addEventListener("click", function(){
+    var g = GUION[pasoAuto % GUION.length];
+    sel = g.p;
+    transicion(g.n);
+    render();
+    pasoAuto++;
+    el("bAuto").textContent = pasoAuto % GUION.length === 0
+      ? "Simular un ciclo típico" : "Siguiente paso del ciclo (" + (pasoAuto % GUION.length) + "/5)";
+  });
+
+  el("bReset").addEventListener("click", function(){
+    reset(); el("bAuto").textContent = "Simular un ciclo típico";
+  });
+
+  reset();
+})();
+</script>
+</body>
+</html>

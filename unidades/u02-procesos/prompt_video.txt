@@ -1,0 +1,17 @@
+Video Explainer en español rioplatense, para un estudiante que prepara el final de Sistemas Operativos. Tono de profesor particular: claro y directo.
+
+Seguí el orden del programa:
+
+1. Qué es un proceso: pseudoparalelismo, diferencia entre programa y proceso.
+2. Creación y terminación: fork y execve contra CreateProcess. Jerarquía de procesos e init.
+3. Prioritario: los tres estados y las cuatro transiciones. Mostrar que no hay transición directa de bloqueado a en ejecución.
+4. El BCP y el cambio de contexto.
+5. Hilos: qué es propio de cada hilo y qué comparten. Implementación en espacio de usuario contra kernel.
+6. Condiciones de carrera y regiones críticas. Las cuatro condiciones de la exclusión mutua.
+7. Soluciones: espera ocupada (Peterson, TSL), inversión de prioridades, y sin espera ocupada (semáforos, mutexes, monitores).
+8. Prioritario: planificación. FCFS, SJF, SRTF y Round Robin. Apropiativa contra no apropiativa.
+9. Filósofos comelones y lectores y escritores.
+
+Explicá visualmente el diagrama de estados con sus cuatro transiciones, la tabla de qué es propio del hilo y qué del proceso, y la condición de carrera del spooler paso a paso.
+
+Resolvé en pantalla, con diagramas de Gantt dibujados y las cuentas a la vista, este ejemplo con FCFS, SJF, SRTF y Round Robin con quantum 2: A llega en 0 con ráfaga 6, B en 2 con 5, C en 4 con 3, D en 6 con 4. Calculá los tiempos de retorno y de espera y sus promedios, y explicá por qué Round Robin da el peor retorno promedio y aun así se usa.
