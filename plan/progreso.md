@@ -1,6 +1,6 @@
 # Progreso — Sistemas Operativos
 
-Última actualización: 2026-10-19
+Última actualización: 2026-10-27
 
 ## Estado de las fases
 
@@ -19,7 +19,7 @@
 | # | Unidad | Preparada (F2) | Clase (F3) | Cuestionario (F4) | Nota (F5) | Temas débiles |
 |---|---|---|---|---|---|---|
 | 1 | Introducción, hardware y estructura de los SO | ✅ | ✅ | — | — | — |
-| 2 | Procesos, hilos, concurrencia y planificación | ✅ | — | — | — | — |
+| 2 | Procesos, hilos, concurrencia y planificación | ✅ | 🔄 6½/10 | — | — | espera ocupada, inversión de prioridades |
 | 3 | Administración de memoria | — | — | — | — | — |
 | 4 | Sistemas de archivos | — | — | — | — | — |
 | 5 | Entrada/salida | — | — | — | — | — |
@@ -41,6 +41,8 @@
 - **2026-10-23** — Cuestionario de la Unidad 1 **empezado y pausado**: partes A y B respondidas, 23/28 (ver `unidades/u01-introduccion/correcciones/avance_cuestionario_u01.md`). Faltan las partes C, D, E y F. Preparada la **Unidad 2** (Fase 2): recorte del libro, apuntes, `notebooklm_u02.md` (16.500 palabras) y `prompt_video.txt`. Los algoritmos de planificación se verificaron con `_trabajo/verificar_planificacion.js`.
 
 - **2026-10-26** — Clase de la Unidad 2 en curso: **6 de 10 temas** (procesos, estados y BCP, hilos, implementación de hilos, condiciones de carrera, exclusión mutua con espera ocupada). Dos visualizaciones nuevas: diagrama de estados interactivo y el spooler con la condición de carrera paso a paso. Se explicaron aparte, a pedido: qué es la pila, qué es un descriptor de archivo y qué es una transición.
+
+- **2026-10-27** — Clase de la Unidad 2: se **cerró el tema 6** (exclusión mutua con espera ocupada) y se dio el **sub-bloque 7.1** (sleep/wakeup y la señal de despertar perdida). Van **6 temas y medio de 10**. El tema 6 fue el más difícil de la materia hasta ahora: llevó cinco explicaciones y hubo que enseñar a leer assembler aparte (`CMP`, `JNE`, etiquetas) y rehacer la inversión de prioridades desde cero, porque la primera analogía fusionaba "tener el candado" con "tener la CPU". Las tres preguntas de cierre del tema 6 salieron 2 correctas y 1 parcial. Queda **deuda de tres visualizaciones** (espera ocupada e inversión de prioridades, productor-consumidor con cola de bloqueados, y el simulador de planificación del tema 8): ver `plan/continuidad.md`, sección 7.
 
 ## Cronograma
 
