@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Productor-consumidor con semáforos</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#fff; --panel2:#eef1f5; --borde:#d9dde3;
+    --texto:#1b1f24; --suave:#5b6572; --acento:#6b4fd8;
+    --ok:#1f8b4c; --okbg:#e6f4ec;
+    --err:#c0392b; --errbg:#fdecea;
+    --av:#b06f00; --avbg:#fdf3e0;
+    --bloq:#8e44ad; --bloqbg:#f3e9f7;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#14171c; --panel:#1c2026; --panel2:#23282f; --borde:#2d333c;
+      --texto:#e6e9ed; --suave:#9aa4b2; --acento:#8d75f0;
+      --ok:#4fd48a; --okbg:#16301f;
+      --err:#ff8a7a; --errbg:#35191a;
+      --av:#e8b04b; --avbg:#332714;
+      --bloq:#c89cf0; --bloqbg:#2a1f36;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:28px 16px 70px;background:var(--bg);color:var(--texto);
+       font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto}
+  h1{font-size:1.45rem;margin:0 0 4px;letter-spacing:-.01em}
+  .sub{color:var(--suave);margin:0 0 20px}
+  h2{font-size:.76rem;text-transform:uppercase;letter-spacing:.08em;color:var(--suave);
+     margin:0 0 10px}
+  .caja{background:var(--panel);border:1px solid var(--borde);border-radius:10px;
+        padding:16px 18px;margin-bottom:14px}
+  .ayuda{background:var(--panel2);border:1px solid var(--borde);border-radius:10px;
+         padding:14px 18px;margin-bottom:18px;font-size:.92rem}
+  .ayuda ul{margin:8px 0 0;padding-left:22px}
+  .ayuda li{margin-bottom:3px}
+  .fila{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  button{font:inherit;font-size:.9rem;padding:8px 14px;border-radius:7px;
+         border:1px solid var(--borde);background:var(--panel2);color:var(--texto);cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--acento)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  button.sel{background:var(--acento);border-color:var(--acento);color:#fff}
+  button.pri{background:var(--acento);border-color:var(--acento);color:#fff;font-weight:600}
+  .sep{width:1px;height:26px;background:var(--borde);margin:0 4px}
+  label.n{font-size:.9rem;color:var(--suave)}
+  input[type=range]{width:120px;vertical-align:middle;accent-color:var(--acento)}
+
+  /* buffer */
+  .buffer{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 0}
+  .ranura{width:46px;height:46px;border:2px solid var(--borde);border-radius:7px;
+          display:flex;align-items:center;justify-content:center;
+          font:600 .85rem var(--mono);background:var(--panel2);color:var(--suave)}
+  .ranura.ll{background:var(--okbg);border-color:var(--ok);color:var(--ok)}
+
+  /* semaforos */
+  .sems{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+  .sem{border:1px solid var(--borde);border-radius:9px;padding:12px 14px;background:var(--panel2)}
+  .sem .nom{font:600 .95rem var(--mono);margin-bottom:2px}
+  .sem .rol{font-size:.76rem;color:var(--suave);margin-bottom:9px;line-height:1.35}
+  .fichas{display:flex;gap:4px;flex-wrap:wrap;align-items:center;min-height:22px;margin-bottom:7px}
+  .f{width:15px;height:15px;border-radius:50%;background:var(--acento)}
+  .f.vacio{background:transparent;border:1px dashed var(--borde)}
+  .val{font:700 1.05rem var(--mono);margin-left:6px}
+  .cola{font-size:.78rem;color:var(--suave);font-family:var(--mono)}
+  .cola b{color:var(--bloq)}
+
+  /* procesos */
+  .procs{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:760px){.procs{grid-template-columns:1fr}}
+  .proc{border:1px solid var(--borde);border-radius:9px;padding:14px;background:var(--panel)}
+  .proc h3{margin:0 0 3px;font-size:1rem}
+  .badge{display:inline-block;font-size:.72rem;padding:2px 8px;border-radius:20px;
+         font-weight:600;letter-spacing:.02em}
+  .b-listo{background:var(--okbg);color:var(--ok)}
+  .b-bloq{background:var(--bloqbg);color:var(--bloq)}
+  .codigo{font-family:var(--mono);font-size:.8rem;margin:11px 0;line-height:1.75}
+  .ln{display:flex;gap:7px;padding:1px 6px;border-radius:4px;white-space:pre}
+  .ln .fl{width:12px;color:var(--acento);font-weight:700}
+  .ln.act{background:var(--avbg);outline:1px solid var(--av)}
+  .ln.act .fl::before{content:"\25B6"}
+  .reg{font-family:var(--mono);font-size:.78rem;color:var(--suave);margin-top:4px}
+  .reg b{color:var(--av)}
+
+  /* banner */
+  .banner{border-radius:9px;padding:14px 18px;margin-bottom:14px;display:none}
+  .banner.on{display:block}
+  .banner.rojo{background:var(--errbg);border:1px solid var(--err)}
+  .banner strong{display:block;margin-bottom:5px}
+  .banner pre{font-family:var(--mono);font-size:.8rem;margin:8px 0 0;white-space:pre-wrap}
+
+  /* log */
+  .log{font-family:var(--mono);font-size:.79rem;max-height:260px;overflow-y:auto;
+       background:var(--panel2);border:1px solid var(--borde);border-radius:8px;padding:10px 12px}
+  .lg{display:flex;gap:8px;padding:2px 0;border-bottom:1px solid transparent}
+  .lg .q{flex:0 0 92px;font-weight:700;font-size:.72rem;letter-spacing:.03em}
+  .lg.P .q{color:var(--acento)}
+  .lg.C .q{color:var(--av)}
+  .lg.ok .t{color:var(--ok)}
+  .lg.bloq .t{color:var(--bloq)}
+  .lg.err .t{color:var(--err);font-weight:700}
+  .lg.aviso .t{color:var(--av)}
+  .vacio{color:var(--suave);font-style:italic}
+  .cont{font-size:.82rem;color:var(--suave);margin-top:9px;font-family:var(--mono)}
+  .nota{font-size:.84rem;color:var(--suave);margin-top:10px}
+  .nota code{font-family:var(--mono);font-size:.82rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Productor-consumidor con semáforos</h1>
+  <p class="sub">Sistemas Operativos &mdash; Unidad 2, tema 7 &mdash; Tanenbaum cap. 2.3.4 y 2.3.5, págs. 126&ndash;130</p>
+
+  <div class="ayuda">
+    <strong>Qué muestra.</strong> Dos procesos que comparten un búfer de N ranuras. Vos decidís a quién le das la CPU
+    en cada paso, así que vos armás la intercalación. Abajo ves el búfer, los tres semáforos como latas de fichas
+    y la cola de bloqueados de cada uno.
+    <ul>
+      <li><strong>Semáforos (orden correcto)</strong>: funciona siempre, probá cualquier intercalación.</li>
+      <li><strong>Down invertidos</strong>: el productor pide el <code>mutex</code> antes de preguntar si hay lugar. Llená el búfer y mirá qué pasa.</li>
+      <li><strong>sleep / wakeup</strong>: la versión sin semáforos. Hacé que el consumidor lea <code>cuenta</code>, después dale varios pasos al productor, y volvé al consumidor.</li>
+    </ul>
+  </div>
+
+  <div class="caja">
+    <h2>Modo</h2>
+    <div class="fila">
+      <button id="m-semaforos" class="sel">Semáforos (orden correcto)</button>
+      <button id="m-invertido">Down invertidos</button>
+      <button id="m-sleepwakeup">sleep / wakeup (sin semáforos)</button>
+      <span class="sep"></span>
+      <label class="n">N = <b id="nval">3</b> <input type="range" id="n" min="1" max="5" value="3"></label>
+      <span class="sep"></span>
+      <button id="reset">Reiniciar</button>
+    </div>
+  </div>
+
+  <div id="banner" class="banner rojo"></div>
+
+  <div class="caja">
+    <h2>Búfer compartido</h2>
+    <div class="buffer" id="buffer"></div>
+    <div class="cont" id="contadores"></div>
+  </div>
+
+  <div class="caja" id="cajasem">
+    <h2>Semáforos</h2>
+    <div class="sems" id="sems"></div>
+  </div>
+
+  <div class="procs">
+    <div class="proc">
+      <h3>Productor <span id="bP" class="badge b-listo">listo</span></h3>
+      <div class="codigo" id="codP"></div>
+      <div class="reg" id="regP"></div>
+      <button id="pasoP" class="pri">Ejecutar un paso del productor</button>
+    </div>
+    <div class="proc">
+      <h3>Consumidor <span id="bC" class="badge b-listo">listo</span></h3>
+      <div class="codigo" id="codC"></div>
+      <div class="reg" id="regC"></div>
+      <button id="pasoC" class="pri">Ejecutar un paso del consumidor</button>
+    </div>
+  </div>
+
+  <div class="caja" style="margin-top:14px">
+    <div class="fila">
+      <button id="auto1">Un paso al azar</button>
+      <button id="auto15">15 pasos al azar</button>
+    </div>
+    <p class="nota">El planificador real elige por vos y no sabés cuándo conmuta. Los botones al azar simulan eso.</p>
+  </div>
+
+  <div class="caja">
+    <h2>Qué fue pasando</h2>
+    <div class="log" id="log"></div>
+  </div>
+
+</div>
+
+<script>
+// ===================== MOTOR =====================
+// Verificado en _trabajo/verificar_semaforos.js (4 pruebas, 0 fallos).
+
+const PROG = {
+  semaforos: {
+    P: [
+      { t:'producir',  txt:'elemento = producir_elemento()' },
+      { t:'down', s:'vacias', txt:'down(&vacias)' },
+      { t:'down', s:'mutex',  txt:'down(&mutex)' },
+      { t:'insertar',  txt:'insertar_elemento(elemento)' },
+      { t:'up',   s:'mutex',  txt:'up(&mutex)' },
+      { t:'up',   s:'llenas', txt:'up(&llenas)' }
+    ],
+    C: [
+      { t:'down', s:'llenas', txt:'down(&llenas)' },
+      { t:'down', s:'mutex',  txt:'down(&mutex)' },
+      { t:'quitar',    txt:'elemento = quitar_elemento()' },
+      { t:'up',   s:'mutex',  txt:'up(&mutex)' },
+      { t:'up',   s:'vacias', txt:'up(&vacias)' },
+      { t:'consumir',  txt:'consumir_elemento(elemento)' }
+    ]
+  },
+  invertido: {
+    P: [
+      { t:'producir',  txt:'elemento = producir_elemento()' },
+      { t:'down', s:'mutex',  txt:'down(&mutex)      ← invertido' },
+      { t:'down', s:'vacias', txt:'down(&vacias)     ← invertido' },
+      { t:'insertar',  txt:'insertar_elemento(elemento)' },
+      { t:'up',   s:'mutex',  txt:'up(&mutex)' },
+      { t:'up',   s:'llenas', txt:'up(&llenas)' }
+    ],
+    C: [
+      { t:'down', s:'llenas', txt:'down(&llenas)' },
+      { t:'down', s:'mutex',  txt:'down(&mutex)' },
+      { t:'quitar',    txt:'elemento = quitar_elemento()' },
+      { t:'up',   s:'mutex',  txt:'up(&mutex)' },
+      { t:'up',   s:'vacias', txt:'up(&vacias)' },
+      { t:'consumir',  txt:'consumir_elemento(elemento)' }
+    ]
+  },
+  sleepwakeup: {
+    P: [
+      { t:'producir',   txt:'elemento = producir_elemento()' },
+      { t:'leer',       txt:'lee cuenta' },
+      { t:'sleepLleno', txt:'if (cuenta == N) sleep()' },
+      { t:'insertarSimple', txt:'insertar_elemento(elem); cuenta++' },
+      { t:'wakeupC',    txt:'if (cuenta == 1) wakeup(consumidor)' }
+    ],
+    C: [
+      { t:'leer',       txt:'lee cuenta' },
+      { t:'sleepVacio', txt:'if (cuenta == 0) sleep()' },
+      { t:'quitarSimple', txt:'elem = quitar_elemento(); cuenta--' },
+      { t:'wakeupP',    txt:'if (cuenta == N-1) wakeup(productor)' },
+      { t:'consumir',   txt:'consumir_elemento(elemento)' }
+    ]
+  }
+};
+
+function crearEstado(modo, N){
+  return {
+    modo, N,
+    buffer:[], sem:{mutex:1, vacias:N, llenas:0},
+    colas:{mutex:[], vacias:[], llenas:[]},
+    cuenta:0, leido:{P:null,C:null},
+    pc:{P:0,C:0}, estado:{P:'listo',C:'listo'}, motivo:{P:null,C:null},
+    enRC:null, sigId:1, producidos:0, consumidos:0, senalesPerdidas:0,
+    log:[], errores:[]
+  };
+}
+
+const nom = q => q==='P' ? 'PRODUCTOR' : 'CONSUMIDOR';
+const anotar = (e,q,txt,clase) => e.log.push({quien:q, txt, clase:clase||''});
+const listos = e => ['P','C'].filter(q => e.estado[q]==='listo');
+const interbloqueado = e => e.estado.P!=='listo' && e.estado.C!=='listo';
+
+function paso(e,q){
+  if(e.estado[q]!=='listo') return false;
+  const prog = PROG[e.modo][q];
+  const ins  = prog[e.pc[q]];
+
+  switch(ins.t){
+    case 'producir':
+      anotar(e,q,'produce un elemento (fuera de la region critica)');
+      e.pc[q]++; break;
+
+    case 'consumir':
+      anotar(e,q,'consume el elemento (fuera de la region critica)');
+      e.pc[q]++; break;
+
+    case 'down': {
+      const s = ins.s;
+      if(e.sem[s] > 0){
+        e.sem[s]--;
+        anotar(e,q,`down(${s}) pasa. ${s} = ${e.sem[s]}`,'ok');
+        if(s==='mutex'){
+          if(e.enRC!==null) e.errores.push(`EXCLUSION MUTUA VIOLADA: ${nom(q)} entro con ${nom(e.enRC)} adentro`);
+          e.enRC = q;
+        }
+        e.pc[q]++;
+      }else{
+        e.estado[q]='bloqueado'; e.motivo[q]=s; e.colas[s].push(q);
+        anotar(e,q,`down(${s}) con ${s} = 0 → SE BLOQUEA en la cola de ${s}`,'bloq');
+      }
+      break;
+    }
+
+    case 'up': {
+      const s = ins.s;
+      e.sem[s]++;
+      if(s==='mutex') e.enRC = null;
+      let extra='';
+      if(e.colas[s].length > 0){
+        const d = e.colas[s].shift();
+        e.sem[s]--;
+        e.estado[d]='listo'; e.motivo[d]=null; e.pc[d]++;
+        if(s==='mutex') e.enRC = d;
+        extra = ` y DESPIERTA al ${nom(d)}, que completa su down`;
+      }
+      anotar(e,q,`up(${s}). ${s} = ${e.sem[s]}${extra}`,'ok');
+      e.pc[q]++;
+      break;
+    }
+
+    case 'insertar':
+      if(e.buffer.length >= e.N) e.errores.push('DESBORDE: inserto en un buffer lleno');
+      e.buffer.push(e.sigId++); e.producidos++;
+      anotar(e,q,`inserta en el buffer (${e.buffer.length}/${e.N})`);
+      e.pc[q]++; break;
+
+    case 'quitar':
+      if(e.buffer.length === 0) e.errores.push('SUBDESBORDE: saco de un buffer vacio');
+      e.buffer.shift(); e.consumidos++;
+      anotar(e,q,`saca del buffer (${e.buffer.length}/${e.N})`);
+      e.pc[q]++; break;
+
+    case 'leer':
+      e.leido[q] = e.cuenta;
+      anotar(e,q,`lee cuenta y se guarda ${e.cuenta}`,'aviso');
+      e.pc[q]++; break;
+
+    case 'sleepLleno':
+      e.pc[q]++;
+      if(e.leido[q] === e.N){
+        e.estado[q]='bloqueado'; e.motivo[q]='sleep';
+        anotar(e,q,`vio cuenta = ${e.leido[q]} = N → sleep()`,'bloq');
+      }else{
+        anotar(e,q,`vio cuenta = ${e.leido[q]}, no esta lleno, sigue`);
+      }
+      break;
+
+    case 'sleepVacio':
+      e.pc[q]++;
+      if(e.leido[q] === 0){
+        e.estado[q]='bloqueado'; e.motivo[q]='sleep';
+        anotar(e,q,`vio cuenta = 0 → sleep()  (con el dato que leyo ANTES)`,'bloq');
+      }else{
+        anotar(e,q,`vio cuenta = ${e.leido[q]}, hay algo, sigue`);
+      }
+      break;
+
+    case 'insertarSimple':
+      if(e.buffer.length >= e.N) e.errores.push('DESBORDE: inserto en un buffer lleno');
+      e.buffer.push(e.sigId++); e.cuenta++; e.producidos++;
+      anotar(e,q,`inserta. cuenta = ${e.cuenta}`);
+      e.pc[q]++; break;
+
+    case 'quitarSimple':
+      if(e.buffer.length === 0) e.errores.push('SUBDESBORDE: saco de un buffer vacio');
+      e.buffer.shift(); e.cuenta--; e.consumidos++;
+      anotar(e,q,`saca. cuenta = ${e.cuenta}`);
+      e.pc[q]++; break;
+
+    case 'wakeupC':
+    case 'wakeupP': {
+      const dest = ins.t==='wakeupC' ? 'C' : 'P';
+      const cond = ins.t==='wakeupC' ? (e.cuenta===1) : (e.cuenta===e.N-1);
+      if(cond){
+        if(e.estado[dest]==='bloqueado' && e.motivo[dest]==='sleep'){
+          e.estado[dest]='listo'; e.motivo[dest]=null;
+          anotar(e,q,`wakeup(${nom(dest)}): estaba dormido, lo despierta`,'ok');
+        }else{
+          e.senalesPerdidas++;
+          anotar(e,q,`wakeup(${nom(dest)}) PERO NO ESTA DORMIDO → LA SENAL SE PIERDE`,'err');
+        }
+      }else{
+        anotar(e,q,`no corresponde despertar a nadie (cuenta = ${e.cuenta})`);
+      }
+      e.pc[q]++;
+      break;
+    }
+  }
+
+  if(e.pc[q] >= prog.length) e.pc[q] = 0;
+  return true;
+}
+
+// ===================== INTERFAZ =====================
+
+const ROLES = {
+  mutex:  'LA llave del búfer.<br>Empieza en 1 → exclusión mutua.',
+  vacias: 'Tickets de <em>hay lugar</em>.<br>Empieza en N → sincronización.',
+  llenas: 'Tickets de <em>hay mercadería</em>.<br>Empieza en 0 → sincronización.'
+};
+
+let modo = 'semaforos';
+let N = 3;
+let e = crearEstado(modo, N);
+
+const $ = id => document.getElementById(id);
+
+function reiniciar(){
+  e = crearEstado(modo, N);
+  pintar();
+}
+
+function fichas(v, max){
+  let h = '';
+  const tope = Math.max(max, v);
+  for(let i=0;i<tope;i++) h += `<span class="f${i<v?'':' vacio'}"></span>`;
+  return h + `<span class="val">${v}</span>`;
+}
+
+function pintarSems(){
+  if(modo === 'sleepwakeup'){ $('cajasem').style.display='none'; return; }
+  $('cajasem').style.display='';
+  const max = {mutex:1, vacias:N, llenas:N};
+  $('sems').innerHTML = ['mutex','vacias','llenas'].map(s => {
+    const c = e.colas[s];
+    return `<div class="sem">
+      <div class="nom">${s} = ${e.sem[s]}</div>
+      <div class="rol">${ROLES[s]}</div>
+      <div class="fichas">${fichas(e.sem[s], max[s])}</div>
+      <div class="cola">bloqueados: ${c.length ? '<b>'+c.map(nom).join(', ')+'</b>' : '—'}</div>
+    </div>`;
+  }).join('');
+}
+
+function pintarBuffer(){
+  let h = '';
+  for(let i=0;i<N;i++){
+    const ll = i < e.buffer.length;
+    h += `<div class="ranura${ll?' ll':''}">${ll ? '#'+e.buffer[i] : ''}</div>`;
+  }
+  $('buffer').innerHTML = h;
+
+  let c = `buffer: ${e.buffer.length}/${N}` +
+          `   │   producidos: ${e.producidos}   consumidos: ${e.consumidos}`;
+  if(modo === 'sleepwakeup'){
+    c += `   │   cuenta = ${e.cuenta}   │   señales perdidas: ${e.senalesPerdidas}`;
+  }else{
+    c += `   │   vacias + llenas = ${e.sem.vacias + e.sem.llenas}`;
+    c += `   │   en la región crítica: ${e.enRC ? nom(e.enRC) : 'nadie'}`;
+  }
+  $('contadores').textContent = c;
+}
+
+function pintarProc(q){
+  const prog = PROG[modo][q];
+  $('cod'+q).innerHTML = prog.map((ins,i) =>
+    `<div class="ln${i===e.pc[q]?' act':''}"><span class="fl"></span>${ins.txt}</div>`
+  ).join('');
+
+  const b = $('b'+q);
+  if(e.estado[q]==='listo'){
+    b.className = 'badge b-listo'; b.textContent = 'listo';
+  }else{
+    b.className = 'badge b-bloq';
+    b.textContent = e.motivo[q]==='sleep' ? 'dormido (sleep)' : 'bloqueado en ' + e.motivo[q];
+  }
+
+  let r = '';
+  if(modo === 'sleepwakeup' && e.leido[q] !== null){
+    const viejo = e.leido[q] !== e.cuenta;
+    r = `valor de cuenta que tiene guardado: <b>${e.leido[q]}</b>` +
+        (viejo ? `  ← el real ahora es ${e.cuenta}: DATO VIEJO` : '');
+  }
+  $('reg'+q).innerHTML = r;
+
+  $('paso'+q).disabled = e.estado[q] !== 'listo';
+}
+
+function pintarBanner(){
+  const bn = $('banner');
+  const trabado = interbloqueado(e);
+  const errs = e.errores.length > 0;
+
+  if(!trabado && !errs){ bn.className = 'banner rojo'; bn.innerHTML = ''; return; }
+  bn.className = 'banner rojo on';
+
+  if(errs){
+    bn.innerHTML = `<strong>⚠ Se rompió una garantía</strong>${e.errores.map(x=>`<pre>${x}</pre>`).join('')}`;
+    return;
+  }
+
+  if(modo === 'invertido'){
+    bn.innerHTML = `<strong>♻ INTERBLOQUEO — los dos procesos bloqueados</strong>
+      El productor pidió el <code>mutex</code> <em>antes</em> de preguntar si había lugar.
+      Cuando el búfer se llenó, <strong>se durmió sin devolver el mutex</strong>.
+      El consumidor es el único que puede liberar una ranura, pero necesita ese mutex para entrar al búfer.
+      <pre>productor:  duerme esperando "vacias"   ← y tiene el mutex
+consumidor: bloqueado esperando "mutex"   ← y es el unico que puede liberar lugar
+
+Es el mismo pecado de la inversion de prioridades:
+QUEDAR INACTIVO SIN SOLTAR EL RECURSO.
+
+Regla: primero el down de SINCRONIZACION (vacias/llenas),
+       despues el down de EXCLUSION MUTUA (mutex).</pre>`;
+  }else if(modo === 'sleepwakeup'){
+    bn.innerHTML = `<strong>♻ LOS DOS DORMIDOS PARA SIEMPRE</strong>
+      Señales de despertar perdidas: <strong>${e.senalesPerdidas}</strong>.
+      Un <code>wakeup</code> dirigido a un proceso que todavía no se durmió <strong>no se guarda en ningún lado</strong>:
+      se tira a la basura. El que lo recibió siguió su camino y se durmió igual, con el dato viejo de <code>cuenta</code>.
+      <pre>buffer: ${e.buffer.length}/${e.N}  ← comida disponible que nadie va a consumir
+
+El semaforo arregla justo esto:
+  wakeup a nadie  ->  SE PIERDE
+  up(s)  a nadie  ->  SE GUARDA en la lata</pre>`;
+  }else{
+    bn.innerHTML = `<strong>Los dos procesos están bloqueados</strong>
+      Con el orden correcto esto no debería pasar. Si lo ves, reiniciá y contame la secuencia.`;
+  }
+}
+
+function pintarLog(){
+  const l = $('log');
+  if(e.log.length === 0){
+    l.innerHTML = '<div class="vacio">Todavía no se ejecutó nada. Dale un paso a alguno de los dos procesos.</div>';
+    return;
+  }
+  l.innerHTML = e.log.map((x,i) =>
+    `<div class="lg ${x.quien} ${x.clase}"><span class="q">${nom(x.quien)}</span><span class="t">${i+1}. ${x.txt}</span></div>`
+  ).join('');
+  l.scrollTop = l.scrollHeight;
+}
+
+function pintar(){
+  pintarBuffer();
+  pintarSems();
+  pintarProc('P');
+  pintarProc('C');
+  pintarBanner();
+  pintarLog();
+}
+
+function darPaso(q){ paso(e,q); pintar(); }
+
+function pasoAzar(){
+  const d = listos(e);
+  if(d.length === 0) return false;
+  darPaso(d[Math.floor(Math.random()*d.length)]);
+  return true;
+}
+
+// eventos
+$('pasoP').onclick = () => darPaso('P');
+$('pasoC').onclick = () => darPaso('C');
+$('auto1').onclick = () => pasoAzar();
+$('auto15').onclick = () => { for(let i=0;i<15;i++){ if(!pasoAzar()) break; } };
+$('reset').onclick = reiniciar;
+
+$('n').oninput = ev => { N = +ev.target.value; $('nval').textContent = N; reiniciar(); };
+
+['semaforos','invertido','sleepwakeup'].forEach(m => {
+  $('m-'+m).onclick = () => {
+    modo = m;
+    ['semaforos','invertido','sleepwakeup'].forEach(x => $('m-'+x).classList.toggle('sel', x===m));
+    reiniciar();
+  };
+});
+
+pintar();
+</script>
+</body>
+</html>

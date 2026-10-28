@@ -1,6 +1,6 @@
 # Progreso — Sistemas Operativos
 
-Última actualización: 2026-10-27
+Última actualización: 2026-10-28
 
 ## Estado de las fases
 
@@ -19,7 +19,7 @@
 | # | Unidad | Preparada (F2) | Clase (F3) | Cuestionario (F4) | Nota (F5) | Temas débiles |
 |---|---|---|---|---|---|---|
 | 1 | Introducción, hardware y estructura de los SO | ✅ | ✅ | — | — | — |
-| 2 | Procesos, hilos, concurrencia y planificación | ✅ | 🔄 6½/10 | — | — | espera ocupada, inversión de prioridades |
+| 2 | Procesos, hilos, concurrencia y planificación | ✅ | 🔄 7¾/10 | — | — | espera ocupada, inversión de prioridades, significado de `up`/`down` |
 | 3 | Administración de memoria | — | — | — | — | — |
 | 4 | Sistemas de archivos | — | — | — | — | — |
 | 5 | Entrada/salida | — | — | — | — | — |
@@ -43,6 +43,8 @@
 - **2026-10-26** — Clase de la Unidad 2 en curso: **6 de 10 temas** (procesos, estados y BCP, hilos, implementación de hilos, condiciones de carrera, exclusión mutua con espera ocupada). Dos visualizaciones nuevas: diagrama de estados interactivo y el spooler con la condición de carrera paso a paso. Se explicaron aparte, a pedido: qué es la pila, qué es un descriptor de archivo y qué es una transición.
 
 - **2026-10-27** — Clase de la Unidad 2: se **cerró el tema 6** (exclusión mutua con espera ocupada) y se dio el **sub-bloque 7.1** (sleep/wakeup y la señal de despertar perdida). Van **6 temas y medio de 10**. El tema 6 fue el más difícil de la materia hasta ahora: llevó cinco explicaciones y hubo que enseñar a leer assembler aparte (`CMP`, `JNE`, etiquetas) y rehacer la inversión de prioridades desde cero, porque la primera analogía fusionaba "tener el candado" con "tener la CPU". Las tres preguntas de cierre del tema 6 salieron 2 correctas y 1 parcial. Queda **deuda de tres visualizaciones** (espera ocupada e inversión de prioridades, productor-consumidor con cola de bloqueados, y el simulador de planificación del tema 8): ver `plan/continuidad.md`, sección 7.
+
+- **2026-10-28** — Clase de la Unidad 2: se dieron los sub-bloques **7.2 (semáforos y productor-consumidor)** y **7.3 (mutexes, `thread_yield` y variables de condición)**. Van **7 temas y tres cuartos de 10**: del tema 7 falta solo el 7.4 (monitores y paso de mensajes). Las dos preguntas del 7.1 salieron bien (identificó que el consumidor decide dormirse con una copia vieja de `cuenta`, y que `sleep`/`wakeup` necesitan modo kernel, aunque confundió el bit de modo del PSW con el campo de estado del BCP). Las dos del 7.2: la primera correcta y completa —explicó solo el interbloqueo por dormirse con el mutex puesto— con la corrección de que un proceso bloqueado **no consume CPU**; la segunda parcial, porque piensa `up`/`down` como "sumar/restar" en vez de "entregar/pedir una unidad del recurso". Las dos preguntas del 7.3 quedaron **sin responder** (se las dejé planteadas y cerró la sesión): están con sus respuestas esperadas en `plan/continuidad.md`, sección 2. **Se saldó una de las tres visualizaciones en deuda:** `unidades/u02-procesos/visuales/productor_consumidor.html`, con tres modos (semáforos bien usados, `down` invertidos → interbloqueo, sleep/wakeup → señal perdida), motor verificado con `_trabajo/verificar_semaforos.js` y la copia pegada en el HTML revalidada con `_trabajo/verificar_html_semaforos.js`. Siguen faltando dos: la de espera ocupada/inversión de prioridades y **el simulador de planificación del tema 8, que es la importante**.
 
 ## Cronograma
 
