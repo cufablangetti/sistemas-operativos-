@@ -37,10 +37,13 @@ Verificá qué hay instalado. Si falta algo, decime el comando para instalarlo s
 ├── plan/
 │   ├── inventario.md
 │   ├── mapa_unidades.md          ← unidad → temas → páginas del libro → apuntes
+│   ├── mapa_conceptual.md        ← ACUMULATIVO: todas las unidades conectadas
+│   ├── mapa_conceptual.pdf       ← el mismo mapa, para leer e imprimir
 │   └── progreso.md
 ├── _trabajo/                     ← textos extraídos y temporales
 ├── visuales/
-│   └── index.html                ← índice con links a todas las visualizaciones
+│   ├── index.html                ← índice con links a todas las visualizaciones
+│   └── mapa_conceptual.html      ← el mapa conceptual, interactivo y con buscador
 └── unidades/
     └── u01-nombre-corto/
         ├── fuentes/              ← PDF recortado del libro + apuntes de la unidad
@@ -146,6 +149,22 @@ Ideas según el tema:
 **Antes del cuestionario, siempre: el PDF de repaso.**
 Al terminar la clase de cada unidad, generá `unidades/uNN-.../repaso_uNN.pdf` con **todo el contenido que vimos en el chat**: los temas en orden, los esquemas, los ejemplos resueltos, las referencias y el cierre. Es para que yo lo lea antes de rendir. No es el `notebooklm_uNN.md` (ese es para la IA): este es para mí, con el mismo formato y los mismos diagramas de la clase.
 
+**Y después del PDF de repaso, el mapa conceptual acumulativo.**
+
+Fuente: **`plan/mapa_conceptual.md`**. Es **acumulativo**: no se reemplaza nunca, se le agrega la unidad nueva y se **reconectan** sus conceptos con los de las unidades anteriores. Salidas: **`plan/mapa_conceptual.pdf`** (para leer e imprimir) y **`visuales/mapa_conceptual.html`** (interactivo: buscador, ramas colapsables y los cruces entre unidades clickeables).
+
+Tiene que ser **completo, no un resumen**. Qué lleva:
+
+- **Jerarquía entera**: unidad → tema → concepto → sub-concepto, sin recortar nada de lo que entra en el examen.
+- **Toda la terminología técnica**, con la definición corta al lado. Si una palabra puede aparecer en una consigna, va en el mapa.
+- **Secuencias de pasos numeradas** para todo lo que sea un procedimiento, ordenadas para poder recitarlas: el cambio de contexto (qué se guarda en el BCP, el PC, el PSW, los registros, en qué orden), una llamada al sistema (TRAP → modo kernel → despacho → retorno), el tratamiento de una interrupción, `fork` + `execve`, la traducción de una dirección virtual con TLB, el algoritmo del banquero, la planificación de disco, el recorrido de un i-nodo.
+- **Notas de memoria**: mnemotecnias, reglas rápidas, pares que se confunden ("PSW vs. estado del BCP", "fin de quantum → LISTO, no BLOQUEADO") y las trampas típicas de los exámenes de la cátedra.
+- **Conexiones explícitas entre unidades**, marcadas como tales. Ejemplos: *espera ocupada (U2) ↔ E/S programada (U1)*; *dormirse con el candado tomado (U2) ↔ Unidad 6 completa*; *TLB (U3) ↔ caché (U1)*.
+- **Los errores que ya cometí**, marcados con ⚠️, para no repetirlos.
+- Las **referencias de página** del Tanenbaum en cada rama.
+
+Sirve para dos cosas a la vez: **estudiar** (contenido completo) y **ordenar el repaso** (ver de un vistazo qué entra y en qué orden). Arranca al cerrar la **Unidad 2** y se amplía al cerrar cada unidad siguiente.
+
 Después sí, generá `cuestionario.md` (sin respuestas) y `respuestas.md` aparte.
 
 **El cuestionario, difícil, de nivel final o superior:**
@@ -180,6 +199,7 @@ Cuando te pase mis respuestas (en el chat o en `correcciones/mis_respuestas_uNN.
 - **"prepará la unidad N"**: material para NotebookLM.
 - **"enseñame la unidad N"**: clase en el chat con esquemas y visualizaciones.
 - **"graficá [tema]"**: visualización interactiva de un tema puntual.
+- **"mapa conceptual"**: ampliá o regenerá el mapa conceptual acumulativo.
 - **"cuestionario unidad N"**: examen difícil.
 - **"corregí la unidad N"**: corrección.
 - **"repaso final"**: examen integrador de todas las unidades.
