@@ -1,6 +1,6 @@
 # Progreso — Sistemas Operativos
 
-Última actualización: 2026-10-29
+Última actualización: 2026-11-03
 
 ## Estado de las fases
 
@@ -18,8 +18,10 @@
 
 | # | Unidad | Preparada (F2) | Clase (F3) | Cuestionario (F4) | Nota (F5) | Temas débiles |
 |---|---|---|---|---|---|---|
-| 1 | Introducción, hardware y estructura de los SO | ✅ | ✅ | — | — | — |
-| 2 | Procesos, hilos, concurrencia y planificación | ✅ | 🔄 8/10 + 8.1 | — | — | asimetría `up`/`signal`, alcance del paso de mensajes |
+| 1 | Introducción, hardware y estructura de los SO | ✅ | ✅ | ⏸ 23/28 (A y B) | — | capas ≠ tolerancia a fallas, buffer ≠ menos disco, CMOS vs sector 0 |
+| 2 | Procesos, hilos, concurrencia y planificación | ✅ | ✅ 10/10 + cierre | ⏸ generado, sin tomar | — | fin de quantum → LISTO, asimetría `up`/`signal`, boletos ≠ porcentajes, alcance del paso de mensajes |
+
+**Material de repaso:** `repaso_u01.pdf` (56 págs., clase completa + resumen condensado), `repaso_u02.pdf` (168 págs.) y el **mapa conceptual acumulativo** de las U1 y U2 (`plan/mapa_conceptual.md`, `.pdf` de 52 págs. y `visuales/mapa_conceptual.html`).
 | 3 | Administración de memoria | — | — | — | — | — |
 | 4 | Sistemas de archivos | — | — | — | — | — |
 | 5 | Entrada/salida | — | — | — | — | — |
@@ -47,6 +49,12 @@
 - **2026-10-28** — Clase de la Unidad 2: se dieron los sub-bloques **7.2 (semáforos y productor-consumidor)** y **7.3 (mutexes, `thread_yield` y variables de condición)**. Van **7 temas y tres cuartos de 10**: del tema 7 falta solo el 7.4 (monitores y paso de mensajes). Las dos preguntas del 7.1 salieron bien (identificó que el consumidor decide dormirse con una copia vieja de `cuenta`, y que `sleep`/`wakeup` necesitan modo kernel, aunque confundió el bit de modo del PSW con el campo de estado del BCP). Las dos del 7.2: la primera correcta y completa —explicó solo el interbloqueo por dormirse con el mutex puesto— con la corrección de que un proceso bloqueado **no consume CPU**; la segunda parcial, porque piensa `up`/`down` como "sumar/restar" en vez de "entregar/pedir una unidad del recurso". Las dos preguntas del 7.3 quedaron **sin responder** (se las dejé planteadas y cerró la sesión): están con sus respuestas esperadas en `plan/continuidad.md`, sección 2. **Se saldó una de las tres visualizaciones en deuda:** `unidades/u02-procesos/visuales/productor_consumidor.html`, con tres modos (semáforos bien usados, `down` invertidos → interbloqueo, sleep/wakeup → señal perdida), motor verificado con `_trabajo/verificar_semaforos.js` y la copia pegada en el HTML revalidada con `_trabajo/verificar_html_semaforos.js`. Siguen faltando dos: la de espera ocupada/inversión de prioridades y **el simulador de planificación del tema 8, que es la importante**.
 
 - **2026-10-29** — **Tema 7 cerrado completo** y arrancado el tema 8. Se dieron: **7.4a monitores** (construcción del lenguaje, Hoare vs Brinch Hansen, por qué no es sleep/wakeup otra vez, el código de la fig. 2-34 con traza, Java `synchronized`), **7.4b paso de mensajes y barreras** (`send`/`receive` como llamadas al sistema que no necesitan memoria compartida, acuse de recibo y números de secuencia, productor-consumidor con N mensajes vacíos, buzones y rendezvous, MPI, barreras) con la **tabla comparativa de las 11 primitivas**, y **8.1 conceptos y métricas de planificación** (ráfagas y CPU-bound vs I/O-bound, las 4 situaciones para planificar, apropiativa vs no apropiativa, los 3 entornos y las metas, y **retorno = fin − llegada / espera = retorno − ráfaga / respuesta = primer arranque − llegada**, con ejemplo de FCFS verificado por script: retorno 10,33 y espera 5,67). Preguntas: las dos del 7.3 **correctas**; las dos del 7.4a **parciales**, con un error importante — **invirtió la asimetría `up`/`signal`** (creía que el `up` del semáforo también había que condicionarlo; es al revés) — que después reformuló bien solo; la 1 del 7.4b **parcial** (buena imagen de "caja de transporte", le faltó que los N vacíos son control de flujo) y la 2 **incorrecta** (creía que el paso de mensajes no se puede usar entre hilos de una misma máquina). Las dos preguntas del 8.1 quedaron **sin responder**, con sus respuestas esperadas en `plan/continuidad.md`, sección 2. **Deuda crítica: el simulador de Gantt se prometió dos veces y hay que entregarlo junto con el bloque 8.2.**
+
+- **2026-10-30 a 2026-11-02** — Clase de la Unidad 2: **temas 8.2 a 8.6** (FCFS, SJF, SRTF, Round Robin, prioridades, múltiples colas, SPN, garantizada, lotería, partes equitativas, tiempo real, política contra mecanismo, planificación de hilos), **tema 9** (filósofos y lectores/escritores) y **temas 10.1 a 10.3** (hardware, tipos de SO y sincronización de multiprocesadores). Se entregaron el **simulador de Gantt** (`planificacion_cpu.html`) y el de **filósofos** (`filosofos_comelones.html`), los dos verificados con scripts. Errores marcados: boletos leídos como porcentajes, convención de prioridades, el filósofo zurdo, la copia de caché que "se actualiza" (se invalida).
+
+- **2026-11-03** — **Clase de la Unidad 2 terminada**: tema 10.4 (planificación de multiprocesadores) y cierre. Generado **`repaso_u02.pdf`** (168 páginas: la clase completa, armada desde el historial del chat con `_trabajo/armar_repaso_u02.py`) y su índice de páginas (`_trabajo/indice_repaso_u02.md`, 528 títulos, 0 sin ubicar). Arrancado el **mapa conceptual acumulativo** con las Unidades 1 y 2: 915 nodos, 42 secuencias numeradas, 37 errores marcados, 101 nodos con cruces entre unidades, referencia doble (Tanenbaum + página del repaso). Se incorporaron las dudas del archivo `googleia.md` (marcadas ❓). Al verificar las páginas del libro se corrigieron referencias de la clase del tema 8 (los algoritmos interactivos son 2.4.3, págs. 154–160; tiempo real 2.4.4, págs. 160–161). Página interactiva probada en Chrome sin ventana (`_trabajo/verificar_mapa_conceptual.js`: 13 pruebas, 0 fallos). **Por pedido del estudiante, los cuestionarios de la U1 (partes C–F) y de la U2 quedan para después, juntos**; antes quiere repasar bien las dos unidades con el mapa y recién ahí empezar la U3.
+
+- **2026-11-03** — Generado el **cuestionario de la Unidad 2** (21 preguntas, 100 p) con sus respuestas aparte; ejercicios numéricos verificados por script. Queda **pendiente junto con el de la U1**, por pedido del estudiante.
 
 ## Cronograma
 

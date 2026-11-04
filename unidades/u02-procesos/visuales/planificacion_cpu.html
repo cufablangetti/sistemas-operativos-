@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Planificación de CPU</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#fff; --panel2:#f0f2f5; --borde:#d9dde3;
+    --texto:#1b1f24; --suave:#5b6572; --acento:#6b4fd8;
+    --cpu:#6b4fd8; --listo:#c98a16; --fin:#1f8a4c; --ocio:#9aa4b2; --rojo:#c0392b;
+    --p1:#6b4fd8; --p2:#1f8a9c; --p3:#c98a16; --p4:#1f8a4c; --p5:#c0392b;
+    --p6:#8e44ad; --p7:#d35400; --p8:#16a085;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#14171c; --panel:#1c2026; --panel2:#23282f; --borde:#2d333c;
+      --texto:#e6e9ed; --suave:#9aa4b2; --acento:#8d75f0;
+      --cpu:#8d75f0; --listo:#e0a92c; --fin:#3fbd77; --ocio:#5b6572; --rojo:#e05c4c;
+      --p1:#8d75f0; --p2:#3fb8cd; --p3:#e0a92c; --p4:#3fbd77; --p5:#e05c4c;
+      --p6:#b07cd8; --p7:#f0812e; --p8:#2ecfb0;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0; padding:28px 16px 60px; background:var(--bg); color:var(--texto);
+       font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:1000px; margin:0 auto}
+  h1{font-size:1.5rem; margin:0 0 4px; letter-spacing:-.01em}
+  .sub{color:var(--suave); margin:0 0 20px}
+  h2{font-size:.78rem; text-transform:uppercase; letter-spacing:.07em; color:var(--suave);
+     margin:26px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--borde)}
+  .caja{background:var(--panel); border:1px solid var(--borde); border-radius:10px; padding:14px 16px}
+  .intro{background:var(--panel2); border:1px solid var(--borde); border-radius:10px;
+         padding:12px 16px; margin-bottom:8px; font-size:.92rem}
+  .intro p{margin:6px 0}
+  button{font:inherit; cursor:pointer; background:var(--panel); color:var(--texto);
+         border:1px solid var(--borde); border-radius:7px; padding:6px 12px}
+  button:hover:not(:disabled){border-color:var(--acento)}
+  button:disabled{opacity:.4; cursor:not-allowed}
+  button.on{background:var(--acento); border-color:var(--acento); color:#fff}
+  .fila{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px}
+  .fila label{color:var(--suave); font-size:.88rem}
+  table{border-collapse:collapse; width:100%; font-size:.9rem}
+  th,td{border:1px solid var(--borde); padding:5px 8px; text-align:center}
+  th{background:var(--panel2); font-weight:600; font-size:.8rem; color:var(--suave)}
+  td.nom{font-weight:700}
+  input[type=number],input[type=text]{font:inherit; width:100%; min-width:48px; background:transparent;
+    color:inherit; border:none; text-align:center; padding:2px}
+  input:focus{outline:2px solid var(--acento); border-radius:4px}
+  .scroll{overflow-x:auto}
+  /* ----- Gantt ----- */
+  .gantt{display:flex; min-width:max-content; border:1px solid var(--borde);
+         border-radius:6px; overflow:hidden}
+  .gantt div{padding:9px 0; text-align:center; font-weight:700; font-size:.85rem;
+             color:#fff; border-right:1px solid rgba(255,255,255,.35)}
+  .gantt div:last-child{border-right:none}
+  .gantt div.ocio{background:var(--ocio); color:var(--panel)}
+  .ejeT{display:flex; min-width:max-content; font-size:.72rem; color:var(--suave);
+        font-variant-numeric:tabular-nums; margin-top:2px}
+  .ejeT span{text-align:left; border-left:1px solid var(--borde); padding-left:2px}
+  .marca{position:relative}
+  .marca::after{content:''; position:absolute; top:-3px; bottom:-3px; width:2px;
+    background:var(--rojo); left:var(--x)}
+  /* ----- paso a paso ----- */
+  .paso{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  .slot{background:var(--panel2); border:1px solid var(--borde); border-radius:8px; padding:10px 12px}
+  .slot h3{margin:0 0 8px; font-size:.75rem; text-transform:uppercase;
+           letter-spacing:.06em; color:var(--suave)}
+  .ficha{display:inline-block; padding:4px 11px; border-radius:6px; font-weight:700;
+         color:#fff; font-size:.88rem; margin:2px 4px 2px 0}
+  .ficha.vacio{background:transparent; color:var(--suave); font-weight:400; font-style:italic}
+  .colaFlecha{color:var(--suave); font-size:.8rem; margin-bottom:4px}
+  .evento{font-size:.88rem; margin-top:10px; padding:8px 10px; border-radius:7px;
+          background:var(--panel2); border:1px solid var(--borde)}
+  .nota{font-size:.85rem; color:var(--suave); margin-top:8px}
+  .clave{border-left:3px solid var(--acento); padding-left:10px; margin:10px 0; font-size:.9rem}
+  .avisoRegla{border-left:3px solid var(--listo); padding:8px 10px; margin:10px 0;
+              background:var(--panel2); border-radius:0 7px 7px 0; font-size:.88rem}
+  code{background:var(--panel2); padding:1px 5px; border-radius:4px; font-size:.88em}
+  .mejor{font-weight:700; color:var(--fin)}
+  @media (max-width:640px){ .paso{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Planificación de CPU</h1>
+  <p class="sub">Simulador con diagrama de Gantt &mdash; Sistemas Operativos, Unidad 2, tema 8</p>
+
+  <div class="intro">
+    <p><strong>Qué es.</strong> Cargás los procesos con su instante de llegada y su ráfaga de CPU,
+    elegís un algoritmo y ves el diagrama de Gantt, los tiempos de retorno y de espera, y
+    <strong>la cola de preparados en cada instante</strong> &mdash; que es justo lo que piden los parciales.</p>
+    <p><strong>Cómo usarlo.</strong> Tocá los números de la tabla para cambiarlos. Cambiá de algoritmo
+    con los botones. Movete por el tiempo con <code>◀</code> y <code>▶</code> para ver qué pasa en cada
+    instante y por qué. Abajo tenés la comparación de todos los algoritmos sobre los mismos datos.</p>
+  </div>
+
+  <div class="avisoRegla">
+    <strong>Regla de desempate de la cátedra</strong> (sale de los parciales reales y está aplicada acá):
+    entre un proceso que <em>llega</em> y otro que <em>sale</em> del estado de ejecución,
+    <strong>el que se pone antes en la cola es el que llega</strong>.
+  </div>
+
+  <h2>1. Procesos</h2>
+  <div class="caja">
+    <div class="fila">
+      <label>Ejemplos:</label>
+      <button data-preset="clase">El de la clase</button>
+      <button data-preset="final">Final de la cátedra</button>
+      <button data-preset="parcial">Parcial de la cátedra</button>
+      <button data-preset="prio">Con prioridades</button>
+    </div>
+    <div class="scroll"><table id="tabEnt"></table></div>
+    <div class="fila" style="margin-top:10px; margin-bottom:0">
+      <button id="btnMas">+ Agregar proceso</button>
+      <button id="btnMenos">&minus; Quitar el último</button>
+    </div>
+  </div>
+
+  <h2>2. Algoritmo</h2>
+  <div class="caja">
+    <div class="fila" id="algos"></div>
+    <div class="fila" id="filaQ">
+      <label for="q">Quantum:</label>
+      <input type="range" id="q" min="1" max="8" value="2" style="width:170px">
+      <strong id="qVal">2</strong>
+      <span class="nota" style="margin:0">&nbsp;unidades de tiempo</span>
+    </div>
+    <div id="descAlgo" class="clave"></div>
+  </div>
+
+  <h2>3. Diagrama de Gantt</h2>
+  <div class="caja">
+    <div class="scroll">
+      <div id="gantt" class="gantt"></div>
+      <div id="ejeT" class="ejeT"></div>
+    </div>
+    <div class="nota" id="secuencia"></div>
+  </div>
+
+  <h2>4. Paso a paso</h2>
+  <div class="caja">
+    <div class="fila">
+      <button id="btnIni">⏮ Inicio</button>
+      <button id="btnAtras">◀ Atrás</button>
+      <button id="btnAdel">▶ Adelante</button>
+      <button id="btnFin">Fin ⏭</button>
+      <label for="tSlider" style="margin-left:6px">Instante <strong id="tVal">0</strong>:</label>
+      <input type="range" id="tSlider" min="0" max="1" value="0" style="width:180px">
+    </div>
+    <div class="paso">
+      <div class="slot">
+        <h3>En la CPU (en ejecución)</h3>
+        <div id="enCPU"></div>
+        <div class="nota" id="notaCPU"></div>
+      </div>
+      <div class="slot">
+        <h3>Cola de preparados (listos)</h3>
+        <div class="colaFlecha">&larr; sale el próximo &nbsp;&nbsp;&nbsp; entran por atrás &rarr;</div>
+        <div id="cola"></div>
+      </div>
+    </div>
+    <div class="evento" id="evento"></div>
+  </div>
+
+  <h2>5. Métricas</h2>
+  <div class="caja">
+    <div class="scroll"><table id="tabMet"></table></div>
+    <div class="nota">
+      <strong>retorno</strong> = fin &minus; llegada &nbsp;·&nbsp;
+      <strong>espera</strong> = retorno &minus; ráfaga &nbsp;·&nbsp;
+      <strong>respuesta</strong> = primer arranque &minus; llegada
+    </div>
+  </div>
+
+  <h2>6. Comparación de todos los algoritmos</h2>
+  <div class="caja">
+    <div class="scroll"><table id="tabComp"></table></div>
+    <div class="nota">Sobre los mismos procesos. En verde, el mejor de cada columna.</div>
+  </div>
+</div>
+
+<script>
+// ====================================================================
+// MOTOR  —  copiado de _trabajo/motor_planificacion.js
+// Verificado con _trabajo/verificar_motor_planificacion.js (cruce contra
+// el motor viejo sobre los parciales reales + 400 juegos aleatorios).
+// La copia pegada acá se revalida con _trabajo/verificar_html_planificacion.js
+//
+// REGLA DE DESEMPATE DE LA CATEDRA:
+//   "entre un proceso que llega y otro que sale del estado de ejecucion,
+//    el que se pone antes en la cola es el proceso que llega".
+// algo: 'FCFS' | 'SJF' | 'SRTF' | 'RR' | 'PRIO' | 'PRIOP'
+// prioridad: menor numero = mas prioritario.
+// ====================================================================
+
+function simular(entrada, algo, quantum) {
+  const ps = entrada.map(p => ({
+    nom: p.nom, llegada: +p.llegada, rafaga: +p.rafaga,
+    prio: p.prio === undefined ? 0 : +p.prio,
+    restante: +p.rafaga, fin: null, primerInicio: null
+  }));
+
+  const cola = [];      // cola de preparados (refs a ps)
+  const gantt = [];     // [{nom, ini, fin}]
+  const pasos = [];     // una foto por unidad de tiempo
+  let t = 0, actual = null, usado = 0, terminados = 0;
+  const LIMITE = 100000;
+
+  const encolarLlegadas = inst => {
+    ps.filter(p => p.llegada === inst && p.restante > 0 && p !== actual && !cola.includes(p))
+      .sort((a, b) => a.nom.localeCompare(b.nom))
+      .forEach(p => cola.push(p));
+  };
+
+  // devuelve el indice del elegido dentro de la cola (-1 si esta vacia).
+  // En empate gana el que entro antes a la cola (FIFO).
+  const elegirIdx = () => {
+    if (!cola.length) return -1;
+    if (algo === 'FCFS' || algo === 'RR') return 0;
+    let mejor = 0;
+    for (let i = 1; i < cola.length; i++) {
+      const a = cola[i], b = cola[mejor];
+      let gana;
+      if (algo === 'SJF')       gana = a.rafaga   < b.rafaga;
+      else if (algo === 'SRTF') gana = a.restante < b.restante;
+      else                      gana = a.prio     < b.prio;
+      if (gana) mejor = i;
+    }
+    return mejor;
+  };
+
+  while (terminados < ps.length && t < LIMITE) {
+    let evento = '';
+
+    // 1) LLEGADAS primero (regla de la catedra)
+    const antesCola = cola.length;
+    encolarLlegadas(t);
+    if (cola.length > antesCola)
+      evento += 'llega ' + cola.slice(antesCola).map(p => p.nom).join(', ') + '. ';
+
+    // 2) ¿sale el que esta en la CPU?
+    if (actual) {
+      let sale = false;
+      if (algo === 'RR' && usado === quantum) {
+        sale = true; evento += 'fin de quantum de ' + actual.nom + ' -> LISTO. ';
+      } else if (algo === 'SRTF' || algo === 'PRIOP') {
+        const i = elegirIdx();
+        if (i >= 0) {
+          const c = cola[i];
+          const mejor = algo === 'SRTF' ? c.restante < actual.restante : c.prio < actual.prio;
+          if (mejor) { sale = true; evento += c.nom + ' desaloja a ' + actual.nom + '. '; }
+        }
+      }
+      if (sale) { cola.push(actual); actual = null; usado = 0; }
+    }
+
+    // 3) si la CPU esta libre, elegir
+    if (!actual) {
+      const i = elegirIdx();
+      if (i >= 0) {
+        actual = cola.splice(i, 1)[0];
+        usado = 0;
+        if (actual.primerInicio === null) actual.primerInicio = t;
+        evento += 'entra a la CPU ' + actual.nom + '. ';
+      }
+    }
+
+    // 4) ejecutar una unidad de tiempo
+    pasos.push({ t, enCPU: actual ? actual.nom : null, cola: cola.map(x => x.nom),
+                 restantes: ps.map(p => ({ nom: p.nom, restante: p.restante })), evento: evento.trim() });
+
+    const ult = gantt[gantt.length - 1];
+    const quien = actual ? actual.nom : '-';
+    if (ult && ult.nom === quien && ult.fin === t) ult.fin = t + 1;
+    else gantt.push({ nom: quien, ini: t, fin: t + 1 });
+
+    if (actual) {
+      actual.restante--; usado++;
+      if (actual.restante === 0) {
+        actual.fin = t + 1; terminados++;
+        pasos[pasos.length - 1].evento = (pasos[pasos.length - 1].evento + ' ' + actual.nom + ' TERMINA en ' + (t + 1) + '.').trim();
+        actual = null; usado = 0;
+      }
+    }
+    t++;
+  }
+  return { gantt, ps, pasos, horizonte: t };
+}
+
+function metricas(ps) {
+  const filas = ps.map(p => {
+    const retorno = p.fin - p.llegada;
+    return { nom: p.nom, llegada: p.llegada, rafaga: p.rafaga, prio: p.prio, fin: p.fin,
+             retorno, espera: retorno - p.rafaga, respuesta: p.primerInicio - p.llegada };
+  }).sort((a, b) => a.nom.localeCompare(b.nom));
+  const n = filas.length, sum = k => filas.reduce((s, f) => s + f[k], 0);
+  return { filas, retornoProm: sum('retorno') / n, esperaProm: sum('espera') / n,
+           respuestaProm: sum('respuesta') / n };
+}
+
+const secuencia = g => g.filter(x => x.nom !== '-').map(x => x.nom).join(' ');
+const ganttTxt  = g => g.map(x => x.nom + '[' + x.ini + '-' + x.fin + ']').join(' ');
+
+// ===================== INTERFAZ =====================
+
+const PRESETS = {
+  clase: [{nom:'P1',llegada:0,rafaga:8,prio:2},{nom:'P2',llegada:1,rafaga:4,prio:1},
+          {nom:'P3',llegada:2,rafaga:2,prio:3}],
+  final: [{nom:'A',llegada:0,rafaga:6,prio:2},{nom:'B',llegada:2,rafaga:5,prio:1},
+          {nom:'C',llegada:4,rafaga:3,prio:3},{nom:'D',llegada:6,rafaga:4,prio:2}],
+  parcial:[{nom:'A',llegada:0,rafaga:5,prio:3},{nom:'B',llegada:1,rafaga:6,prio:1},
+          {nom:'C',llegada:2,rafaga:5,prio:2},{nom:'D',llegada:4,rafaga:3,prio:4},
+          {nom:'E',llegada:3,rafaga:4,prio:2}],
+  prio:  [{nom:'L',llegada:0,rafaga:6,prio:3},{nom:'M',llegada:2,rafaga:4,prio:2},
+          {nom:'H',llegada:4,rafaga:3,prio:1}],
+};
+
+const ALGOS = [
+  ['FCFS',  'FCFS',            'no apropiativo',
+   'Primero en llegar, primero en ser atendido. Una sola cola, en orden de llegada, y cada proceso corre hasta terminar. Simple y justo en sentido formal, pero <strong>un proceso largo que llega primero retrasa a todos los cortos</strong> (efecto convoy).'],
+  ['SJF',   'SJF / SJN',       'no apropiativo',
+   'El trabajo más corto primero. Entre los que ya llegaron, elige el de <strong>ráfaga total</strong> más chica. <strong>Minimiza el tiempo de retorno promedio, pero solo es óptimo si todos los trabajos llegan juntos.</strong> Necesita conocer de antemano la duración.'],
+  ['SRTF',  'SRTF / SRTN',     'apropiativo',
+   'Menor tiempo restante a continuación. Versión apropiativa de SJF: en cada instante corre el de <strong>menor tiempo que le falta</strong>, así que <strong>un proceso nuevo y corto desaloja al que está en la CPU</strong>. Excelente para trabajos cortos; puede causar inanición de los largos.'],
+  ['RR',    'Round Robin',     'apropiativo',
+   'Turno circular. Cada proceso recibe un <strong>quantum</strong>; si no termina, va <strong>al final de la cola de listos</strong>. Es el algoritmo de los sistemas interactivos. Quantum muy corto = demasiadas conmutaciones y sobrecarga; quantum muy largo = mala respuesta (se degrada a FCFS).'],
+  ['PRIO',  'Prioridades',     'no apropiativo',
+   'Corre el proceso listo de <strong>mayor prioridad</strong> (acá, el número más chico). No apropiativo: el que está en la CPU termina igual. Riesgo de <strong>inanición</strong> de los de baja prioridad; se corrige con <strong>envejecimiento</strong>.'],
+  ['PRIOP', 'Prioridades apr.','apropiativo',
+   'Igual que el anterior, pero si llega uno de <strong>mayor prioridad, desaloja</strong> al que está en la CPU. Ojo: si el desalojado tenía un candado tomado, aparece la <strong>inversión de prioridades</strong> del tema 6.'],
+];
+
+let algoSel = 'FCFS', quantum = 2, tSel = 0, procs = JSON.parse(JSON.stringify(PRESETS.clase));
+const $ = id => document.getElementById(id);
+const colorDe = nom => {
+  const i = procs.findIndex(p => p.nom === nom);
+  return 'var(--p' + ((i < 0 ? 0 : i) % 8 + 1) + ')';
+};
+
+// ---------- tabla de entrada ----------
+function pintarEntrada(){
+  let h = '<tr><th>Proceso</th><th>Llegada</th><th>Ráfaga de CPU</th><th>Prioridad<br><span style="font-weight:400">(1 = más alta)</span></th></tr>';
+  procs.forEach((p,i) => {
+    h += '<tr><td class="nom" style="color:'+colorDe(p.nom)+'">'
+      +  '<input type="text" data-i="'+i+'" data-k="nom" value="'+p.nom+'" maxlength="4" style="font-weight:700;color:inherit"></td>'
+      +  '<td><input type="number" data-i="'+i+'" data-k="llegada" min="0" max="40" value="'+p.llegada+'"></td>'
+      +  '<td><input type="number" data-i="'+i+'" data-k="rafaga"  min="1" max="20" value="'+p.rafaga+'"></td>'
+      +  '<td><input type="number" data-i="'+i+'" data-k="prio"    min="1" max="9"  value="'+p.prio+'"></td></tr>';
+  });
+  $('tabEnt').innerHTML = h;
+  $('tabEnt').querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('change', e => {
+      const i = +e.target.dataset.i, k = e.target.dataset.k;
+      if (k === 'nom') {
+        const v = e.target.value.trim().slice(0,4) || ('P'+(i+1));
+        procs[i].nom = procs.some((p,j) => j !== i && p.nom === v) ? procs[i].nom : v;
+      } else {
+        let v = parseInt(e.target.value, 10);
+        if (isNaN(v)) v = (k === 'llegada' ? 0 : 1);
+        if (k === 'llegada') v = Math.max(0, Math.min(40, v));
+        if (k === 'rafaga')  v = Math.max(1, Math.min(20, v));
+        if (k === 'prio')    v = Math.max(1, Math.min(9,  v));
+        procs[i][k] = v;
+      }
+      tSel = 0; render();
+    });
+  });
+}
+
+// ---------- botones de algoritmo ----------
+function pintarAlgos(){
+  $('algos').innerHTML = ALGOS.map(a =>
+    '<button data-algo="'+a[0]+'" class="'+(a[0]===algoSel?'on':'')+'">'+a[1]+'</button>').join('');
+  $('algos').querySelectorAll('button').forEach(b =>
+    b.addEventListener('click', () => { algoSel = b.dataset.algo; tSel = 0; render(); }));
+  const a = ALGOS.find(x => x[0] === algoSel);
+  $('descAlgo').innerHTML = '<strong>'+a[1]+'</strong> &mdash; <em>'+a[2]+'</em>. '+a[3];
+  $('filaQ').style.display = algoSel === 'RR' ? 'flex' : 'none';
+}
+
+// ---------- render principal ----------
+let R = null, M = null;
+
+function render(){
+  pintarEntrada();
+  pintarAlgos();
+  R = simular(procs, algoSel, quantum);
+  M = metricas(R.ps);
+  const H = R.horizonte;
+  if (tSel > H - 1) tSel = H - 1;
+  if (tSel < 0) tSel = 0;
+  pintarGantt(H);
+  $('tSlider').max = Math.max(0, H - 1);
+  $('tSlider').value = tSel;
+  pintarPaso();
+  pintarMetricas();
+  pintarComparacion();
+}
+
+function pintarGantt(H){
+  const g = $('gantt'); const anchoU = Math.max(26, Math.min(44, Math.floor(880 / H)));
+  g.innerHTML = R.gantt.map(tr => {
+    const w = (tr.fin - tr.ini) * anchoU;
+    if (tr.nom === '-')
+      return '<div class="ocio" style="width:'+w+'px" title="CPU ociosa '+tr.ini+'&ndash;'+tr.fin+'">ocio</div>';
+    return '<div style="width:'+w+'px;background:'+colorDe(tr.nom)+'" title="'+tr.nom+' de '+tr.ini+' a '+tr.fin+'">'+tr.nom+'</div>';
+  }).join('');
+  let e = '';
+  for (let i = 0; i <= H; i++) e += '<span style="width:'+anchoU+'px">'+i+'</span>';
+  $('ejeT').innerHTML = e;
+  $('secuencia').innerHTML = '<strong>Secuencia de ejecución:</strong> ' + secuencia(R.gantt)
+    + ' &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Gantt:</strong> ' + ganttTxt(R.gantt);
+}
+
+function ficha(nom){
+  return '<span class="ficha" style="background:'+colorDe(nom)+'">'+nom+'</span>';
+}
+
+function pintarPaso(){
+  const p = R.pasos[tSel];
+  $('tVal').textContent = tSel;
+  if (!p){ $('enCPU').innerHTML = ''; $('cola').innerHTML = ''; return; }
+  $('enCPU').innerHTML = p.enCPU ? ficha(p.enCPU)
+    : '<span class="ficha vacio">CPU ociosa: no hay ningún proceso listo</span>';
+  if (p.enCPU){
+    const r = p.restantes.find(x => x.nom === p.enCPU);
+    $('notaCPU').innerHTML = 'Ocupa la CPU durante el intervalo <strong>['+tSel+', '+(tSel+1)+')</strong>. '
+      + 'Le faltaban <strong>'+r.restante+'</strong> unidades al empezar este instante.';
+  } else $('notaCPU').innerHTML = '';
+  $('cola').innerHTML = p.cola.length ? p.cola.map(ficha).join('')
+    : '<span class="ficha vacio">vacía</span>';
+  $('evento').innerHTML = '<strong>t = '+tSel+':</strong> ' + (p.evento || 'sigue el mismo proceso en la CPU.');
+}
+
+function pintarMetricas(){
+  let h = '<tr><th>Proceso</th><th>Llegada</th><th>Ráfaga</th><th>Fin</th>'
+        + '<th>Retorno<br><span style="font-weight:400">fin &minus; llegada</span></th>'
+        + '<th>Espera<br><span style="font-weight:400">retorno &minus; ráfaga</span></th>'
+        + '<th>Respuesta</th></tr>';
+  M.filas.forEach(f => {
+    h += '<tr><td class="nom" style="color:'+colorDe(f.nom)+'">'+f.nom+'</td>'
+      +  '<td>'+f.llegada+'</td><td>'+f.rafaga+'</td><td>'+f.fin+'</td>'
+      +  '<td><strong>'+f.retorno+'</strong></td><td><strong>'+f.espera+'</strong></td>'
+      +  '<td>'+f.respuesta+'</td></tr>';
+  });
+  const n = M.filas.length;
+  const s = k => M.filas.reduce((a,f) => a + f[k], 0);
+  h += '<tr><th colspan="4" style="text-align:right">Promedios</th>'
+    +  '<th>'+s('retorno')+'/'+n+' = '+M.retornoProm.toFixed(2)+'</th>'
+    +  '<th>'+s('espera')+'/'+n+' = '+M.esperaProm.toFixed(2)+'</th>'
+    +  '<th>'+M.respuestaProm.toFixed(2)+'</th></tr>';
+  $('tabMet').innerHTML = h;
+}
+
+function pintarComparacion(){
+  const filas = ALGOS.map(a => {
+    const et = a[0] === 'RR' ? a[1] + ' (q=' + quantum + ')' : a[1];
+    const r = simular(procs, a[0], quantum), m = metricas(r.ps);
+    return { et, algo:a[0], tipo:a[2], sec:secuencia(r.gantt),
+             ret:m.retornoProm, esp:m.esperaProm, resp:m.respuestaProm };
+  });
+  const mejor = k => Math.min.apply(null, filas.map(f => f[k]));
+  const mRet = mejor('ret'), mEsp = mejor('esp'), mResp = mejor('resp');
+  let h = '<tr><th>Algoritmo</th><th>Tipo</th><th>Secuencia de ejecución</th>'
+        + '<th>Retorno prom.</th><th>Espera prom.</th><th>Respuesta prom.</th></tr>';
+  filas.forEach(f => {
+    const act = f.algo === algoSel ? ' style="background:var(--panel2)"' : '';
+    h += '<tr'+act+'><td class="nom">'+(f.algo===algoSel?'▸ ':'')+f.et+'</td>'
+      +  '<td style="font-size:.82rem;color:var(--suave)">'+f.tipo+'</td>'
+      +  '<td style="font-size:.8rem;letter-spacing:.04em">'+f.sec+'</td>'
+      +  '<td'+(Math.abs(f.ret-mRet)<1e-9?' class="mejor"':'')+'>'+f.ret.toFixed(2)+'</td>'
+      +  '<td'+(Math.abs(f.esp-mEsp)<1e-9?' class="mejor"':'')+'>'+f.esp.toFixed(2)+'</td>'
+      +  '<td'+(Math.abs(f.resp-mResp)<1e-9?' class="mejor"':'')+'>'+f.resp.toFixed(2)+'</td></tr>';
+  });
+  $('tabComp').innerHTML = h;
+}
+
+// ---------- eventos ----------
+$('q').addEventListener('input', e => { quantum = +e.target.value; $('qVal').textContent = quantum; tSel = 0; render(); });
+$('tSlider').addEventListener('input', e => { tSel = +e.target.value; pintarPaso(); });
+$('btnIni').addEventListener('click', () => { tSel = 0; $('tSlider').value = 0; pintarPaso(); });
+$('btnFin').addEventListener('click', () => { tSel = R.horizonte - 1; $('tSlider').value = tSel; pintarPaso(); });
+$('btnAtras').addEventListener('click', () => { if (tSel > 0){ tSel--; $('tSlider').value = tSel; pintarPaso(); } });
+$('btnAdel').addEventListener('click', () => { if (tSel < R.horizonte - 1){ tSel++; $('tSlider').value = tSel; pintarPaso(); } });
+document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => {
+  procs = JSON.parse(JSON.stringify(PRESETS[b.dataset.preset])); tSel = 0; render();
+}));
+$('btnMas').addEventListener('click', () => {
+  if (procs.length >= 8) return;
+  let i = procs.length + 1, nom = 'P' + i;
+  while (procs.some(p => p.nom === nom)) nom = 'P' + (++i);
+  procs.push({ nom, llegada: 0, rafaga: 3, prio: 2 }); tSel = 0; render();
+});
+$('btnMenos').addEventListener('click', () => {
+  if (procs.length > 2){ procs.pop(); tSel = 0; render(); }
+});
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight') $('btnAdel').click();
+  if (e.key === 'ArrowLeft')  $('btnAtras').click();
+});
+
+render();
+</script>
+</body>
+</html>

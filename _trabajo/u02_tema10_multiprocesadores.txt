@@ -1,0 +1,1381 @@
+
+===== [PDF pag 556] =====
+8.1  MULTIPROCESADORES
+Un multiprocesador con memoria compartida (o sólo multiprocesador, de aquí en adelante) es
+un sistema de cómputo en el que dos o más CPUs comparten todo el acceso a una RAM común. Un
+programa que se ejecuta en cualquiera de las CPUs ve un espacio normal de direcciones virtuales
+(por lo general paginadas). La única propiedad inusual que tiene este sistema es que la CPU puede
+escribir cierto valor en una palabra de memoria y después puede volver a leer esa palabra y obtener
+un valor distinto (tal vez porque otra CPU lo cambió). Si se organiza en forma correcta, esta pro-
+piedad forma la base de la comunicación entre procesadores: una CPU escribe ciertos datos en la
+memoria y otra lee esos datos.
+En su mayor parte, los sistemas operativos multiprocesadores son sólo sistemas operativos re-
+gulares. Manejan las llamadas al sistema, administran la memoria, proveen un sistema de archivos
+y administran los dispositivos de E/S. Sin embargo, hay ciertas áreas en las que tienen característi-
+cas únicas. Estas áreas son la sincronización de procesos, la administración de recursos y la progra-
+mación de tareas. A continuación analizaremos con brevedad el hardware de los multiprocesadores
+y después pasaremos a ver las cuestiones relacionadas con estos sistemas operativos.
+8.1.1  Hardware de multiprocesador
+Aunque todos los multiprocesadores tienen la propiedad de que cada CPU puede direccionar toda la
+memoria, algunos tienen la característica adicional de que cada palabra de memoria se puede leer con
+la misma velocidad que cualquier otra palabra de memoria. Estas máquinas se conocen como multipro-
+cesadores UMA (Uniform Memory Access, Acceso uniforme a la memoria). Por el contrario, los mul-
+tiprocesadores NUMA (Non-uniform Memory Access, Acceso no uniforme a la memoria) no tienen
+esta propiedad. Más adelante aclararemos por qué existe esta diferencia. Primero examinaremos los
+multiprocesadores UMA y después los NUMA.
+Multiprocesadores UMA con arquitecturas basadas en bus
+Los multiprocesadores más simples se basan en un solo bus, como se ilustra en la figura 8-2(a). Dos
+o más CPUs y uno o más módulos de memoria utilizan el mismo bus para comunicarse. Cuando
+una CPU desea leer una palabra de memoria, primero comprueba si el bus está ocupado. Si está
+inactivo, la CPU coloca la dirección de la palabra que desea en el bus, declara unas cuantas seña-
+les de control y espera hasta que la memoria coloque la palabra deseada en el bus.
+Si el bus está ocupado cuando una CPU desea leer o escribir en la memoria, la CPU espera só-
+lo hasta que el bus esté inactivo. Aquí es donde se encuentra el problema con este diseño. Con dos
+o tres CPUs, la contención por el bus será manejable; con 32 o 64 será imposible. El sistema esta-
+rá totalmente limitado por el ancho de banda del bus, y la mayoría de las CPUs estarán inactivas la
+mayor parte del tiempo.
+La solución a este problema es agregar una caché a cada CPU, como se ilustra en la figu-
+ra 8.2(b). La caché puede estar dentro del chip de la CPU, a un lado de ésta, en el tablero del procesa-
+dor o puede ser alguna combinación de las tres opciones anteriores. Como esto permite satisfacer 
+526
+SISTEMAS DE MÚLTIPLES PROCESADORES
+CAPÍTULO 8
+ www.FreeLibros.me
+
+===== [PDF pag 557] =====
+SECCIÓN 8.1
+MULTIPROCESADORES
+527
+muchas operaciones de lectura desde la caché local, habrá mucho menos tráfico en el bus y el sistema
+podrá soportar más CPUs. En general, el uso de caché no se realiza por cada palabra individual, sino
+por bloques de 32 o 64 bytes. Cuando se hace referencia a una palabra, se obtiene su bloque completo
+(conocido como línea de caché) y se coloca en la caché de la CPU que está en contacto con ella.
+Cada bloque de la caché se marca como de sólo lectura (en cuyo caso puede estar presente en
+varias cachés al mismo tiempo) o como de lectura-escritura (no puede estar presente en otras ca-
+chés). Si una CPU trata de escribir una palabra que está en una o más cachés remotas, el hardware
+del bus detecta la escritura y coloca una señal en el bus para informar a todas las demás cachés so-
+bre la operación de escritura. Si otras cachés tienen una copia “limpia” (es decir, una copia exacta
+de lo que hay en memoria), sólo tienen que descartar sus copias y dejar que la CPU que va a escri-
+bir obtenga el bloque de la caché de la memoria antes de modificarla. Si alguna otra caché tiene una
+copia “sucia” (es decir, modificada), debe escribirla de vuelta a la memoria para que pueda conti-
+nuar la escritura, o transferirla directamente a la CPU que va a realizar la operación de escritura a
+través del bus. A este conjunto de reglas se le conoce como protocolo de coherencia de cachés y
+es uno de muchos.
+Otra posibilidad es el diseño de la figura 8-2(c), donde cada CPU tiene no sólo una caché, sino
+también una memoria privada local que utiliza mediante un bus dedicado (privado). Para utilizar es-
+ta configuración de manera óptima, el compilador debe colocar todo el texto del programa, las cade-
+nas, constantes y demás datos de sólo lectura, las pilas y las variables locales en las memorias
+privadas. De esta forma, la memoria compartida se utiliza sólo para escribir variables compartidas.
+En la mayoría de los casos, esta cuidadosa colocación reducirá de manera considerable el tráfico en
+el bus, pero requiere de una cooperación activa por parte del compilador.
+Multiprocesadores UMA que utilizan interruptores de barras cruzadas
+Aun con la mejor caché, el uso de un solo bus limita el tamaño de un multiprocesador UMA a 16 o
+32 CPUs, aproximadamente. Para lograr algo más se necesita un tipo distinto de interconexión. El
+circuito más simple para conectar n CPUs a k memorias es el interruptor (conmutador) de ba-
+rras cruzadas, que se muestra en la figura 8-3. Los interruptores de barras cruzadas se han utiliza-
+do por décadas en los puntos de intercambio de los conmutadores telefónicos para conectar un
+grupo de líneas entrantes a un conjunto de líneas salientes de manera arbitraria.
+CPU
+CPU
+M
+Memoria compartida
+Memoria
+compartida
+Bus
+(a)
+CPU
+CPU
+M
+Memoria privada
+(b)
+CPU
+CPU
+M
+(c)
+Caché
+Figura 8-2. Tres multiprocesadores basados en bus.  (a) Sin caché.  (b) Con
+caché.  (c) Con caché y memorias privadas.
+ www.FreeLibros.me
+
+===== [PDF pag 558] =====
+En cada intersección de una línea horizontal (entrante) y una vertical (saliente) hay un punto
+de cruce, el cual es un pequeño interruptor que puede estar abierto o cerrado en sentido eléctrico,
+dependiendo de si las líneas horizontal y vertical van a conectarse o no. En la figura 8-3(a) pode-
+mos ver tres puntos de cruce cerrados al mismo tiempo, con lo cual se permiten tres conexiones en-
+tre los pares (CPU, memoria) (010, 000), (101, 101) y (110, 010) al mismo tiempo. También son
+posibles muchas otras combinaciones. De hecho, el número de combinaciones es igual al número
+de las distintas formas en que se pueden colocar ocho torres en un tablero de ajedrez.
+528
+SISTEMAS DE MÚLTIPLES PROCESADORES
+CAPÍTULO 8
+Memorias
+CPUs
+Conmutador 
+de punto de 
+cruce cerrado
+Conmutador 
+de punto de 
+cruce abierto
+(a)
+(b)
+(c)
+El conmutador de punto 
+de cruce está cerrado
+El conmutador de punto 
+de cruce está abierto
+000
+001
+010
+011
+100
+101
+110
+111
+100
+101
+110
+111
+000
+001
+010
+011
+Figura 8-3.  (a) Un conmutador de barras cruzadas de 8  8.  (b) Un punto de cruce
+abierto.  (c) Un punto de cruce cerrado.
+Una de las propiedades más agradables de un interruptor de barras cruzadas es que es una red
+sin bloqueos, lo cual significa que a ninguna CPU se le niega nunca la conexión que necesita, de-
+bido a que algún punto de cruce o una línea ya estén ocupados (suponiendo que el módulo de me-
+moria en sí esté disponible). Además, no se necesita una planeación por adelantado. Aun si ya hay
+siete conexiones arbitrarias establecidas, siempre es posible conectar la CPU restante a la memoria
+restante.
+Desde luego que también es posible la contención de memoria, si dos CPUs desean acceder al
+mismo módulo, al mismo tiempo. Sin embargo, al particionar la memoria en n unidades, la conten-
+ción se reduce por un factor de n en comparación con el modelo de la figura 8-2. 
+ www.FreeLibros.me
+
+===== [PDF pag 559] =====
+SECCIÓN 8.1
+MULTIPROCESADORES
+529
+Una de las peores propiedades del conmutador de barras cruzadas es el hecho de que el nú-
+mero de puntos de cruce aumenta con base en n2. Con 1000 CPUs y 1000 módulos de memoria,
+necesitamos un millón de puntos de cruce. No es factible un interruptor de barras cruzadas de es-
+te tamaño. Sin embargo, para los sistemas de tamaño mediano, se puede utilizar el diseño de las
+barras cruzadas.
+Multiprocesadores UMA que utilizan redes de conmutación multietapa
+Un diseño completamente distinto de multiprocesador se basa en el humilde conmutador de 2  2
+que se muestra en la figura 8-4(a). Este interruptor tiene dos entradas y dos salidas. Los mensajes que
+llegan en cualquiera de las líneas de entrada se pueden conmutar a cualquiera de las líneas de sali-
+da. Para nuestros fines, los mensajes deben contener hasta cuatro partes, como se muestra en la fi-
+gura 8-4(b). El campo Módulo indica qué memoria utilizar. Dirección especifica una dirección
+dentro de un módulo. CódigoOp proporciona la operación, como READ o WRITE. Por último, el cam-
+po Valor opcional puede contener un operando, como una palabra de 32 bits a escribir mediante una
+operación WRITE. El interruptor inspecciona el campo Módulo y lo utiliza para determinar si el men-
+saje se debe enviar en X o en Y.
+A
+B
+X
+Y
+(a)
+(b)
+Módulo
+Dirección CódigoOp
+Valor
+Figura 8-4. (a)  Un conmutador de 2  2 con dos líneas de entrada (A y B) y dos 
+líneas de salida (X y Y).  (b) Un formato de mensaje.
+Nuestros conmutadores de 2  2 se pueden organizar de muchas formas para construir redes
+de conmutación multietapa más grandes (Adams y colaboradores, 1987; Bhuyan y colaboradores,
+1989; Kumar y Reddy, 1987). Una posibilidad es la red omega de clase económica sin adornos, que
+se ilustra en la figura 8-5. Aquí hemos conectado ocho CPUs a ocho memorias, utilizando 12 con-
+mutadores. De manera más general, para n CPUs y n memorias necesitaríamos log2n etapas, con
+n/2 conmutadores por etapa, para un total de (n/2)log2n conmutadores, que es mucho mejor que n2
+puntos de cruce, en especial para valores grandes de n.
+El patrón de cableado de la red omega se conoce comúnmente como barajado perfecto, ya
+que la mezcla de las señales en cada etapa se asemeja al proceso de cortar a la mitad un mazo de
+cartas y después mezclarlas, carta por carta. Para ver cómo funciona la red omega, suponga que la
+CPU 011 desea leer una palabra del módulo de memoria 110. La CPU envía un mensaje READ al in-
+terruptor 1D que contiene el valor 110 en el campo Módulo. El interruptor toma el primer bit (de
+más a la izquierda) de 110 y lo utiliza para el enrutamiento. Un 0 enruta a la salida superior y un 
+1 a la inferior. Como este bit es un 1, el mensaje se enruta a través de la salida inferior hacia 2D.
+Todos los interruptores de la segunda etapa (incluyendo a 2D) utilizan el segundo bit para el
+enrutamiento. Éste también es un 1, por lo que ahora el mensaje se reenvía a través de la salida in-
+ferior hacia 3D. Aquí se evalúa el tercer bit y se encuentra que es 0. En consecuencia, el mensaje
+ www.FreeLibros.me
+
+===== [PDF pag 560] =====
+pasa por la salida superior y llega a la memoria 110, como se desea. La ruta seguida por este men-
+saje está marcada en la figura 8-5 por la letra a.
+A medida que el mensaje pasa a través de la red de conmutación, los bits en el extremo izquier-
+do del número de módulo ya no se necesitan. Se les puede dar un buen uso al registrar ahí el núme-
+ro de línea entrante, para que la respuesta pueda encontrar su camino de regreso. Para la ruta a, las
+líneas entrantes son 0 (entrada superior a 1D), 1 (entrada inferior a 2D) y 1 (entrada inferior a 3D),
+respectivamente. La respuesta se enruta de vuelta utilizando 011, sólo que esta vez se lee de dere-
+cha a izquierda. 
+Al mismo tiempo que ocurre todo esto, la CPU 001 desea escribir una palabra en el módulo de
+memoria 001. Aquí ocurre un proceso análogo, donde el mensaje se enruta a través de las salidas
+superior, superior e inferior, respectivamente, marcadas por la letra b. Cuando llega, en su campo
+Módulo se lee 001, lo cual representa la ruta que tomó. Como estas dos peticiones no utilizan nin-
+guno de los mismos conmutadores, líneas o módulos de memoria, pueden proceder en paralelo.
+Ahora considere lo que ocurriría si la CPU 000 quisiera acceder al mismo tiempo al módulo de
+memoria 000. Su petición entraría en conflicto con la petición de la CPU 001 en el interruptor 3A.
+Una de ellas tendría que esperar. A diferencia del conmutador de barras cruzadas, la red omega es
+una red con bloqueo. No todos los conjuntos de peticiones pueden procesarse al mismo tiempo.
+Puede haber conflictos sobre el uso de un cable o de un conmutador, así como entre las peticiones
+a la memoria y las respuestas de la memoria.
+Sin duda, es conveniente esparcir las referencias a memoria de manera uniforme a través de los
+módulos. Una técnica común es utilizar los bits de menor orden como el número de módulo. Por
+ejemplo, considere un espacio de direcciones orientado a bytes para una computadora que por lo
+general utiliza palabras completas de 32 bits. Los 2 bits de menor orden por lo general serán 00, pe-
+ro los siguientes 3 bits estarán distribuidos de manera uniforme. Al utilizar estos 3 bits como el nú-
+mero de módulo, las palabras consecutivas estarán en módulos consecutivos. Se dice que un sistema
+de memoria en el que las palabras consecutivas están en distintos módulos es entrelazado. Las me-
+morias entrelazadas maximizan el paralelismo, debido a que la mayoría de las referencias a memo-
+530
+SISTEMAS DE MÚLTIPLES PROCESADORES
+CAPÍTULO 8
+CPUs
+b
+b
+b
+b
+a
+a
+a
+a
+3 etapas
+Memorias
+000
+001
+010
+011
+100
+101
+110
+111
+000
+001
+010
+011
+100
+101
+110
+111
+1A
+1B
+1C
+1D
+2A
+2B
+2C
+2D
+3A
+3B
+3C
+3D
+Figura 8-5.  Una red de conmutación omega.
+ www.FreeLibros.me
+
+===== [PDF pag 561] =====
+SECCIÓN 8.1
+MULTIPROCESADORES
+531
+ria son a direcciones consecutivas. También es posible diseñar redes de conmutación que sean sin
+bloqueo y que ofrezcan varias rutas desde cada CPU a cada módulo de memoria, para esparcir me-
+jor el tráfico.
+Multiprocesadores NUMA
+Los multiprocesadores UMA de un solo bus por lo general están limitados a no más de unas cuan-
+tas docenas de CPUs, y los multiprocesadores de barras cruzadas o de conmutadores necesitan mu-
+cho hardware (costoso) y no son tan grandes. Para poder tener más de 100 CPUs, hay que ceder
+algo. Por lo general, lo que cede es la idea de que todos los módulos de memoria tienen el mismo
+tiempo de acceso. Esta concesión nos lleva a la idea de los multiprocesadores NUMA, como diji-
+mos antes. Al igual que sus parientes UMA, proveen un solo espacio de direcciones a través de to-
+das las CPUs, pero a diferencia de las máquinas UMA, el acceso a los módulos de memoria locales
+es más rápido que el acceso a los remotos. Por ende, todos los programas UMA se ejecutarán sin
+cambios en las máquinas NUMA, pero el rendimiento será peor que en una máquina UMA a la mis-
+ma velocidad de reloj.
+Las máquinas NUMA poseen tres características clave que, en conjunto, las distinguen de otros
+multiprocesadores:
+1. Hay un solo espacio de direcciones visible para todas las CPUs.
+2. El acceso a la memoria remota es mediante instrucciones LOAD y STORE.
+3. El acceso a la memoria remota es más lento que el acceso a la memoria local.
+Cuando el tiempo de acceso a la memoria remota no está oculto (debido a que no hay caché), al sis-
+tema se le llama NC-NUMA (No Cache NUMA, NUMA sin caché). Cuando hay cachés coheren-
+tes presentes, al sistema se le llama CC-NUMA (Cache-Coherent NUMA, NUMA con cachés
+coherentes). 
+El método más popular para construir grandes multiprocesadores CC-NUMA en la actualidad
+es el multiprocesador basado en directorios. La idea es mantener una base de datos que indique
+dónde está cada línea de caché y cuál es su estado. Cuando se hace referencia a una línea de caché,
+se consulta la base de datos para averiguar dónde está, y si está limpia o sucia (modificada). Como
+esta base de datos se debe consultar en cada instrucción que hace referencia a la memoria, debe
+mantenerse en un hardware de propósito especial, en extremo veloz, que pueda responder en una
+fracción de un ciclo del bus.
+Para que la idea sobre un multiprocesador basado en directorios sea algo más concreta, vamos
+a considerar un ejemplo simple (hipotético): un sistema con 256 nodos donde cada nodo consista en
+una CPU y 16 MB de RAM conectados a la CPU a través de un bus local. La memoria total es de
+232 bytes, que se divide en 226 líneas de caché de 64 bytes cada una. La memoria se asigna en forma
+estática entre los nodos, con 0 a 16M en el nodo 0, 16M a 32M en el nodo 1, y así en lo sucesivo.
+Los nodos se conectan mediante una red de interconexión, como se muestra en la figura 8-6(a). Ca-
+da nodo también contiene las entradas de directorio para las 218 líneas de caché de 64 bytes que 
+ www.FreeLibros.me
+
+===== [PDF pag 562] =====
+conforman su memoria de 224 bytes. Por el momento, vamos a suponer que una línea se puede con-
+tener a lo más en una caché.
+532
+SISTEMAS DE MÚLTIPLES PROCESADORES
+CAPÍTULO 8
+Directorio
+Nodo 0
+Nodo 1
+Nodo 255
+(a)
+(b)
+Bits
+8
+18
+6
+(c)
+Red de interconexión
+CPU Memoria
+Bus local
+CPU Memoria
+Bus local
+CPU Memoria
+Bus local
+Nodo
+Bloque
+Despla-
+zamiento
+0
+1
+2
+3
+4
+0
+0
+1
+0
+0
+218-1
+82
+Figura 8.6. (a)  Un multiprocesador basado en directorio de 256 nodos.  (b) División
+de una dirección de memoria de 32 bits en campos.  (c) El directorio en el nodo 36.
+Para ver cómo funciona el directorio, vamos a rastrear una instrucción LOAD desde la CPU 20
+que hace referencia a una línea en la caché. Primero, la CPU que emite la instrucción la presenta a
+su MMU, que la traduce en una dirección física; por ejemplo, 0x24000108. La MMU divide esta
+dirección en las tres partes que se muestran en la figura 8-6(b). En decimal, las tres partes son el
+nodo 36, la línea 4 y el desplazamiento 8. La MMU ve que la palabra de memoria a la que se hace
+referencia es del nodo 36, no del nodo 20, por lo que envía un mensaje de petición a través de la
+red de interconexión al nodo de inicio de la línea (36), en donde le pregunta si su línea 4 está en 
+la caché, y de ser así, en dónde está.
+Cuando la petición llega al nodo 36 a través de la red de interconexión, se enruta al hardware
+de directorio. El hardware la indexa en su tabla de 218 entradas, una para cada una de sus líneas de
+caché, y extrae la entrada 4. De la figura 8-6(c) podemos ver que la línea no está en la caché, por
+lo que el hardware obtiene la línea 4 de la RAM local, la envía de vuelta al nodo 20 y actualiza la
+entrada 4 del directorio para indicar que la línea ahora está en caché en el nodo 20. 
+Ahora consideremos una segunda petición, esta vez preguntando sobre la línea 2 del nodo 36.
+En la figura 8-6(c) podemos ver que esta línea está en la caché en el nodo 82. En este punto, el hard-
+ www.FreeLibros.me
+
+===== [PDF pag 563] =====
+SECCIÓN 8.1
+MULTIPROCESADORES
+533
+ware podría actualizar la entrada 2 del directorio para decir que la línea se encuentra ahora en el no-
+do 20, y después enviar un mensaje al nodo 82 para indicarle que debe pasar la línea al nodo 20 e
+invalidar su caché. Observe que hasta un “multiprocesador con memoria compartida” realiza mu-
+chas operaciones de paso de mensajes de manera interna.
+Como una observación rápida adicional, vamos a calcular cuánta memoria está siendo ocupa-
+da por los directorios. Cada nodo tiene 16 MB de RAM y 218 entradas de 9 bits para llevar la cuen-
+ta de esa RAM. Por ende, la sobrecarga del directorio es de aproximadamente 9  218 bits, dividida
+entre 16 MB o aproximadamente de 1.76%, que por lo general es aceptable (aunque tiene que ser
+memoria de alta velocidad, lo que desde luego incrementa su costo). Aun con las líneas de caché
+de 32 bytes, la sobrecarga sería sólo de 4%. Con líneas de caché de 128 bytes, sería menor de 1%.
+Una limitación obvia de este diseño es que una línea se puede colocar en caché sólo en un no-
+do. Para permitir que se coloquen líneas en caché en varios nodos, necesitaríamos alguna forma de
+localizarlos a todos, por ejemplo para invalidarlos o actualizarlos en una escritura. Hay varias op-
+ciones posibles para permitir el uso de caché en varios nodos al mismo tiempo, pero un análisis de
+estas opciones es algo que está más allá del alcance de este libro.
+Chips multinúcleo
+A medida que mejora la tecnología de fabricación de chips, los transistores se están haciendo cada
+vez más pequeños y es posible colocar cada vez más de ellos en un chip. A esta observación empí-
+rica se le conoce algunas veces como Ley de Moore, en honor del co-fundador de Intel Gordon
+Moore, quien la descubrió primero. Los chips en la clase del Intel Core 2 Duo contienen cerca de
+300 millones de transistores.
+Una pregunta obvia es: “¿Qué se debe hacer con todos esos transistores?”. Como vimos en la
+sección 1.3.1, una opción es agregar megabytes de caché al chip. Esta opción es seria, y los chips
+con 4 MB de caché fuera del chip ya son comunes, con cachés más grandes en camino. Pero en cier-
+to punto, incrementar el tamaño de la caché tal vez sólo eleve la tasa de aciertos de 99% a 99.5%,
+lo cual no mejora mucho el rendimiento de las aplicaciones.
+La otra opción es colocar dos o más CPUs completas, a las que generalmente se les denomina
+núcleos, en el mismo chip (técnicamente, en la misma pastilla). Los chips de doble núcleo y de
+cuádruple núcleo ya son comunes; se han fabricado chips con 80 núcleos, y los chips con cientos
+de núcleos ya están en el horizonte.
+Aunque las CPUs pueden o no compartir cachés (por ejemplo, vea la figura 1-8), siempre
+comparten la memoria principal, y ésta es consistente en el sentido de que siempre hay un valor
+único para cada palabra de memoria. Los circuitos de hardware especiales aseguran que si hay una
+palabra presente en dos o más cachés, y una de las CPUs modifica la palabra, ésta se remueva en
+forma automática y atómica de todas las cachés para poder mantener la consistencia. A este pro-
+ceso se le conoce como snooping. 
+El resultado de este diseño es que los chips multinúcleo son sólo pequeños multiprocesadores.
+De hecho, a los chips multinúcleo se les conoce algunas veces como CMPs (Multiprocesadores a
+nivel de chip). Desde la perspectiva del software, los CMPs no son en realidad tan distintos de los
+multiprocesadores basados en bus, o de los multiprocesadores que utilizan redes de conmutación.
+ www.FreeLibros.me
+
+===== [PDF pag 564] =====
+534
+SISTEMAS DE MÚLTIPLES PROCESADORES
+CAPÍTULO 8
+Sin embargo, hay algunas diferencias. Para empezar, en un multiprocesador basado en bus cada
+CPU tiene su propia caché, como en la figura 8-2(b) y también como en el diseño AMD de la figu-
+ra 1-8(b). El diseño de caché compartida de la figura 1-8(a), que Intel utiliza, no ocurre en otros
+multiprocesadores. La caché L2 compartida puede afectar el rendimiento. Si un núcleo necesita mu-
+cha memoria caché y los otros no, este diseño permite que ese núcleo tome lo que necesite. Por otro
+lado, la caché compartida también hace posible que un núcleo avaricioso dañe el rendimiento de los
+demás núcleos.
+Otra área en la que los CMPs difieren de sus primos más grandes es la tolerancia a fallas. Co-
+mo las CPUs tienen una conexión tan estrecha, las fallas en los componentes compartidos pueden
+afectar a varias CPUs a la vez, algo que es menos probable en los multiprocesadores tradicionales.
+Además de los chips multinúcleo simétricos, en donde todos los núcleos son idénticos, hay otra
+categoría de chip multinúcleo conocida como sistema en un chip. Estos chips tienen una o más
+CPUs principales, pero también tienen núcleos de propósito especial, como decodificadores de vi-
+deo y audio, criptoprocesadores, interfaces de red y demás, con lo cual se obtiene un sistema de
+cómputo completo en un chip.
+Como ha ocurrido con frecuencia en el pasado, el hardware está muy adelantado al software.
+Aunque los chips multinúcleo ya están aquí, nuestra habilidad para escribir aplicaciones para ellos
+todavía no. Los lenguajes de programación actuales no están preparados para escribir programas
+altamente paralelos, y los buenos compiladores y herramientas de depuración son escasos. Po-
+cos programadores han tenido experiencia con la programación en paralelo y la mayoría saben 
+poco acerca de cómo dividir el trabajo en varios paquetes que se puedan ejecutar en paralelo. La
+sincronización, la eliminación de las condiciones de carrera y la prevención del interbloqueo van
+a ser pesadillas, y el rendimiento sufrirá de manera considerable como resultado. Los semáforos
+no son la respuesta. Y más allá de estos problemas iniciales, está muy lejos de ser obvio qué tipo
+de aplicación realmente necesita cientos de núcleos. El reconocimiento de voz en lenguaje natural
+probablemente podría absorber mucho poder de cómputo, pero el problema aquí no es la falta de
+ciclos, sino de algoritmos que funcionen. En resumen, los diseñadores de hardware pueden estar
+ofreciendo un producto que los diseñadores de software no saben cómo usar, y que los usuarios no
+quieren.
+8.1.2  Tipos de sistemas operativos multiprocesador
+Ahora vamos a pasar del hardware de multiprocesador al software de multiprocesador, y en espe-
+cial a los sistemas operativos multiprocesador. Hay varias metodologías posibles. A continuación
+estudiaremos tres de ellas. Observe que todas se pueden aplicar de igual forma a los sistemas mul-
+tinúcleo, así como a los sistemas con CPUs discretas.
+Cada CPU tiene su propio sistema operativo
+La manera más simple posible de organizar un sistema operativo multiprocesador es dividir estáti-
+camente la memoria y su propia copia privada del sistema operativo. En efecto, las n CPUs operan
+entonces como n computadoras independientes. Una optimización obvia es permitir que todas las
+ www.FreeLibros.me
+
+===== [PDF pag 565] =====
+SECCIÓN 8.1
+MULTIPROCESADORES
+535
+CPUs compartan el código del sistema operativo y obtengan copias privadas sólo de las estructuras
+de datos del sistema operativo, como se muestra en la figura 8-7. 
+Tiene un
+SO
+privado
+CPU 1
+Tiene un
+SO
+privado
+CPU 2
+Tiene un
+SO
+privado
+CPU 3
+Tiene un
+SO
+privado
+CPU 4
+Memoria
+E/S
+1
+2
+Datos Datos
+3
+4
+Datos Datos
+Código OS
+Bus
+Figura 8-7.  Particionamiento de la memoria de un multiprocesador entre cuatro CPUs,
+pero compartiendo una sola copia del código del sistema operativo. Los cuadros mar-
+cados como Datos son los datos privados del sistema operativo para cada CPU.
+Este esquema es aún mejor que tener n computadoras separadas, ya que permite que todas las
+máquinas compartan un conjunto de discos y otros dispositivos de E/S, y también permite com-
+partir la memoria con flexibilidad. Por ejemplo, aun con la asignación estática de memoria, una
+CPU puede recibir una porción extra-grande de la memoria para poder manejar con eficiencia los
+programas grandes. Además, los procesos pueden comunicarse de manera eficiente unos con otros,
+al permitir que un productor escriba los datos directamente en la memoria y que un consumidor
+los obtenga del lugar en el que los escribió el productor. Aún así, desde la perspectiva de un siste-
+ma operativo, el que cada CPU tenga su propio sistema operativo es lo más primitivo posible.
+Vale la pena mencionar cuatro aspectos de este diseño que tal vez no sean obvios. En primer
+lugar, cuando un proceso realiza una llamada al sistema, ésta se atrapa y maneja en su propia CPU,
+usando las estructuras de datos en las tablas de ese sistema operativo.
+En segundo lugar, como cada sistema operativo tiene sus propias tablas, también tiene su pro-
+pio conjunto de procesos que programa por su cuenta. No hay compartición de procesos. Si un usua-
+rio se conecta a la CPU 1, todos sus procesos se ejecutan en la CPU 1. Como consecuencia, puede
+ocurrir que la CPU 1 esté inactiva mientras la CPU 2 está cargada de trabajo.
+En tercer lugar, no hay compartición de páginas. Puede ocurrir que la CPU 1 tenga páginas de
+sobra, mientras que la CPU 2 esté paginando en forma continua. No hay forma de que la CPU 2 pi-
+da prestadas algunas páginas a la CPU 1, ya que la asignación de memoria es fija. 
+En cuarto lugar (y lo que es peor), si el sistema operativo mantiene una caché en búfer de los
+bloques de disco de uso reciente, cada sistema operativo hace esto de manera independiente a los de-
+más. Por ende, puede ocurrir que haya cierto bloque de disco presente y sucio en varias cachés 
+de búfer al mismo tiempo, con lo cual se producirán resultados inconsistentes. La única forma de evi-
+tar este problema es eliminar las cachés del búfer. Eso no es tan difícil, pero daña el rendimiento en
+forma considerable. 
+Por estas razones, es muy raro que se utilice este modelo, aunque en los primeros días de los
+multiprocesadores sí se utilizaba, cuando el objetivo era portar los sistemas operativos existentes
+hacia algún multiprocesador nuevo, lo más rápido posible.
+ www.FreeLibros.me
+
+===== [PDF pag 566] =====
+Multiprocesadores maestro-esclavo
+En la figura 8-8 se muestra un segundo modelo. Aquí, hay una copia del sistema operativo y sus ta-
+blas presente en la CPU 1, y nada más ahí. Todas las llamadas al sistema se redirigen a la CPU 1
+para procesarlas ahí. La CPU 1 también puede ejecutar proceso de usuario si tiene tiempo de sobra.
+A este modelo se le conoce como maestro-esclavo, ya que la CPU 1 es el maestro y todas los de-
+más son los esclavos.
+536
+SISTEMAS DE MÚLTIPLES PROCESADORES
+CAPÍTULO 8
+El maestro
+ejecuta
+el SO
+CPU 1
+El esclavo
+ejecuta
+procesos
+de usuario
+El esclavo
+ejecuta
+procesos
+de usuario
+El esclavo
+ejecuta
+procesos
+de usuario
+CPU 2
+CPU 3
+Procesos
+de usuario
+SO
+CPU 4
+Memoria
+E/S
+Bus
+Figura 8.8. Un modelo de multiprocesador maestro-esclavo.
+El modelo maestro-esclavo resuelve la mayoría de los problemas del primer modelo. Hay una
+sola estructura de datos (por ejemplo, una lista o un conjunto de listas con prioridades) que lleva la
+cuenta de los procesos listos. Cuando una CPU está inactiva, pide al sistema operativo en la CPU 1
+un proceso para ejecutarlo, y se le asigna uno. Por ende, nunca puede ocurrir que una CPU esté inac-
+tiva mientras que otra esté sobrecargada. De manera similar, se pueden asignar las páginas entre to-
+dos los procesos en forma dinámica y sólo hay una caché de búfer, por lo que nunca ocurren
+inconsistencias.
+El problema con este modelo es que con muchas CPUs, el maestro se convertirá en un cuello
+de botella. Después de todo, debe manejar todas las llamadas al sistema de todas las CPUs. Si, por
+ejemplo, el 10% del tiempo está manejando llamadas al sistema, entonces con 10 CPUs el maestro
+casi se saturará y con 20 CPUs estará completamente sobrecargado. Por ende, este modelo es sim-
+ple y funciona para pequeños multiprocesadores, pero no para los grandes.
+Multiprocesadores simétricos
+Nuestro tercer modelo, el SMP (Multiprocesador simétrico), elimina esta asimetría. Hay una co-
+pia del sistema operativo en memoria, pero cualquier CPU puede ejecutarlo. Cuando se hace una
+llamada al sistema, la CPU en la que se hizo la llamada al sistema atrapa para el kernel y procesa
+la llamada al sistema. El modelo SMP se ilustra en la figura 8-9.
+Este modelo equilibra los procesos y la memoria en forma dinámica, ya que sólo hay un con-
+junto de tablas del sistema operativo. También elimina el cuello de botella de la CPU, ya que no hay
+maestro, pero introduce sus propios problemas. En especial, si dos o más CPUs están ejecutando
+código del sistema operativo al mismo tiempo, se puede producir un desastre. Imagine que dos
+CPUs seleccionan el mismo proceso para ejecutarlo, o que reclaman la misma página de memoria
+ www.FreeLibros.me
+
+===== [PDF pag 567] =====
+SECCIÓN 8.1
+MULTIPROCESADORES
+537
+Ejecuta los
+procesos
+de usuarios
+y el SO
+compartido
+Ejecuta los
+procesos
+de usuarios
+y el SO
+compartido
+Ejecuta los
+procesos
+de usuarios
+y el SO
+compartido
+Ejecuta los
+procesos
+de usuarios
+y el SO
+compartido
+CPU 1
+CPU 2
+CPU 3
+SO
+CPU 4
+Memoria
+E/S
+Bloqueos
+Bus
+Figura 8-9.  El modelo de multiprocesador SMP.
+libre. La solución más simple para estos problemas es asociar un mutex (es decir, bloqueo) con el
+sistema operativo, convirtiendo a todo el sistema en una gran región crítica. Cuando una CPU de-
+sea ejecutar código del sistema operativo, debe adquirir primero el mutex. Si el mutex está bloquea-
+do, sólo espera. De esta forma, cualquier CPU puede ejecutar el sistema operativo, pero sólo una a
+la vez.
+Este modelo funciona, pero casi tan mal como el modelo maestro-esclavo. De nuevo, suponga
+que 10% de todo el tiempo de ejecución se invierte dentro del sistema operativo. Con 20 CPUs, ha-
+brá largas colas de CPUs esperando entrar. Por fortuna, es fácil de mejorar. Muchas partes del sis-
+tema operativo son independientes unas de otras. Por ejemplo, no habría problema si una CPU
+ejecutara el planificador mientras que otra CPU manejara una llamada al sistema de archivos, y una
+tercera CPU estuviera procesando un fallo de página.
+Esta observación ocasiona que se divida el sistema operativo en varias regiones críticas inde-
+pendientes que no interactúan entre sí. Cada región crítica está protegida por su propio mutex, por
+lo que sólo una CPU a la vez puede ejecutarlo. De esta forma se puede lograr mucho más parale-
+lismo. Sin embargo, puede ocurrir que algunas tablas (como las de procesos) sean utilizadas por va-
+rias regiones críticas. Por ejemplo, la tabla de procesos es necesaria para la programación, pero
+también para la llamada al sistema fork y para el manejo de señales. Cada tabla que pueda ser uti-
+lizada por varias regiones críticas necesita su propio mutex. De esta forma, cada región crítica se
+puede ejecutar sólo por una CPU a la vez, y cada tabla crítica se puede utilizar sólo por una CPU a
+la vez.
+La mayoría de los multiprocesadores modernos utilizan esta organización. La parte difícil so-
+bre escribir el sistema operativo para una máquina de este tipo no es que el código actual sea tan
+distinto de un sistema operativo regular. No es así. La parte difícil es dividirlo en regiones críticas
+que se puedan ejecutar de manera concurrente por distintas CPUs sin interferir unas con otras, ni si-
+quiera en formas sutiles e indirectas. Además, cada tabla utilizada por dos o más regiones críticas
+debe estar protegida por separado por un mutex, y todo el código que utilice la tabla debe utilizar
+el mutex en forma correcta.
+Además, hay que tener mucho cuidado para evitar los interbloqueos. Si dos regiones críticas
+necesitan la tabla A y la tabla B, y una de ellas reclama la tabla A primero y la otra reclama la tabla
+B primero, tarde o temprano ocurrirá un interbloqueo y nadie sabrá por qué. En teoría, a todas las
+ www.FreeLibros.me
+
+===== [PDF pag 568] =====
+538
+SISTEMAS DE MÚLTIPLES PROCESADORES
+CAPÍTULO 8
+tablas se les podrían asignar valores enteros y todas las regiones críticas podrían requerir la adqui-
+sición de tablas en orden ascendente. Esta estrategia evita los interbloqueos, pero requiere que el
+programador piense con mucho cuidado sobre cuáles tablas necesita cada región crítica, y realice
+las peticiones en el orden correcto. 
+A medida que el código evoluciona con el tiempo, una región crítica puede llegar a necesitar
+una nueva tabla que no necesitaba antes. Si el programador es nuevo y no comprende la lógica com-
+pleta del sistema, entonces la tentación será sólo colocar el mutex en la tabla, en el punto en el que
+se necesite y liberarlo cuando ya no sea necesario. Sin importar qué tan razonable pueda parecer es-
+to, se pueden producir interbloqueos, que el usuario percibirá como si el sistema se paralizara. No
+es fácil hacerlo bien, y mantenerlo así durante un periodo de años frente a los cambios de progra-
+madores es muy difícil.
+8.1.3  Sincronización de multiprocesadores
+Con frecuencia, las CPUs en un multiprocesador necesitan sincronizarse. Acabamos de ver el caso
+en el que las regiones críticas del kernel y las tablas se tienen que proteger mediante mutexes. Ahora
+vamos a analizar con más detalle la forma en que funciona esta sincronización en un multiprocesa-
+dor. No carece de importancia, como pronto veremos.
+Para empezar, realmente se necesitan primitivas de sincronización apropiadas. Si un proceso en
+una máquina uniprocesador (sólo una CPU) realiza una llamada al sistema que requiera acceder a
+cierta tabla crítica del kernel, el código del kernel sólo tiene que deshabilitar las interrupciones an-
+tes de tocar la tabla. Después puede hacer su trabajo, sabiendo que podrá terminar sin que ningún
+otro proceso se entrometa y toque la tabla antes de que haya terminado. En un sistema multiproce-
+sador, deshabilitar las interrupciones sólo afecta a esa CPU, desshilitándola. Las demás CPUs se si-
+guen ejecutando y aún pueden tocar la tabla crítica. Como consecuencia, se debe utilizar un protocolo
+de mutex apropiado, el cual debe ser respetado por todas las CPUs para garantizar que funcione la
+exclusión mutua.
+El corazón de cualquier protocolo de mutex práctico es una instrucción especial que permite
+inspeccionar una palabra de memoria y establecerla en una operación indivisible. En la figura 2-22
+vimos cómo se utilizaba TSL (Probar y establecer bloqueo) para implementar regiones críticas. Co-
+mo vimos antes, lo que hace esta instrucción es leer una palabra de memoria y almacenarla en un
+registro. Al mismo tiempo, escribe un 1 (o cualquier otro valor distinto de cero) en la palabra de
+memoria. Desde luego que se requieren dos ciclos de bus para realizar las operaciones de lectura y
+escritura de memoria. En un uniprocesador, mientras que la instrucción no se pueda descomponer
+a mitad de ejecución, TSL siempre funcionará como se espera.
+Ahora piense en lo que podría ocurrir en un multiprocesador. En la figura 8-10 podemos ver la
+sincronización en el peor caso, en donde la palabra de memoria 1000, que se utiliza como bloqueo,
+en un principio es 0. En el paso 1, la CPU 1 lee la palabra y obtiene un 0. En el paso 2, antes de que
+la CPU 1 tenga la oportunidad de volver a escribir la palabra para que sea 1, la CPU 2 entra y tam-
+bién lee la palabra como un 0. En el paso 3, la CPU 1 escribe un 1 en la palabra. En el paso 4, la
+CPU 2 también escribe un 1 en la palabra. Ambas CPUs obtuvieron un 0 de la instrucción TSL, por
+lo que ambas tienen ahora acceso a la región crítica y falla la exclusión mutua.
+ www.FreeLibros.me
+
+===== [PDF pag 569] =====
+SECCIÓN 8.1
+MULTIPROCESADORES
+539
+Para evitar este problema, la instrucción TSL debe primero bloquear el bus, para evitar que otras
+CPUs lo utilicen; después debe realizar ambos accesos a la memoria, y luego desbloquear el bus.
+Por lo general, para bloquear el bus se hace una petición del bus usando el protocolo de petición de
+bus común, y después se declara (es decir, se establece a un 1 lógico) cierta línea de bus especial
+hasta que se hayan completado ambos ciclos. Mientras que esté declarada esta línea especial, nin-
+guna otra CPU obtendrá acceso al bus. Esta instrucción puede implementarse sólo en un bus que
+tenga las líneas necesarias y el protocolo (de hardware) para utilizarlas. Los buses modernos tienen
+estas facilidades, pero en los primeros que no las tenían, no era posible implementar la instrucción
+TSL en forma correcta. Ésta es la razón por la que se inventó el protocolo de Peterson: para sincro-
+nizar por completo en el software (Peterson, 1981).
+Si la instrucción TSL se implementa y utiliza en forma correcta, garantiza que la exclusión 
+mutua pueda llegar a funcionar. Sin embargo, este método de exclusión mutua utiliza un bloqueo
+de giro debido a que la CPU que hace la petición sólo espera en un ciclo estrecho, evaluando el
+bloqueo lo más rápido que pueda. No sólo se desperdicia por completo el tiempo de la CPU (o
+CPUs) que hace la petición, sino que también se puede imponer una carga masiva en el bus o la
+memoria, reduciendo considerablemente a todas las demás CPUs que tratan de realizar su trabajo
+normal.
+En primera instancia, podría parecer que la presencia de la caché debería eliminar el problema
+de la contención del bus, pero no es así. En teoría, una vez que la CPU que hace la petición ha leí-
+do la palabra de bloqueo, debe obtener una copia en su caché. Mientras que ninguna otra CPU in-
+tente utilizar el bloqueo, la CPU que hace la petición debe ser capaz de salir de su caché. Cuando
+la CPU que posee el bloqueo escribe un 1 en la caché para liberarla, el protocolo de la caché inva-
+lida de manera automática todas las copias de ésta en las cachés remotas, con lo que se debe volver
+a obtener el valor correcto.
+El problema es que las cachés operan en bloques de 32 o 64 bytes. Por lo general, la CPU que
+contiene el bloqueo necesita las palabras que lo rodean. Como la instrucción TSL es una escritura
+(ya que modifica el bloqueo), necesita acceso exclusivo al bloque de la caché que contiene el blo-
+queo. Por lo tanto, cada instrucción TSL invalida el bloqueo en la caché de la CPU que contiene el
+bloqueo y obtiene una copia privada y exclusiva para la CPU que hace la petición. Tan pronto co-
+mo la CPU que contiene el bloqueo toca una palabra adyacente al mismo, el bloque de la caché se
+CPU 1
+Memoria
+CPU 2
+Bus
+Al principio,
+la palabra 
+1000 es 0
+1. La CPU 1 lee un 0
+3. La CPU 1 escribe un 1
+2. La CPU 2 lee un 0
+4. La CPU 2 escribe un 1
+Figura 8-10.  La instrucción TSL puede fallar si el bus no se puede bloquear. Estos cua-
+tro pasos muestran una secuencia de eventos en donde se demuestra la falla.
+ www.FreeLibros.me
+
+===== [PDF pag 570] =====
+mueve a su máquina. En consecuencia, todo el bloque de la caché que contiene el bloqueo se trans-
+porta constantemente entre el propietario del bloqueo y el que solicita el bloqueo, generando aún
+más tráfico en el bus que las lecturas individuales en la palabra de bloqueo.
+Si pudiéramos deshacernos de todas las escrituras inducidas por TSL en el lado que hace la 
+petición, podríamos reducir el thrashing de caché en forma considerable. Este objetivo se puede
+lograr al hacer que la CPU que hace la petición realice primero una lectura pura, para ver si el blo-
+queo está libre. Sólo si el bloqueo parece estar libre es cuando se realiza una TSL para poder ad-
+quirirlo. El resultado de este pequeño cambio es que la mayoría de los sondeos son ahora lecturas
+en vez de escrituras. Si la CPU que contiene el bloqueo sólo lee las variables en el mismo bloque
+de caché, cada una de ellas puede tener una copia del bloque de la caché en modo de sólo lectura
+compartido, eliminando todas las transferencias del bloque de caché. Cuando por fin se libera el
+bloqueo, el propietario realiza una escritura, la cual requiere acceso exclusivo, con lo cual se in-
+validan todas las otras copias en las cachés remotas. En la siguiente lectura que realice la CPU que
+hace la petición, el bloque de la caché se volverá a cargar. Observe que si hay dos o más CPUs
+contendiendo por el mismo bloqueo, puede ocurrir que ambas vean que está libre al mismo tiem-
+po, y ambas puedan llegar a realizar una operación TSL simultánea para adquirirlo. Sólo una de 
+estas operaciones tendrá éxito, por lo que no hay condición de competencia aquí debido a que la
+verdadera adquisición la realiza la instrucción TSL, y esta instrucción es atómica. Detectar que el
+bloqueo está libre y tratar de obtenerlo de inmediato con una operación TSL no garantiza la ob-
+tención del mismo. Alguien más podría ganar, pero para que el algoritmo sea correcto, no impor-
+ta quién lo obtenga. El éxito en la lectura pura es tan sólo una sugerencia de que sería un buen mo-
+mento de adquirir el bloqueo, pero no constituye una garantía de que la adquisición tendrá 
+éxito.
+Otra forma de reducir el tráfico en el bus es mediante el uso del popular algoritmo de backoff
+exponencial binario de Ethernet (Anderson, 1990). En vez de sondear en forma continua como en
+la figura 2-22, se puede insertar un ciclo de retraso entre los sondeos. Al principio, el retraso es una
+instrucción. Si el bloqueo sigue ocupado, el retraso se duplica a dos instrucciones, después a cua-
+tro instrucciones, y así hasta llegar a cierto valor máximo. Un máximo bajo ofrece una respuesta rá-
+pida cuando se libera el bloqueo, pero desperdicia más ciclos de bus en el thrashing de la caché. Un
+máximo alto reduce el thrashing de la caché a expensas de no observar que el bloque está libre con
+tanta rapidez. El algoritmo de backoff exponencial binario se puede utilizar con o sin las lecturas
+puras que van antes de la instrucción TSL.
+Una idea mejor incluso es proporcionar a cada CPU que desea adquirir el mutex su propia va-
+riable de bloqueo privada para evaluarla, como se ilustra en la figura 8-11 (Mellor-Crummey y
+Scott, 1991). La variable debe residir en un bloque de caché no utilizado, para evitar conflictos. El
+algoritmo funciona al hacer que una CPU que no puede adquirir el bloqueo asigne una variable de
+bloqueo y se adjunte a sí misma al final de una lista de CPUs que esperan el bloqueo. Cuando la
+CPU que contiene el bloque sale de la región crítica, libera el bloqueo privado que la primera CPU
+en la lista está evaluando (en su propia caché). Después, esta CPU entra a la región crítica. Cuando
+termina, libera el bloqueo que está usando su sucesora, y así en lo sucesivo. Aunque el protocolo es
+algo complicado (para evitar que dos CPUs se adjunten a sí mismas al final de la lista al mismo
+tiempo), es eficiente y libre de inanición. Para obtener todos los detalles, los lectores deberán con-
+sultar el artículo.
+540
+SISTEMAS DE MÚLTIPLES PROCESADORES
+CAPÍTULO 8
+ www.FreeLibros.me
+
+===== [PDF pag 571] =====
+SECCIÓN 8.1
+MULTIPROCESADORES
+541
+Comparación entre espera activa y conmutación
+Hasta ahora hemos asumido que una CPU que necesita un mutex bloqueado sólo lo espera, ya sea
+mediante un sondeo continuo, un sondeo intermitente o adjuntándose a sí misma a una lista de
+CPUs en espera. Algunas veces no hay alternativa para que la CPU que hace la petición sólo espe-
+re. Por ejemplo, suponga que cierta CPU está inactiva y necesita acceder a la lista compartida de
+procesos listos para elegir un proceso y ejecutarlo. Si la lista de procesos listos está bloqueada, la
+CPU no puede sólo decidir suspender lo que está haciendo y ejecutar otro proceso, ya que para ello
+tendría que leer la lista de procesos listos. Debe esperar hasta que pueda adquirir esa lista.
+Sin embargo, en otros casos hay una opción. Por ejemplo, si algún hilo en una CPU necesita
+acceso a la caché del búfer del sistema de archivos y actualmente está bloqueada, la CPU puede de-
+cidir cambiar a un hilo distinto en vez de esperar. La cuestión de si debe hacer una espera activa o
+realizar un cambio de hilo ha sido tema de mucha investigación, parte de la cual analizaremos a con-
+tinuación. Observe que esta cuestión no ocurre en un uniprocesador, ya que no tiene mucho senti-
+do una espera activa cuando no hay otra CPU para liberar el bloqueo. Si un subproceso trata de
+adquirir un bloqueo y falla, siempre se bloquea para dar al propietario del bloqueo la oportunidad
+de ejecutarse y liberar el bloqueo.
+Suponiendo que la espera activa y realizar un cambio de hilo son opciones viables, hay que ha-
+cer la siguiente concesión. La espera activa desperdicia ciclos de la CPU de manera directa; evaluar
+un bloqueo en forma repetida no es un trabajo productivo. Sin embargo, cambiar de hilo también
+desperdicia ciclos de la CPU, ya que se debe guardar el estado del hilo actual, se debe adquirir el
+bloqueo sobre la lista de procesos listos, hay que seleccionar un hilo, se debe cargar su estado y de-
+be iniciarse. Además, la caché de la CPU contendrá todos los bloques incorrectos, por lo que ocu-
+rrirán muchos fallos de caché a medida que el nuevo hilo se empiece a ejecutar. También es
+probable que ocurran fallos de TLB. En un momento dado se realizará un cambio de vuelta al hilo
+original, y le seguirán más fallos de caché. Además de los fallos de caché, se desperdician los ci-
+clos invertidos en estos dos cambios de contexto.
+CPU 3
+La CPU 3 gira en este bloqueo (privado)
+La CPU 4 gira en este 
+bloqueo (privado)
+La CPU 2 gira sobre este
+bloqueo (privado)
+Cuando la CPU 1 termina con el
+bloqueo real, lo libera y también
+libera el bloqueo privado sobre 
+el que gira la CPU 2
+La CPU 1 contiene 
+el bloqueo real
+Memoria compartida
+4
+2
+3
+1
+Figura 8-11.  Uso de varios bloqueos para evitar el thrashing de la caché.
+ www.FreeLibros.me
+
+===== [PDF pag 572] =====
+Por ejemplo, si se sabe que los mutexes se contienen generalmente durante 50 µseg, y se re-
+quiere 1 mseg para cambiar del hilo actual, y 1 mseg para volver a cambiar posteriormente, es más
+eficiente una espera activa sobre el mutex. Por otra parte, si el mutex promedio se contiene duran-
+te 10 mseg, vale la pena el esfuerzo de realizar los dos cambios de contexto. El problema es que las
+regiones críticas pueden variar de manera considerable en cuanto a su duración, así que, ¿cuál mé-
+todo es mejor?
+Un diseño es una espera activa todo el tiempo; un segundo diseño es siempre cambiar. Un ter-
+cer diseño es tomar una decisión por separado cada vez que nos encontramos con un mutex blo-
+queado. Al momento en que se tiene que tomar la decisión, no se sabe si es mejor realizar una espera
+activa o cambiar, pero para cualquier sistema dado, es posible realizar un rastreo de toda la activi-
+dad y analizarla después fuera de línea. Así, podemos saber en retrospectiva cuál decisión fue la me-
+jor y cuánto tiempo se desperdició en el mejor caso. Este algoritmo de retrospección se convierte
+entonces en un punto de referencia contra el que se pueden medir los algoritmos viables.
+Los investigadores han estudiado este problema (Karlin y colaboradores, 1989; Karlin y colabo-
+radores, 1991; Ousterhout, 1982). La mayor parte del trabajo utiliza un modelo en el que un hilo que
+no puede adquirir un mutex gira durante cierto periodo. Si se excede este umbral, hace el cambio. En
+algunos casos se corrige el umbral, que por lo general es la sobrecarga conocida por cambiar a otro
+hilo y después cambiar de vuelta. En otros casos es dinámico, dependiendo de la historia observada
+del mutex sobre el que se espera.
+Los mejores resultados se obtienen cuando el sistema lleva el rastro de los últimos tiempos de
+espera activa observados, y asume que éste será similar a los anteriores. Por ejemplo, suponiendo
+un tiempo de cambio de contexto de 1 mseg otra vez, un hilo realiza una espera activa por un má-
+ximo de 2 mseg, pero observe cuánto tiempo giró en realidad. Si no puede adquirir un bloqueo y
+detecta que en las tres ejecuciones anteriores esperó un promedio de 200 µseg, debe hacer una es-
+pera activa por 2 mseg antes de cambiar de hilo. Pero si detecta que la espera activa dura los 2 mseg
+completos en cada uno de los intentos anteriores, debe cambiar de inmediato y no realizar una es-
+pera activa. Encontrará más detalles en (Karlin y colaboradores, 1991).
+8.1.4  Planificación de multiprocesadores
+Antes de analizar la forma en que se realiza la planificación en los multiprocesadores, es necesario
+determinar qué es lo que se va a planificar. En los días de antaño, cuando todos los procesos tenían
+un solo hilo, los procesos eran los que se planificaban; no había nada más que se pudiera planificar.
+Todos los sistemas operativos modernos soportan procesos multihilo, lo cual complica aún más la
+planificación.
+Es importante saber si los hilos son de kernel o de usuario. Si la ejecución de hilos se lleva a
+cabo mediante una biblioteca en espacio de usuario y el kernel no sabe nada acerca de los hilos, en-
+tonces la planificación se lleva a cabo con base en cada proceso, como siempre. Si el kernel ni si-
+quiera sabe que los hilos existen, es muy difícil que pueda planificarlos.
+Con los hilos del kernel sucede algo distinto. Aquí el kernel está al tanto de todos los hilos
+y puede elegir y seleccionar de entre los hilos que pertenecen a un proceso. En estos sistemas, la
+tendencia es que el kernel seleccione un hilo para ejecutarlo, y el proceso al que pertenece sólo
+542
+SISTEMAS DE MÚLTIPLES PROCESADORES
+CAPÍTULO 8
+ www.FreeLibros.me
+
+===== [PDF pag 573] =====
+SECCIÓN 8.1
+MULTIPROCESADORES
+543
+tiene un pequeño papel (o tal vez ninguno) en el algoritmo de selección de hilos. A continuación
+hablaremos sobre la planificación de hilos, pero desde luego que, en un sistema con procesos con
+un solo hilo, o con hilos implementados en espacio de usuario, son los procesos los que se pro-
+graman. 
+Proceso contra hilo no es la única cuestión de planificación. En un uniprocesador, la planifi-
+cación es de una dimensión. La única pregunta que hay que responder (repetidas veces) es:
+“¿Cuál hilo se debe ejecutar a continuación?”.  En un multiprocesador, la planificación tiene dos
+dimensiones: el planificador tiene que decidir qué hilo ejecutar y en cuál CPU lo va a ejecutar.
+Esta dimensión adicional complica de manera considerable la planificación en los multiprocesa-
+dores.
+Otro factor que complica las cosas es que, en ciertos sistemas, ninguno de los hilos está re-
+lacionado, mientras que en otros se dividen en grupos donde todos pertenecen a la misma aplica-
+ción y trabajan en conjunto. Un ejemplo del primer caso es un sistema de tiempo compartido, en
+el que usuarios independientes inician procesos independientes. Los hilos de los distintos proce-
+sos no están relacionados, y cada uno de ellos se puede planificar de manera independiente a los
+demás. 
+Un ejemplo del segundo caso ocurre con regularidad en los entornos de desarrollo de progra-
+mas. A menudo, los sistemas extensos consisten de cierto número de archivos de encabezado que
+contienen macros, definiciones de tipos y declaraciones de variables que utilizan los archivos de có-
+digo actuales. Cuando se modifica un archivo de encabezado, se deben volver a compilar todos los
+archivos de código que lo incluyen. El programa make se utiliza comúnmente para administrar el
+desarrollo. Cuando se invoca make, inicia la compilación sólo de aquellos archivos de código que
+se deben volver a compilar debido a las modificaciones realizadas en el encabezado o los archivos
+de código. Los archivos de código objeto que siguen siendo válidos no se regeneran.
+La versión original de make realizaba su trabajo en forma secuencial, pero las versiones más
+recientes diseñadas para multiprocesadores pueden iniciar todas las compilaciones a la vez. Si se
+necesitan 10 compilaciones, no tiene caso programar 9 de ellas para que se ejecuten de inmediato
+y dejar la última hasta mucho después, ya que el usuario no percibirá el trabajo como terminado si-
+no hasta que termine la última compilación. En este caso, tiene sentido considerar los hilos que rea-
+lizan las compilaciones como si fueran un grupo, y tomar eso en cuenta al programarlos.
+Tiempo compartido 
+Vamos a analizar el caso de la programación de hilos independientes; más adelante consideraremos
+cómo planificar hilos relacionados. El algoritmo de planificación más simple para lidiar con hilos
+no relacionados es tener una sola estructura de datos a nivel de sistema para los hilos que estén lis-
+tos, que tal vez sea sólo una lista, pero es mucho más probable que sea un conjunto de listas para
+los hilos con distintas prioridades, como se ilustra en la figura 8-12(a). Aquí, las 16 CPUs están ocu-
+padas en un momento dado, y hay un conjunto de 14 hilos por orden de prioridad, esperando ser
+ejecutados. La primera CPU en terminar su trabajo actual (o en hacer que su hilo se bloquee) es la
+CPU 4, que después bloquea las colas de programación y selecciona el hilo con mayor prioridad
+(A), como se muestra en la figura 8-12(b). A continuación, la CPU 12 queda inactiva y selecciona
+el hilo B, como se ilustra en la figura 8-12(c). Mientras que los hilos no estén relacionados de nin-
+ www.FreeLibros.me
+
+===== [PDF pag 574] =====
+guna manera, es una opción razonable llevar a cabo la planificación de esta forma, y es muy sim-
+ple de implementar con eficiencia.
+544
+SISTEMAS DE MÚLTIPLES PROCESADORES
+CAPÍTULO 8
+0
+4
+8
+12
+1
+5
+9
+13
+2
+6
+10
+14
+3
+7
+11
+15
+A
+B
+C
+D
+E
+F
+G
+H
+I
+J
+K
+L
+M
+N
+7
+5
+4
+2
+1
+0
+Prioridad
+CPU
+0
+A
+8
+12
+1
+5
+9
+13
+2
+6
+10
+14
+3
+7
+11
+15
+B
+C
+D
+E
+F
+G
+H
+I
+J
+K
+L
+M
+N
+7
+5
+4
+2
+1
+0
+Prioridad
+La CPU 4
+queda inactiva
+La CPU 12
+queda inactiva
+0
+A
+8
+B
+1
+5
+9
+13
+2
+6
+10
+14
+3
+7
+11
+15
+C
+D
+E
+F
+G
+H
+I
+J
+K
+L
+M
+N
+7
+5
+4
+2
+3
+3
+3
+6
+6
+6
+1
+0
+Prioridad
+(a)
+(b)
+(c)
+Figura 8-12.  Uso de una sola estructura de datos para programar un multiprocesador.
+Al tener una sola estructura de datos de planificación utilizada por todas las CPUs, éstas se
+comparten en el tiempo, de igual forma que como se hace en un sistema uniprocesador. También 
+se proporciona un balance automático de la carga, ya que no puede haber una CPU inactiva mien-
+tras otras están sobrecargadas. Dos desventajas de este método son: la potencial contención por la
+estructura de datos que se utiliza en la programación a medida que aumenta el número de CPUs, y
+la sobrecarga usual que se produce al realizar un cambio de contexto, cuando un hilo se bloquea en
+espera de una operación de E/S.
+También es posible que ocurra un cambio de contexto al momento en que expire el quantum
+de un hilo, por ejemplo, en un multiprocesador, que tiene ciertas propiedades que no están presen-
+tes en un uniprocesador. Suponga que el hilo contiene un bloqueo de espera activa al momento en
+que expira su quantum. Las otras CPUs que esperan a que se libere el bloqueo de espera activa só-
+lo desperdician su tiempo en una espera activa hasta que se vuelve a programar ese hilo y se libera
+el bloqueo. En un uniprocesador, los bloqueos de espera activa se utilizan raras veces, por lo que si
+un proceso se suspende mientras contiene un mutex, y otro hilo se inicia y trata de adquirir el mu-
+tex, se bloqueará de inmediato, por lo que no se desperdicia mucho tiempo.
+Para solucionar esta anomalía, algunos sistemas utilizan la planificación inteligente, en la cual
+un hilo que adquiere un bloqueo de espera activa establece una bandera a nivel de proceso, para
+mostrar que actualmente tiene un bloqueo de espera activa (Zahorjan y colaboradores, 1991). Al li-
+berar el bloqueo, se borra la bandera. Así, el planificador no detiene un hilo que contenga un blo-
+queo de espera activa, sino que le da un poco más de tiempo para que complete su región crítica y
+libere el bloqueo.
+Otra cuestión que desempeña un papel en la planificación es el hecho de que aunque todas las
+CPUs son iguales, ciertas CPUs son más iguales que otras. En especial, cuando el subproceso A se
+ha ejecutado durante mucho tiempo en la CPU k, la caché de esta CPU estará llena de bloques de
+A. Si A se vuelve a ejecutar poco tiempo después, tal vez su rendimiento sea mejor si se ejecuta en
+ www.FreeLibros.me
+
+===== [PDF pag 575] =====
+SECCIÓN 8.1
+MULTIPROCESADORES
+545
+la CPU k debido a que la caché de esta CPU tal vez todavía contenga algunos de los bloques de A.
+Cuando se cargan previamente los bloques en la caché se incrementa la proporción de aciertos y, en
+consecuencia, la velocidad del hilo. Además, se puede dar el caso de que la TLB contenga las pá-
+ginas correctas, con lo cual se reducen sus fallas.
+Algunos multiprocesadores toman en cuenta este efecto y utilizan lo que se conoce como pla-
+nificación por afinidad (Vaswani y Zahorjan, 1991). Aquí, la idea básica es esforzarse en serio por
+hacer que un hilo se ejecute en la misma CPU en que se ejecutó la última vez. Una manera de crear
+esta afinidad es mediante el uso de un algoritmo de planificación de dos niveles. Cuando se crea
+un hilo, éste se asigna a una CPU, por ejemplo con base en cuál de las CPUs tiene la menor carga
+en ese momento. Esta asignación de hilos a CPUs es el nivel superior del algoritmo. Como resulta-
+do de esta directiva, cada CPU adquiere su propia colección de hilos.
+La planificación actual de los hilos es el nivel inferior del algoritmo. Cada CPU la realiza por
+separado, mediante el uso de prioridades o de algún otro medio. Al tratar de mantener un hilo en la
+misma CPU durante todo su tiempo de vida, se maximiza la afinidad de la caché. No obstante, si
+una CPU no tiene hilos qué ejecutar, obtiene uno de otra CPU en vez de quedar inactiva.
+La planificación de dos niveles tiene tres beneficios. En primer lugar, distribuye la carga de una
+manera casi uniforme sobre las CPUs disponibles. En segundo lugar, se aprovecha la afinidad de la
+caché siempre que sea posible. En tercer lugar, al dar a cada CPU su propia lista de hilos listos se
+minimiza la contención por estas listas, ya que es muy poco frecuente que una CPU intente utilizar
+la lista de hilos listos de otra CPU.
+Espacio compartido 
+El otro método general para la planificación de multiprocesadores se puede utilizar cuando los hilos
+están relacionados entre sí de alguna manera. Anteriormente mencionamos el ejemplo del programa
+make paralelo como uno de los casos. También ocurre con frecuencia que un solo proceso tenga va-
+rios hilos que trabajen en conjunto. Por ejemplo, si los hilos de un proceso se comunican con mucha
+frecuencia, es conveniente hacer que se ejecuten al mismo tiempo. A la planificación de varios hilos
+al mismo tiempo, esparcidos sobre varias CPUs, se le conoce como espacio compartido.
+El algoritmo de espacio compartido más simple funciona de la siguiente manera. Suponga que
+se crea un grupo completo de hilos relacionados al mismo tiempo. Al momento de su creación, el
+programador comprueba si hay tantas CPUs libres como el número de hilos. Si las hay, a cada hilo
+se le proporciona su propia CPU dedicada (es decir, sin multiprogramación) y todos empiezan su
+ejecución. Si no hay suficientes CPUs, ninguno de los hilos se iniciará, sino hasta que haya sufi-
+cientes CPUs disponibles. Cada hilo se aferra a su CPU hasta que termina, y en ese momento la
+CPU se regresa a la reserva de CPUs disponibles. Si un hilo se bloquea en espera de una operación
+de E/S, de todas formas retiene  a la CPU, que simplemente se queda inactiva hasta que el hilo se
+despierta. Cuando aparece el siguiente lote de hilos, se aplica el mismo algoritmo.
+En cualquier instante, el conjunto de CPUs se divide de manera estática en cierto número de
+particiones, cada una de las cuales ejecuta los hilos de un hilo. Por ejemplo, en la figura 8-13 hay
+particiones con 4, 6, 8 y 12 CPUs, y hay 2 CPUs sin asignar. Con el tiempo cambiará el número y
+el tamaño de las particiones, a medida que se creen nuevos hilos y cuando los anteriores terminen
+de ejecutarse.
+ www.FreeLibros.me
+
+===== [PDF pag 576] =====
+De vez en cuando hay que tomar decisiones sobre planificación. En los sistemas con uniproce-
+sador, el algoritmo “el trabajo más corto primero” es un algoritmo popular para la programación por
+lotes. El algoritmo análogo para un multiprocesador es seleccionar el proceso que necesita el me-
+nor número de ciclos de la CPU; es decir, el hilo cuyo valor de la multiplicación “cuenta de la CPU
+ tiempo de ejecución” sea el menor de todos. No obstante, en la práctica esta información raras
+veces está disponible, por lo que es difícil llevar a cabo el algoritmo. De hecho, los estudios han de-
+mostrado que, en la práctica, es difícil vencer al algoritmo “primero en llegar, primero en ser aten-
+dido” (Krueger y colaboradores, 1994).
+En este modelo simple de particionamiento, un hilo sólo pide cierto número de CPUs y los ob-
+tiene todos, o tiene que esperar hasta que estén disponibles. Una metodología distinta es que los hi-
+los administren de manera activa el grado de paralelismo. Un método para administrar el
+paralelismo es tener un servidor central que lleve la cuenta de cuáles hilos se están ejecutando, cuá-
+les desean ejecutarse y cuáles son sus requerimientos de CPU mínimos y máximos (Tucker y Gup-
+ta, 1989). De vez en cuando, cada aplicación sondea al servidor central para saber cuántas CPUs
+puede utilizar. Después aumenta o reduce el número de hilos para ajustarse a lo que haya disponi-
+ble. Por ejemplo, un servidor Web puede tener 5, 10, 20 o cualquier otro número de hilos ejecután-
+dose en paralelo. Si en un momento dado tiene 10 hilos, aumenta la demanda de CPUs de manera
+repentina y el servidor Web tiene que reducir su número de hilos a 5, cuando los siguientes 5 hilos
+terminen su trabajo actual, tendrán que dejar de ejecutarse en vez de recibir más trabajo. Este es-
+quema permite que los tamaños de las particiones varíen en forma dinámica para adaptarse a la car-
+ga de trabajo actual de una mejor forma que el sistema fijo de la figura 8-13. 
+Planificación por pandilla
+Una ventaja clara de la compartición de espacio es la eliminación de la multiprogramación, que a
+su vez elimina la sobrecarga impuesta por el cambio de contexto. Sin embargo, una desventaja tam-
+bién clara es el tiempo que se desperdicia cuando una CPU se bloquea y no tiene nada que hacer
+hasta que vuelva a estar lista. En consecuencia, las personas han buscado algoritmos que intenten
+realizar la planificación tanto en tiempo como en espacio, en especial para los hilos que crean va-
+rios hilos, que por lo general se necesitan comunicar entre sí.
+546
+SISTEMAS DE MÚLTIPLES PROCESADORES
+CAPÍTULO 8
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+Partición con
+4 CPUs
+Partición con 
+12 CPUs
+CPU sin asignar
+Partición con
+6 CPUs  
+Partición con
+8 CPUs  
+Figura 8-13.  Un conjunto de 32 CPUs divididas en cuatro particiones, con dos CPUs
+disponibles.
+ www.FreeLibros.me
+
+===== [PDF pag 577] =====
+SECCIÓN 8.1
+MULTIPROCESADORES
+547
+Para ver el tipo de problema que puede ocurrir cuando los hilos de un proceso se planifican de
+manera independiente, considere un sistema con los hilos A0 y A1 que pertenecen al proceso A, y
+los hilos B0 y B1 que pertenecen al proceso B. Los hilos A0 y B0 comparten el tiempo en la CPU 0; los
+hilos A1 y B1 comparten el tiempo en la CPU 1. Los hilos A0 y A1 necesitan comunicarse con fre-
+cuencia. El patrón de comunicación es que A0 envía un mensaje a A1, y después A1 envía de regre-
+so una respuesta a A0, seguida de otra secuencia similar. Suponga que A0 y B1 se inician primero,
+como se muestra en la figura 8-14.
+A0
+B0
+A0
+B0
+A0
+B0
+B1
+A1
+B1 
+A1
+B1
+A1
+Hilo A0 en ejecución
+0
+100
+200
+300
+400
+500
+600
+CPU 0
+CPU 1
+Tiempo
+Petición 1
+Petición 2
+Respuesta 2
+Respuesta 1
+Figura 8-14. Comunicación entre dos hilos que pertenecen al hilo A, los cuales se es-
+tán ejecutando fuera de fase.
+En el intervalo 0, A0 envía una petición a A1, pero A1 no la recibe sino hasta que se ejecuta en
+el intervalo 1, el cual empieza en los 100 mseg. Envía la respuesta de inmediato, pero A0 no la re-
+cibe sino hasta que se vuelve a ejecutar de nuevo, a los 200 mseg. El resultado neto es una secuen-
+cia de solicitud-respuesta cada 200 mseg. No es algo muy bueno.
+La solución a este problema es la planificación por pandilla, que es una consecuencia de la
+co-planificación (Ousterhout, 1982). La planificación por pandilla consta de tres partes: 
+1. Los grupos de hilos relacionados se programan como una unidad, o pandilla.
+2. Todos los miembros de una plantilla se ejecutan en forma simultánea, en distintas CPUs de
+tiempo compartido.
+3. Todos los miembros de la pandilla inician y terminan sus intervalos en conjunto.
+El truco que hace funcionar la planificación por pandilla es que todas las CPUs se planifican en for-
+ma asíncrona. Esto significa que el tiempo se divide en quantums discretos, como en la figura 8-14.
+Al inicio de cada nuevo quantum todas las CPUs se reprograman, y se inicia un nuevo hilo en ca-
+da CPU. Al inicio del siguiente quantum ocurre otro evento de planificación. En el intervalo no se
+realiza ninguna planificación. Si un hilo se bloquea, su CPU permanece inactiva hasta el final del
+quantum.
+En la figura 8-15 se muestra un ejemplo del funcionamiento de la planificación por pandilla.
+Aquí tenemos un multiprocesador con seis CPUs que son utilizadas por cinco procesos (A a E), con
+un total de 24 hilos listos para ejecutarse. Durante la ranura de tiempo 0, se programan los hilos A0
+ www.FreeLibros.me
+
+===== [PDF pag 578] =====
+a A6 y se ejecutan. Durante la ranura de tiempo 1, se programan los hilos B0, B1, B2, C0, C1 y C2, y
+se ejecutan. Durante la ranura de tiempo 2, se ejecutan los cinco hilos de D y E0. Los seis hilos res-
+tantes que pertenecen al hilo E se ejecutan en la ranura de tiempo 3. Después se repite el ciclo, don-
+de la ranura 4 es igual a la ranura 0, y así en lo sucesivo.
+548
+SISTEMAS DE MÚLTIPLES PROCESADORES
+CAPÍTULO 8
+0
+1
+2
+3
+4
+5
+6
+7
+0
+1
+2
+3
+4
+5
+A0
+B0
+B1
+D1
+E2
+A1
+B1
+D1
+E2
+A1
+A2
+B2
+D2
+E3
+A2
+B2
+D2
+E3
+A3
+D3
+E4
+A3
+C0
+D3
+E4
+C1
+D4
+E5
+A4
+C1
+D4
+E5
+C2
+E0
+E6
+A5
+C2
+E0
+E6
+C0
+A4
+A5
+D0
+E1
+A0
+B0
+D0
+E1
+CPU
+Ranura
+de tiempo
+Figura 8-15.  Planificación por pandilla.
+La idea de la planificación por pandilla es que todos los hilos de un hilo se ejecuten en conjun-
+to, de manera que si uno de ellos envía una petición a otro, recibirá el mensaje casi de inmediato y
+podrá responder también casi de inmediato. En la figura 8-15, como todos los hilos de A se están
+ejecutando en conjunto, durante un quantum pueden enviar y recibir una gran cantidad de mensa-
+jes, con lo cual se elimina el problema de la figura 8-14. 
+8.2  MULTICOMPUTADORAS
+Los multiprocesadores son populares y atractivos debido a que ofrecen un modelo de comunica-
+ción simple: todas las CPUs comparten una memoria común. Los procesos pueden escribir men-
+sajes en la memoria, para que después otros procesos los lean. La sincronización se puede realizar
+mediante el uso de mutexes, semáforos, monitores y otras técnicas bien establecidas. El único con-
+tratiempo es la dificultad de construir multiprocesadores grandes, además de que es un proceso
+costoso.
+Para resolver estos problemas se ha investigado mucho sobre las multicomputadoras: CPUs
+con acoplamiento fuerte que no comparten memoria. Cada una tiene su propia memoria, como se
+muestra en la figura 8-1(b). Estos sistemas también son conocidos por una variedad de nombres, in-
+cluyendo clúster de computadoras y COWS (Clusters of Workstations, Clústeres de estaciones de
+trabajo).
+Es fácil construir las multicomputadoras, ya que el componente básico es una PC que tiene só-
+lo los componentes esenciales, además de una tarjeta de interfaz de red de alto rendimiento. Desde
+luego que el secreto para obtener un alto rendimiento es diseñar de manera inteligente la red de in-
+ www.FreeLibros.me

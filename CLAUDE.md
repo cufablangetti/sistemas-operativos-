@@ -161,7 +161,11 @@ Tiene que ser **completo, no un resumen**. Qué lleva:
 - **Notas de memoria**: mnemotecnias, reglas rápidas, pares que se confunden ("PSW vs. estado del BCP", "fin de quantum → LISTO, no BLOQUEADO") y las trampas típicas de los exámenes de la cátedra.
 - **Conexiones explícitas entre unidades**, marcadas como tales. Ejemplos: *espera ocupada (U2) ↔ E/S programada (U1)*; *dormirse con el candado tomado (U2) ↔ Unidad 6 completa*; *TLB (U3) ↔ caché (U1)*.
 - **Los errores que ya cometí**, marcados con ⚠️, para no repetirlos.
-- Las **referencias de página** del Tanenbaum en cada rama.
+- **Referencia DOBLE en cada rama**, que es lo que lo vuelve un índice de repaso y no solo un resumen:
+  - `(Tanenbaum, cap. 2.3.7, págs. 136–141)` → para leer la fuente.
+  - `(Repaso U2, pág. 14 — "Tema 7 — Monitores")` → **para volver a lo que ya leí**, con el número de página real del `repaso_uNN.pdf` y el título de la sección.
+
+  El índice título → página se saca **del PDF ya generado** con `_trabajo/indice_repaso.py repaso_uNN.html repaso_uNN.pdf _trabajo/indice_repaso_uNN.md`. Por eso el mapa se hace **después** del PDF de repaso y no antes. Si algún día se regenera un `repaso_uNN.pdf`, hay que **volver a correr el índice y actualizar las referencias del mapa**, porque las páginas se corren.
 
 Sirve para dos cosas a la vez: **estudiar** (contenido completo) y **ordenar el repaso** (ver de un vistazo qué entra y en qué orden). Arranca al cerrar la **Unidad 2** y se amplía al cerrar cada unidad siguiente.
 

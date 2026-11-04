@@ -3,7 +3,7 @@
 > **Este archivo es para la IA que retoma la tutoría en otra computadora.**
 > Leelo completo antes de responderle nada al estudiante.
 
-Última actualización: **2026-10-29**
+Última actualización: **2026-11-03**
 
 ---
 
@@ -16,6 +16,7 @@
 5. **No le muestres `respuestas.md` de ninguna unidad** salvo que lo pida explícitamente.
 6. **Al terminar la clase de cada unidad, antes del cuestionario, generá el PDF de repaso** `unidades/uNN-.../repaso_uNN.pdf` con todo el contenido que se vio en el chat. Es un pedido explícito del estudiante y ya está en `CLAUDE.md`. El método está en la sección 6.
 7. **⭐ Al cerrar cada unidad, después del PDF de repaso, ampliá el mapa conceptual acumulativo** `plan/mapa_conceptual.md` (+ el PDF y el HTML interactivo). Es un pedido explícito del estudiante del **29 de octubre de 2026** y está especificado en `CLAUDE.md`, en la Fase 4. **Es acumulativo: nunca se reemplaza, se le agrega la unidad nueva y se reconectan los conceptos con los de las unidades anteriores.** Arranca al cerrar la Unidad 2.
+   - **Ampliación del 1 de noviembre de 2026:** cada rama lleva **referencia doble** — la página del Tanenbaum **y la página real del `repaso_uNN.pdf`** con el título de la sección, para que el mapa funcione como índice de lo que ya leyó. El índice título → página se saca con **`_trabajo/indice_repaso.py`** (ya probado sobre `repaso_u01.pdf`: 63 títulos, 0 sin ubicar). Si se regenera un PDF de repaso, hay que volver a correr el índice y actualizar el mapa.
 
 ---
 
@@ -31,39 +32,18 @@ Material en `material_so/` (**nunca modificar los originales**). Libro principal
 
 ## 2. ⭐ QUÉ HAY QUE HACER AHORA
 
-**El TEMA 7 ESTÁ CERRADO COMPLETO.** Está en el **tema 8 — PLANIFICACIÓN**, el más importante de la materia. Van **8 de 10 temas**.
+**🏁 LA UNIDAD 2 ESTÁ CERRADA EN CLASE** (3 de noviembre): los 10 temas + el cierre. Ese mismo día se generaron:
 
-El tema 8 se dividió en cinco bloques y **se dio solamente el primero**:
+- **`unidades/u02-procesos/repaso_u02.pdf`** — 168 páginas, la clase completa tal como se dio (armada desde el historial del chat con `_trabajo/armar_repaso_u02.py`; índice de páginas en `_trabajo/indice_repaso_u02.md`).
+- **El mapa conceptual acumulativo, U1 + U2** — fuente única `plan/mapa_conceptual.md`; salidas `plan/mapa_conceptual.pdf` (50 págs., con anexos de errores, cruces y trampas) y `visuales/mapa_conceptual.html` (buscador, filtros por tipo de marca, cruces clickeables). Las dudas que el estudiante anotó en **`googleia.md`** (raíz del proyecto, su chat con otro asistente) están incorporadas como ❓.
 
-```
-8.1  CONCEPTOS Y MÉTRICAS                       ← DADO, preguntas SIN RESPONDER
-     ráfagas, cuándo planificar, apropiativa vs no,
-     tiempo de retorno y tiempo de espera
-8.2  ALGORITMOS POR LOTES: FCFS, SJF, SRTF      ← SIGUE ACÁ  + 🖥️ SIMULADOR
-8.3  INTERACTIVOS: Round Robin ★, prioridades,
-     múltiples colas, lotería                        + 🖥️ el mismo simulador
-8.4  TIEMPO REAL: plazos y planificabilidad
-8.5  POLÍTICA vs MECANISMO + planificación de hilos
-```
+**⭐ QUÉ QUIERE AHORA EL ESTUDIANTE (pedido explícito del 3/11):** *repasar y ordenar bien las Unidades 1 y 2 con el mapa conceptual antes de empezar la Unidad 3*, "para tener todo fresco". Lo que más le importa es **el mapa**. Si pide ayuda con el repaso, conviene recorrer el mapa rama por rama, hacerle recitar las 🔢 secuencias y repasar juntos los ⚠️ errores y 📌 trampas (el HTML tiene filtros para cada uno).
 
-Quedaron **estas dos preguntas del 8.1 sin responder** (se las hice y cerró la sesión):
+**Cuestionarios: POSPUESTOS por decisión del estudiante.** El de la U2 **ya está generado** (2026-11-03: `unidades/u02-procesos/cuestionario.md`, 21 preguntas, 100 p, y `respuestas.md`, que NO se le muestra; numéricos verificados con `_trabajo/verificar_cuestionario_u02.js` y `.py`); el de la U1 está pausado (partes C–F). Quiere hacerlos **los dos juntos, más adelante**. No insistirle; cuando los pida, tomárselos y corregir con la Fase 5.
 
-> **1.** El proceso A hace, en ciclo: 2 ms de cálculo y después espera 50 ms al disco. El proceso B hace: 40 ms de cálculo y después espera 5 ms al disco. ¿Cuál es limitado a E/S y cuál a cálculos? **¿Qué dato usaste para decidirlo y qué dato es una distracción?**
->
-> **2.** En el ejemplo de FCFS de la clase, P3 (llegada 2, ráfaga 2, fin 14) dio **retorno 12** y **espera 10**. Un compañero dice: *"está mal, la espera no puede ser 10 si el proceso solo tardó 2 en ejecutarse; esperó 12 como máximo"*. ¿Dónde está el error de su razonamiento? Y además: **¿cuál fue el tiempo de respuesta de P3?**
+**Después del repaso viene la Unidad 3 — Administración de memoria.** Al cerrarla, **agregarle su rama al mapa** (`plan/mapa_conceptual.md`, a mano), reconectar con U1/U2 (TLB ↔ caché U1, MMU U1, protección de memoria ↔ multiprogramación U1, reemplazo óptimo ↔ SJF/retrospección U2) y regenerar con `python -X utf8 -I _trabajo/mapa_conceptual.py` + `html2pdf.py` (ver sección 6).
 
-**Respuestas esperadas:**
-
-1. **A es limitado a E/S** (ráfaga de CPU de 2 ms) y **B limitado a cálculos** (ráfaga de 40 ms). El dato que decide es **la longitud de la ráfaga de CPU**; **la duración de la E/S es la distracción** — es la trampa clásica del libro: *"el factor clave es la longitud de la ráfaga de CPU, no de la ráfaga de E/S"*. Si contesta mirando los 50 ms de A, cayó en la trampa; si acierta pero justificando con la E/S, es parcial.
-2. El compañero **confunde retorno con espera y mezcla el reloj absoluto con el tiempo del proceso**. P3 llegó en el instante 2, no en 0: su retorno es 14 − 2 = **12**, y de esos 12, **2 los pasó ejecutándose y 10 esperando**. "Esperó 12 como máximo" sería cierto si hubiera llegado en 0. **La espera nunca puede ser mayor que el retorno, y acá no lo es (10 < 12).** **Tiempo de respuesta de P3 = 10** (llegó en 2, arrancó en 12). Dato fino: en FCFS, sin apropiación, **respuesta y espera coinciden**; con Round Robin o SRTF **ya no**, porque el proceso arranca temprano pero se ejecuta a pedacitos.
-
-Después seguir con **8.2 — FCFS, SJF y SRTF**, y ahí **hay que entregar el simulador de Gantt en el mismo turno** (ver abajo: es una promesa explícita que ya se le hizo dos veces).
-
-El gancho ya está puesto en el chat: en el ejemplo de FCFS, **P3 necesitaba 2 unidades de CPU y tardó 12 en salir porque P1 es largo y llegó primero**. Se le dijo: *"ése es el defecto de FCFS, y es el motivo por el que existen todos los demás algoritmos"*. Arrancar 8.2 desde ahí, **con el mismo juego de datos** (P1: llega 0 ráfaga 8; P2: llega 1 ráfaga 4; P3: llega 2 ráfaga 2), para que compare FCFS contra SJF y SRTF sobre números que ya conoce. **Métricas verificadas de ese juego en FCFS: retorno promedio 31/3 = 10,33; espera promedio 17/3 = 5,67.**
-
-### 🔴 PROMESA PENDIENTE — el simulador de Gantt
-
-Se le dijo textualmente: *"cuando lleguemos a los algoritmos te armo el **simulador de Gantt** en el mismo turno, con la regla de desempate de tu cátedra ya incorporada"*, y después *"ahí te debo el simulador de Gantt, que esta vez sí va junto con la clase"*. **Es la visualización más importante de la materia y ya se prometió dos veces. Hay que entregarla junto con el bloque 8.2, no después.** La lógica ya está escrita y verificada en `_trabajo/verificar_planificacion.js`: conviene portarla tal cual. Método en la sección 7.
+**Ojo:** el estudiante usa en paralelo **otro asistente de IA** y a veces pega sus respuestas (se reconocen por las marcas `[1.1]`, `[3.1]`). Se le pidió que **el cuestionario lo responda solo**. Esas respuestas suelen estar bien pero traen errores que hay que marcar (ver sección 5).
 
 ---
 
@@ -76,13 +56,15 @@ Se le dijo textualmente: *"cuando lleguemos a los algoritmos te armo el **simula
 | **Unidad 1** | |
 | 2 — Preparar | Hecho |
 | 3 — Clase | **Terminada**: 9 temas + cierre |
-| — PDF de repaso | Hecho → `unidades/u01-introduccion/repaso_u01.pdf` (18 págs.) |
+| — PDF de repaso | Hecho → `unidades/u01-introduccion/repaso_u01.pdf` (56 págs.: la clase completa + anexo con el resumen condensado; rehecho el 3/11 con `_trabajo/armar_repaso_u01.py`. La versión resumida vieja quedó en `_trabajo/repaso_u01_version_resumida.pdf`) |
 | 4 — Cuestionario | Generado. **Empezado y pausado**: partes A y B respondidas, **23/28** |
 | 5 — Corrección | Parcial → `unidades/u01-introduccion/correcciones/avance_cuestionario_u01.md` |
 | **Unidad 2** | |
 | 2 — Preparar | Hecho → `unidades/u02-procesos/` |
-| 3 — Clase | **EN CURSO: 8 temas de 10 cerrados + el bloque 8.1 del tema 8** |
-| 4 y 5 | Pendientes |
+| 3 — Clase | **Terminada**: 10 temas + cierre (3/11) |
+| — PDF de repaso | Hecho → `unidades/u02-procesos/repaso_u02.pdf` (168 págs.) |
+| — Mapa conceptual | Hecho con U1 + U2 → `plan/mapa_conceptual.md` / `.pdf` / `visuales/mapa_conceptual.html` |
+| 4 y 5 | **Pospuestos por el estudiante** (junto con el de la U1) |
 
 **El cuestionario de la Unidad 1 quedó a medias por decisión del estudiante**, que prefirió avanzar con la Unidad 2. Le faltan las partes C (ejercicios prácticos, 34 p), D (desarrollo, 13 p), E (escenarios, 13 p) y F (integración, 12 p). Puede retomarlo diciendo "parte C", "parte D", etc., sin orden obligatorio. **No insistirle con esto**: fue su decisión.
 
@@ -108,10 +90,10 @@ La unidad se dividió en **10 temas**, organizados en tres actos:
 | 5 | Condiciones de carrera y regiones críticas | Visto |
 | 6 | Exclusión mutua con espera ocupada | **Visto y cerrado** — costó muchísimo, ver sección 5 |
 | 7 | Sin espera ocupada: semáforos, mutexes, monitores, mensajes | **Visto y cerrado** (7.1 a 7.4b) |
-| **8** | **PLANIFICACIÓN** ★ | **ACÁ QUEDAMOS** — dado el 8.1 (conceptos y métricas); faltan 8.2 a 8.5. **El más importante de la materia** |
-| 9 | Problemas clásicos (filósofos, lectores/escritores, barbero) | Pendiente |
-| 10 | Multiprocesamiento | Pendiente |
-| — | Cierre de la unidad | Pendiente |
+| **8** | **PLANIFICACIÓN** ★ | **Visto** (8.1 a 8.6) |
+| 9 | Problemas clásicos (filósofos, lectores/escritores) | **Visto** (9.1, 9.2) — barbero dormilón NO está en el libro |
+| 10 | Multiprocesamiento | **Visto** (10.1 a 10.4) |
+| — | Cierre de la unidad | **Dado** (8 puntos + lo que más se toma) |
 
 ### Resumen de lo cubierto, por si pregunta hacia atrás
 
@@ -128,11 +110,15 @@ La unidad se dividió en **10 temas**, organizados en tres actos:
 - **Tema 7.4b — Paso de mensajes y barreras:** `send`/`receive` son **llamadas al sistema** (como los semáforos, **no** construcciones del lenguaje como los monitores) y **no requieren memoria compartida**: es el único mecanismo que sirve en máquinas distribuidas; los problemas de diseño (mensajes perdidos → **acuse de recibo**; acuse perdido → duplicados → **números de secuencia**; nomenclatura; autenticación; y el **rendimiento**, porque *"copiar mensajes es siempre más lento que una operación con un semáforo o entrar a un monitor"*); **productor-consumidor con N mensajes vacíos iniciales** (el total de mensajes es constante = N; el vacío es la ficha de `vacias` y el lleno la de `llenas`); direccionamiento a procesos vs **buzones**, y el extremo sin búfer = **rendezvous**; **MPI**. **Barreras**: para **grupos** de procesos en fases, el que llega se bloquea hasta que llegue el último (fig. 2-37). Se cerró con **la tabla comparativa de las 11 primitivas** y las tres preguntas que la resumen: *¿gira o se bloquea? ¿la señal se guarda o se pierde? ¿necesita memoria compartida?* *(Tanenbaum 2.3.8 y 2.3.9, págs. 140–146.)*
 - **Tema 8.1 — Conceptos y métricas de planificación:** qué es el planificador y que **solo elige entre los LISTOS**; por qué importa poco en una PC y mucho en un servidor; **el costo del cambio de contexto** (7 pasos, incluida la invalidación de la caché) como justificación anticipada del quantum; **ráfagas de CPU y E/S**, CPU-bound vs I/O-bound y la trampa: **el factor clave es la longitud de la ráfaga de CPU, no la de E/S**; que copiar a la RAM de video **cuenta como cálculo**; que con CPU más rápidas los procesos tienden a ser más limitados a E/S; **las 4 situaciones en que hay que planificar** + la interrupción de reloj; **apropiativa vs no apropiativa** (sin reloj, la no apropiativa es la única opción; fin de quantum → LISTO); los **3 entornos** y las **metas de la fig. 2-39** (incluida **proporcionalidad**); y **las métricas**: **retorno = fin − llegada**, **espera = retorno − ráfaga**, **respuesta = primer arranque − llegada**. Ejemplo resuelto de FCFS con P1(0,8) P2(1,4) P3(2,2) → retorno promedio 10,33 y espera promedio 5,67, **verificado con script**. Se le marcó que **`retorno − ráfaga` sirve siempre** mientras que `inicio − llegada` solo sin apropiación. *(Tanenbaum 2.4.1, págs. 145–152, figs. 2-38 y 2-39. Apunte de la cátedra: mismas metas y métricas; la cátedra llama **SRTN** al SRTF y los parciales dicen **SJN**.)*
 
-**Tema 8 — PLANIFICACIÓN. Es el tema más importante de la materia.** **El bloque 8.1 ya se dio** (ver el resumen de arriba): quedan los algoritmos, tiempo real y política/mecanismo. Conceptos: planificador y algoritmo; CPU-bound vs I/O-bound (**la ráfaga de CPU es lo que define**); cuándo planificar (5 situaciones); **apropiativa vs no apropiativa**; metas por tipo de sistema; **tiempo de retorno = fin − llegada** y **tiempo de espera = retorno − ráfaga**. Algoritmos: FCFS, SJF (óptimo solo con llegadas simultáneas), SRTF, **Round Robin y el problema del quantum**, prioridades (estáticas/dinámicas), múltiples colas, el más corto a continuación con **envejecimiento**, garantizada, **lotería**, partes equitativas, dos y tres niveles. Tiempo real y la **condición de planificabilidad** (suma de Ci/Pi ≤ 1). Política vs mecanismo. Planificación de hilos.
+- **Tema 8.2–8.6 — Algoritmos de planificación:** FCFS, SJF, SRTF (2.4.2, págs. 152–156); **Round Robin** y el quantum (2.4.3, págs. 156–157); prioridades, múltiples colas, el más corto a continuación con **envejecimiento** (promedio exponencial), garantizada, **lotería**, partes equitativas (2.4.4, págs. 157–161); tiempo real y **Σ Cᵢ/Pᵢ ≤ 1**, política vs mecanismo (2.4.5, págs. 161–162); planificación de hilos (2.4.6, págs. 162–163). **Se entregó el simulador de Gantt.**
+- **Tema 9 — Problemas clásicos:** filósofos (2.5.1, págs. 163–166): los intentos que fallan y Dijkstra con `estado[]` + semáforo por filósofo, máximo 2 comiendo; lectores y escritores (2.5.2, págs. 166–168): inanición del escritor ⟺ **I ≤ D**, y la regla *"dormirse con un candado tomado es interbloqueo SOLO SI el que te despierta necesita ese candado"*. **Se entregó el simulador de filósofos.**
+- **Tema 10 — Multiprocesadores (cap. 8.1, págs. 526–548):** 10.1 hardware (UMA de bus único 16–32 CPUs, caché + coherencia: copia limpia **se descarta**, barras cruzadas, NUMA con sus 3 características, NC vs CC-NUMA, directorios); 10.2 los 3 modelos de SO (cada CPU su SO con los 4 problemas — el 4º, la caché de búfer, es **corrupción**; maestro-esclavo con `n × fracción ≤ 1`; SMP y la granularidad de los candados); 10.3 sincronización (TSL exige **bloquear el bus**, por eso Peterson; thrashing de caché; lectura pura antes de TSL, backoff exponencial, candado privado de Mellor-Crummey y Scott; girar vs conmutar, la lista de listos obliga a girar, Karlin 1991); 10.4 planificación (**dos dimensiones**; tiempo compartido fig. 8-12 y sus 2 desventajas; planificación inteligente con bandera; afinidad y **dos niveles con sus 3 beneficios**; espacio compartido fig. 8-13, FCFS difícil de vencer; **pandillas** con sus 3 partes, figs. 8-14 y 8-15).
 
-**Tema 9 — Problemas clásicos.** Filósofos (los 3 intentos que fallan y la solución con estados + semáforo por filósofo); lectores y escritores (**inanición de escritores**); barbero dormilón (**complemento elaborado, no está en el Tanenbaum 3ª ed.**).
-
-**Tema 10 — Multiprocesamiento.** UMA vs NUMA; los 3 modelos de SO (uno por CPU, maestro-esclavo, **SMP**); sincronización (TSL con reintentos espaciados); planificación con **dos dimensiones** (qué proceso y en qué CPU), **afinidad de caché** y **planificación por pandillas**; concurrencia vs paralelismo.
+**Números verificados de la unidad (usar en el repaso y el cuestionario, no recalcular):**
+- Juego P1(0,8) P2(1,4) P3(2,2): FCFS ret 10,33 / esp 5,67. RR q=1 → ret 9,33, resp 0,33; **q=2 → `P1[0-2] P2[2-4] P3[4-6] P1[6-8] P2[8-10] P1[10-14]`, ret 9,00, esp 4,33, resp 1,00**; q=3 → ret 10,33, resp 2,00; q=4 → ret 9,67, resp 3,00; q=8 = FCFS.
+- Prioridades L(0,6,p3) M(2,4,p2) H(4,3,p1): no apropiativa `L[0-6] H[6-9] M[9-13]` ret 7,33 esp 3,00; apropiativa `L[0-2] M[2-4] H[4-7] M[7-9] L[9-13]` ret 7,67 esp 3,33 resp 0.
+- Envejecimiento a=½ desde 10 con ráfagas 6,4,14,6 → 8, 6, 10, 8. Garantizada A10 B30 C20 D25 E15 de 20 c/u → razones 0,50 1,50 1,00 1,25 0,75 → corre A. Lotería A5 B15 C30 → 10/30/60 %; tras C→A 20 boletos → 50/30/20 %.
+- Tiempo real 50/100 + 30/200 + 100/500 = 0,85 (15 % libre). Maestro-esclavo 8 CPUs al 15 % → 1,20 saturado; máximo n = 6. Girar vs conmutar con 3000 µs: 400 µs → girar.
 
 ---
 
@@ -176,6 +162,10 @@ La unidad se dividió en **10 temas**, organizados en tres actos:
 - **⚠️ Creyó que una señal perdida es, por sí misma, un error.** Al preguntarle qué se rompe si se saca el `if cuenta = 1` del `signal`, contestó que se rompe algo. **No se rompe nada**: la señal se pierde pero nadie la necesitaba. La distinción: **señal perdida con alguien esperándola = desastre (el wakeup perdido); señal perdida sin nadie esperando = solo trabajo al vacío.** El `if` es una **optimización, no una condición de correctitud**.
 - **⚠️ Creyó que el paso de mensajes exige procesos separados** y que no se puede usar entre hilos ni dentro de una sola máquina. Lee la tabla al revés: **`send`/`receive` NO NECESITA memoria compartida, pero funciona igual si la hay** — es el mecanismo **más general** de todos. La razón para no usarlo con memoria compartida no es que no se pueda, es el **costo de copiar** (*"copiar mensajes es siempre más lento que una operación con un semáforo o entrar a un monitor"*).
 - **Vocabulario:** dijo *"las llamadas perdidas acumuladas"* hablando del contador del semáforo. Si se acumulan **no están perdidas**: están **guardadas**. Es justo lo contrario y conviene corregírselo cada vez.
+- **⚠️ Patrón general de los temas 8–10: fusiona o invierte dos cosas parecidas.** Casos ya corregidos: retorno/espera, respuesta/espera, **boletos/porcentajes** (leyó los boletos como porcentajes sin dividir por el total), los **dos "envejecimientos"** homónimos (subir prioridad vs estimar la ráfaga), la copia de caché que "se actualiza" (**se descarta**). Lo que le sirve: **tabla de dos columnas** que separe el par.
+- **Convención de prioridades:** la cátedra usa **1 = más prioritario**; la fórmula `1/f` del libro va al revés. Regla que se le dio: **declarar siempre la convención en la respuesta**.
+- **SMP con un solo mutex global NO resuelve el cuello de botella** del maestro-esclavo (lo creyó en 10.2). Lo que lo resuelve es la **granularidad** de los candados.
+- **🔴 Volvió a escribir que al terminar el quantum el hilo "se va a dormir"** (respuesta 2a del 10.4, 3/11). Es el mismo error del tema 6: **fin de quantum → LISTO**. En esa respuesta también atribuyó el 100 % de uso de CPU a "cambios de contexto inútiles": en la fig. 8-14 las CPUs hacen **trabajo útil de otros hilos**; el problema es la **latencia**, no la utilización.
 
 ### Lo que ya tiene sólido (preguntas respondidas bien)
 
@@ -209,8 +199,16 @@ Todos en `_trabajo/`:
 | `render.py entrada.pdf prefijo pag1 ...` | PDF → PNG, para leer escaneados o revisar maquetación |
 | `calibrar.py` | Verifica el desfase impresa/PDF del Tanenbaum |
 | **`html2pdf.py entrada.html salida.pdf`** | **Genera el PDF de repaso.** CSS ya armado (cajas `.clave`, `.ojo`, `.err`, `.ej`, `<pre>` monoespaciado para los diagramas ASCII). Usa PyMuPDF Story |
+| **`indice_repaso.py repaso.html repaso.pdf [salida.md]`** | **Saca el índice título → página del PDF de repaso ya generado.** Imprescindible para las referencias dobles del mapa conceptual. Probado sobre `repaso_u01.pdf`: 63 títulos, 18 páginas, 0 sin ubicar |
 | `verificar_u01.py`, `verificar_es.js`, `verificar_cuestionario_u01.py` | Ejercicios numéricos de la Unidad 1 |
+| `verificar_cuestionario_u02.js`, `verificar_cuestionario_u02.py` | Ejercicios numéricos del cuestionario de la Unidad 2 |
 | **`verificar_planificacion.js`** | **Simuladores de FCFS, SJF, SRTF y Round Robin**, con la **regla de desempate de la cátedra** (entre uno que llega y uno que sale, entra primero el que llega). Imprime Gantt, métricas y la cola de preparados en cada instante. **Indispensable para el tema 8** |
+
+| **`armar_repaso_u02.py clase.md salida.html`** | Arma el HTML del repaso desde los mensajes de la clase extraídos del historial del chat (`_trabajo/u02_clase_chat.md`): saca la logística, ordena los temas en h2 y convierte el Markdown. Sirve de modelo para las próximas unidades |
+| **`mapa_conceptual.py`** | **Genera el mapa conceptual** desde `plan/mapa_conceptual.md`: escribe `visuales/mapa_conceptual.html` (usa `_trabajo/mapa_conceptual_plantilla.html`) y `_trabajo/mapa_conceptual_imprimir.html`, que se pasa a PDF con `html2pdf.py … plan/mapa_conceptual.pdf`. Falla si hay un `[[id]]` que no existe o un id repetido |
+| **`verificar_mapa_conceptual.js`** | Prueba la página interactiva en Chrome sin ventana (playwright-core del MCP global): búsqueda, filtros, cruces, modo oscuro y ancho de 375 px. 13 pruebas |
+
+**Sintaxis del mapa** (`plan/mapa_conceptual.md`): `#` unidad, `##` tema, `###` concepto, cada uno con `{#id}`; líneas `>` debajo del título = referencias (📖 libro, 📄 repaso); listas con sangria de 2 espacios; `1.` = paso de una secuencia; `[[id]]` = enlace a otra rama. Marcas al principio del ítem: 🔢 ⚠️ 📌 ⚖️ 🔗 🧠 ❓. **Páginas del Tanenbaum verificadas contra el texto** (`impresa = pág. del recorte u02 + 82`): 2.4.3 interactivos 154–160 (RR 154, prioridad 155, múltiples colas 156, SPN y garantizada 158, lotería 159, partes equitativas 160), 2.4.4 tiempo real 160–161, 2.4.5 política 161–162, 2.4.6 hilos 162–163, 2.5.1 filósofos 164–167, 2.5.2 lectores 167–168. **Algunas referencias que se dieron en la clase del tema 8 estaban corridas 1 o 2 páginas; las del mapa son las buenas.**
 
 **Método para el PDF de repaso:** escribir `unidades/uNN-.../repaso_uNN.html` con el contenido completo de la clase (los mismos diagramas ASCII dentro de `<pre>`), correr `python -X utf8 -I "_trabajo\html2pdf.py" "ruta.html" "ruta.pdf"`, y revisar la maquetación renderizando un par de páginas con `render.py`.
 
@@ -239,12 +237,16 @@ Todos en `_trabajo/`:
 | `condicion_de_carrera.html` | El spooler paso a paso, con dos secuencias de conmutación a elegir |
 | **`productor_consumidor.html`** | **Entregada el 28/10.** Productor-consumidor con tres modos: semáforos en el orden correcto, `down` invertidos (interbloqueo) y sleep/wakeup (señal perdida). El usuario elige a quién le da la CPU en cada paso. Muestra el búfer, las tres latas de fichas, la cola de bloqueados de cada semáforo, el PC de cada proceso y, en modo sleep/wakeup, **el valor viejo de `cuenta` que cada proceso tiene guardado**. Motor verificado con `_trabajo/verificar_semaforos.js` (4 pruebas) y la copia pegada en el HTML con `_trabajo/verificar_html_semaforos.js` |
 
+| **`planificacion_cpu.html`** ★ | Simulador de Gantt: FCFS, SJF, SRTF, RR con quantum ajustable, prioridades; cola de preparados en cada instante; desempate de la cátedra; trae los ejercicios del parcial y del final. Verificado con `_trabajo/verificar_motor_planificacion.js` y `verificar_html_planificacion.js` |
+| **`filosofos_comelones.html`** | Los cuatro esquemas (todos el izquierdo, zurdo, mutex de mesa, Dijkstra). Verificado por BFS exhaustivo con `_trabajo/verificar_motor_filosofos.js` y `verificar_html_filosofos.js` |
+
+**Repaso** (en `visuales/`): **`mapa_conceptual.html`** — el mapa conceptual acumulativo, primera entrada de `visuales/index.html`. **`mapa_grafico.html`** (pedido del 3/11: "como un mapa conceptual de papel") — grafo de 103 cajas con nota técnica, flechas rotuladas y 20 cruces punteados; cada caja abre `mapa_conceptual.html#id`. Los datos (`NODOS`, `CRUCES`) están escritos a mano dentro del HTML: **al agregar una unidad, sumarle sus cajas y cruces ahí también**, con destinos que existan en `plan/mapa_conceptual.md`. Se prueba con `node _trabajo/verificar_mapa_grafico.js` (sin superposiciones, destinos válidos, clic → rama correcta). **El estudiante pidió no modificar `mapa_conceptual.html`** para esto: el gráfico va en un archivo aparte.
+
 ### ⚠️ Deuda pendiente — visualizaciones prometidas y NO entregadas
 
-Durante el tema 6 se le dijo **varias veces** "ahora te armo la visualización" y no se entregó hasta que el estudiante lo reclamó ("y el archivo?"). **Cumplir lo que se promete en el mismo turno, o no prometerlo.** Falta:
+**Cumplir lo que se promete en el mismo turno, o no prometerlo.** Falta:
 
-1. **Espera ocupada e inversión de prioridades** (la más prometida, sigue sin hacer). Debería tener: dos columnas separadas **quién tiene la CPU / quién tiene el candado**, avance paso a paso, el fin de quantum visible (H → LISTO → lo vuelven a elegir), y un **interruptor "H gira" vs "H duerme"** para comparar el cuelgue eterno contra la solución. Opcionalmente, un panel de TSL paso a paso (variable candado en dos pasos vs TSL atómico, eligiendo dónde conmuta el planificador).
-2. 🔴 **Simulador de planificación con diagrama de Gantt para el tema 8. PROMETIDA DOS VECES, HAY QUE ENTREGARLA CON EL BLOQUE 8.2 — no después.** FCFS, SJF, SRTF, Round Robin con quantum ajustable y prioridades, mostrando **la cola de preparados en cada instante** y los tiempos de espera y retorno. Debe respetar la **regla de desempate de la cátedra** (entre uno que llega y uno que sale de ejecución, entra primero el que llega). La lógica ya está escrita y verificada en `_trabajo/verificar_planificacion.js`: conviene portarla tal cual al HTML. **Esta es la más importante para el examen.** Conviene que arranque cargada con el juego de datos que ya vio en clase —P1(0,8), P2(1,4), P3(2,2)— para que pueda comparar los algoritmos sobre números conocidos.
+1. **Espera ocupada e inversión de prioridades.** Debería tener: dos columnas separadas **quién tiene la CPU / quién tiene el candado**, avance paso a paso, el fin de quantum visible (H → LISTO → lo vuelven a elegir), y un **interruptor "H gira" vs "H duerme"**. Opcional, no bloquea el cierre de la unidad.
 
 **Método que funcionó para la de productor-consumidor y conviene repetir:** escribir primero el motor en un `.js` de `_trabajo/` con pruebas que afirmen las propiedades (nunca dos en la región crítica, el interbloqueo aparece, etc.), correrlo, pegarlo en el HTML, y después **extraer el `<script>` del HTML y correrle las mismas pruebas** para confirmar que la copia no divergió.
 
@@ -276,6 +278,8 @@ Detalle completo en `plan/cronograma.md`. Rinde la **primera semana de diciembre
 
 La Unidad 2 tiene asignados **5 días** (lun 26 de octubre a dom 1 de noviembre) y unas 12 horas de trabajo. Hay **8 días de colchón** en total hasta el examen.
 
-**Estado al 29 de octubre:** van 4 días de los 5 y se cubrieron **8 temas de 10 más el bloque 8.1**. El ritmo se recuperó fuerte: el 28 se dieron 7.2 y 7.3 con la visualización de productor-consumidor, y el 29 se cerró el tema 7 completo (monitores, paso de mensajes y barreras) y se arrancó el 8. **Queda el tema 8 (que es largo y es el que más vale), el 9 y el 10.** Se va a pasar un día o dos del plan, y está bien: el colchón de 8 días existe para esto. Lo que NO hay que recortar es el tema 8. El tema 6 consumió bastante más de lo previsto porque hubo que enseñarle a leer assembler y rehacer la inversión de prioridades desde cero. **Ojo con el tema 8 (planificación): es el que más puntos vale en los exámenes prácticos y no conviene recortarlo.** Si hace falta recortar algo, que sea el tema 10 (multiprocesamiento), que casi no aparece en las fotos de exámenes.
+**Estado al 3 de noviembre:** la clase de la Unidad 2 terminó con **2 días de atraso** sobre el plan (estaba prevista hasta el 1/11). PDF de repaso, mapa conceptual y cuestionario de la U2 ya están hechos (el cuestionario, sin tomar); después, la Unidad 3. El colchón restante es de unos 6 días.
+
+**Historia — estado al 29 de octubre:** van 4 días de los 5 y se cubrieron **8 temas de 10 más el bloque 8.1**. El ritmo se recuperó fuerte: el 28 se dieron 7.2 y 7.3 con la visualización de productor-consumidor, y el 29 se cerró el tema 7 completo (monitores, paso de mensajes y barreras) y se arrancó el 8. **Queda el tema 8 (que es largo y es el que más vale), el 9 y el 10.** Se va a pasar un día o dos del plan, y está bien: el colchón de 8 días existe para esto. Lo que NO hay que recortar es el tema 8. El tema 6 consumió bastante más de lo previsto porque hubo que enseñarle a leer assembler y rehacer la inversión de prioridades desde cero. **Ojo con el tema 8 (planificación): es el que más puntos vale en los exámenes prácticos y no conviene recortarlo.** Si hace falta recortar algo, que sea el tema 10 (multiprocesamiento), que casi no aparece en las fotos de exámenes.
 
 Después de la Unidad 2 viene la **Unidad 3 — Administración de memoria** (Tanenbaum cap. 3 completo, impresas 175–254 → PDF 205–284, más 2.1.7 en impresas 93–95). Es la otra unidad pesada.

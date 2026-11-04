@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Los filósofos comelones</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#fff; --panel2:#f0f2f5; --borde:#d9dde3; --texto:#1b1f24;
+    --suave:#5b6572; --acento:#6b4fd8; --acento2:#e8e3fb;
+    --pensando:#8893a4; --hambriento:#d98324; --comiendo:#2e9e5b;
+    --mal:#c8373c; --malbg:#fdecec; --bien:#2e9e5b; --bienbg:#e9f7ee;
+    --tened:#7a828e; --codigo:#f4f5f7;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#14171c; --panel:#1c2026; --panel2:#23282f; --borde:#2d333c; --texto:#e6e9ed;
+      --suave:#9aa4b2; --acento:#8d75f0; --acento2:#2b2544;
+      --pensando:#6d7686; --hambriento:#e09a46; --comiendo:#4cb97a;
+      --mal:#e8696e; --malbg:#33201f; --bien:#4cb97a; --bienbg:#17291e;
+      --tened:#99a1ad; --codigo:#23282f;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#14171c; --panel:#1c2026; --panel2:#23282f; --borde:#2d333c; --texto:#e6e9ed;
+    --suave:#9aa4b2; --acento:#8d75f0; --acento2:#2b2544;
+    --pensando:#6d7686; --hambriento:#e09a46; --comiendo:#4cb97a;
+    --mal:#e8696e; --malbg:#33201f; --bien:#4cb97a; --bienbg:#17291e;
+    --tened:#99a1ad; --codigo:#23282f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; padding:30px 16px 70px; background:var(--bg); color:var(--texto);
+       font:15px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:1020px; margin:0 auto}
+  h1{font-size:1.6rem; margin:0 0 6px; letter-spacing:-.01em}
+  .sub{color:var(--suave); margin:0 0 22px}
+  h2{font-size:.78rem; text-transform:uppercase; letter-spacing:.08em; color:var(--suave);
+     margin:30px 0 12px; padding-bottom:6px; border-bottom:1px solid var(--borde)}
+  .caja{background:var(--panel); border:1px solid var(--borde); border-radius:10px; padding:16px}
+  .nota{background:var(--acento2); border:1px solid var(--acento); border-radius:9px;
+        padding:12px 14px; font-size:.9rem; margin:0 0 18px}
+  .nota strong{color:var(--acento)}
+  button{font:inherit; cursor:pointer; border:1px solid var(--borde); background:var(--panel);
+         color:inherit; border-radius:8px; padding:7px 13px}
+  button:hover:not(:disabled){border-color:var(--acento)}
+  button:disabled{opacity:.45; cursor:not-allowed}
+  button.on{background:var(--acento); border-color:var(--acento); color:#fff; font-weight:600}
+  .fila{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+  .grid{display:grid; grid-template-columns:minmax(300px,1fr) minmax(280px,1fr); gap:18px}
+  @media (max-width:860px){ .grid{grid-template-columns:1fr} }
+  svg{display:block; width:100%; height:auto; max-width:430px; margin:0 auto}
+  .filo{cursor:pointer}
+  .filo.bloq{cursor:not-allowed}
+  table{width:100%; border-collapse:collapse; font-size:.86rem}
+  th,td{padding:5px 7px; border-bottom:1px solid var(--borde); text-align:left}
+  th{font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave); font-weight:600}
+  td.mono,th.mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+  .chip{display:inline-block; padding:1px 7px; border-radius:20px; font-size:.75rem;
+        font-weight:600; color:#fff; white-space:nowrap}
+  .chip.p{background:var(--pensando)} .chip.h{background:var(--hambriento)} .chip.c{background:var(--comiendo)}
+  pre{background:var(--codigo); border:1px solid var(--borde); border-radius:8px; padding:12px;
+      overflow-x:auto; font-size:.78rem; line-height:1.5; margin:0;
+      font-family:ui-monospace,Menlo,Consolas,monospace}
+  pre b{color:var(--acento)}
+  #alerta{display:none; border-radius:9px; padding:13px 15px; margin:0 0 16px; font-size:.92rem}
+  #alerta.ver{display:block}
+  #alerta.mal{background:var(--malbg); border:1px solid var(--mal); color:var(--mal)}
+  #alerta.bien{background:var(--bienbg); border:1px solid var(--bien); color:var(--bien)}
+  #bitacora{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.78rem;
+            max-height:230px; overflow-y:auto; background:var(--panel2);
+            border:1px solid var(--borde); border-radius:8px; padding:10px}
+  #bitacora div{padding:1px 0; border-bottom:1px solid var(--borde)}
+  #bitacora div:last-child{border-bottom:0; color:var(--acento); font-weight:600}
+  .met{display:flex; gap:20px; flex-wrap:wrap; margin-top:12px}
+  .met div{font-size:.8rem; color:var(--suave)}
+  .met b{display:block; font-size:1.35rem; color:var(--texto); font-weight:700}
+  .desc{font-size:.88rem; color:var(--suave); margin:12px 0 0}
+  .leyenda{display:flex; gap:14px; flex-wrap:wrap; font-size:.78rem; color:var(--suave); margin-top:10px;
+           justify-content:center}
+  .ref{font-size:.82rem; color:var(--suave); margin-top:26px; font-style:italic}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Los filósofos comelones</h1>
+<p class="sub">Cinco filósofos, cinco tenedores y cuatro intentos de resolverlo &mdash; Tanenbaum, cap.&nbsp;2.5.1, págs. 163&ndash;166</p>
+
+<div class="nota">
+  <strong>Cómo se usa:</strong> elegí un esquema, y después <strong>hacé clic en un filósofo</strong> para que
+  ejecute su próximo paso. Vos sos el planificador: el orden en que los vas tocando decide qué pasa.
+  Los filósofos con 🔒 están bloqueados y no se pueden tocar.
+  Para ver el interbloqueo del libro, probá <strong>«Forzar el interbloqueo»</strong>.
+</div>
+
+<div id="alerta"></div>
+
+<h2>1. Esquema</h2>
+<div class="caja">
+  <div class="fila" id="modos"></div>
+  <p class="desc" id="descModo"></p>
+</div>
+
+<h2>2. La mesa</h2>
+<div class="grid">
+  <div class="caja">
+    <svg id="mesa" viewBox="0 0 400 400" role="img" aria-label="Mesa de los filósofos"></svg>
+    <div class="leyenda">
+      <span>⬤ <span style="color:var(--pensando)">pensando</span></span>
+      <span>⬤ <span style="color:var(--hambriento)">hambriento</span></span>
+      <span>⬤ <span style="color:var(--comiendo)">comiendo</span></span>
+      <span>🔒 bloqueado</span>
+    </div>
+    <div class="met">
+      <div>Pasos<b id="mPasos">0</b></div>
+      <div>Comiendo ahora<b id="mAhora">0</b></div>
+      <div>Máximo simultáneo<b id="mMax">0</b></div>
+    </div>
+  </div>
+
+  <div class="caja">
+    <table id="tabla"></table>
+    <div class="fila" style="margin-top:14px">
+      <button id="bAzar">🎲 Paso al azar</button>
+      <button id="bTrabar">💥 Forzar el interbloqueo</button>
+      <button id="bReset">↺ Reiniciar</button>
+    </div>
+    <div style="margin-top:14px" id="internos"></div>
+  </div>
+</div>
+
+<h2>3. El código de este esquema</h2>
+<pre id="codigo"></pre>
+
+<h2>4. Bitácora</h2>
+<div id="bitacora"></div>
+
+<p class="ref">Los cuatro esquemas se verificaron explorando exhaustivamente su espacio de estados
+(<code>_trabajo/verificar_motor_filosofos.js</code>): el intento 1 tiene exactamente 1 estado de
+interbloqueo, y los otros tres tienen 0. El esquema de Dijkstra alcanza 2 filósofos comiendo a la vez,
+que es el máximo posible con 5 tenedores.</p>
+
+</div>
+
+<script>
+// ===== Motor de los filosofos comelones =====
+// Cuatro esquemas:
+//   'izq'      intento 1 del libro: todos toman el IZQUIERDO primero -> interbloqueo
+//   'asim'     el filosofo N-1 invierte el orden ("el zurdo") -> sin interbloqueo
+//   'mutex'    todo el acto de comer protegido por un semaforo binario -> correcto, sin paralelismo
+//   'dijkstra' figura 2-46: arreglo estado[] + un semaforo por filosofo -> correcto y con paralelismo
+
+const PENSANDO = 'PENSANDO', HAMBRIENTO = 'HAMBRIENTO', COMIENDO = 'COMIENDO';
+
+function crear(modo, N) {
+  N = N || 5;
+  const orden = [];
+  for (let i = 0; i < N; i++) {
+    const izq = i, der = (i + 1) % N;
+    orden.push(modo === 'asim' && i === N - 1 ? [der, izq] : [izq, der]);
+  }
+  return {
+    modo, N, orden,
+    fase: new Array(N).fill(0),
+    estado: new Array(N).fill(PENSANDO),
+    tenedor: new Array(N).fill(null),   // tenedor[t] = filosofo que lo tiene, o null
+    mutex: 1,
+    s: new Array(N).fill(0),
+    log: [],
+    pasos: 0,
+  };
+}
+
+const izqDe = (st, i) => (i + st.N - 1) % st.N;   // vecino izquierdo
+const derDe = (st, i) => (i + 1) % st.N;          // vecino derecho
+
+// probar(i) de la figura 2-46
+function probar(st, i) {
+  if (st.estado[i] === HAMBRIENTO &&
+      st.estado[izqDe(st, i)] !== COMIENDO &&
+      st.estado[derDe(st, i)] !== COMIENDO) {
+    st.estado[i] = COMIENDO;
+    st.s[i] = 1;                                   // up(&s[i])
+    return true;
+  }
+  return false;
+}
+
+const FASES = { izq: 4, asim: 4, mutex: 5, dijkstra: 4 };
+
+// Puede el filosofo i ejecutar su proximo paso?
+function puede(st, i) {
+  const f = st.fase[i];
+  if (st.modo === 'izq' || st.modo === 'asim') {
+    if (f === 0) return true;                                   // tener hambre
+    if (f === 1) return st.tenedor[st.orden[i][0]] === null;     // tomar el primero
+    if (f === 2) return st.tenedor[st.orden[i][1]] === null;     // tomar el segundo
+    return true;                                                 // terminar de comer
+  }
+  if (st.modo === 'mutex') {
+    if (f === 0) return true;                                   // tener hambre
+    if (f === 1) return st.mutex === 1;                          // down(mutex)
+    if (f === 2 || f === 3) return true;                         // los tenedores estan garantizados
+    return true;                                                 // terminar: suelta todo y up(mutex)
+  }
+  // dijkstra
+  if (f === 0) return true;                                      // tener hambre
+  if (f === 1) return st.mutex === 1;                             // tomar_tenedores (entra al mutex)
+  if (f === 2) return st.s[i] === 1;                              // down(&s[i])
+  return st.mutex === 1;                                          // poner_tenedores (entra al mutex)
+}
+
+// Ejecuta un paso del filosofo i. Devuelve el texto del evento, o null si esta bloqueado.
+function avanzar(st, i) {
+  if (!puede(st, i)) return null;
+  const f = st.fase[i], N = st.N;
+  let ev = '';
+
+  if (st.modo === 'izq' || st.modo === 'asim') {
+    if (f === 0) { st.estado[i] = HAMBRIENTO; st.fase[i] = 1; ev = 'F' + i + ' tiene hambre'; }
+    else if (f === 1) { const t = st.orden[i][0]; st.tenedor[t] = i; st.fase[i] = 2;
+      ev = 'F' + i + ' toma el tenedor ' + t + (t === i ? ' (izquierdo)' : ' (derecho)'); }
+    else if (f === 2) { const t = st.orden[i][1]; st.tenedor[t] = i; st.fase[i] = 3;
+      st.estado[i] = COMIENDO;
+      ev = 'F' + i + ' toma el tenedor ' + t + ' y EMPIEZA A COMER'; }
+    else { st.tenedor[st.orden[i][0]] = null; st.tenedor[st.orden[i][1]] = null;
+      st.estado[i] = PENSANDO; st.fase[i] = 0;
+      ev = 'F' + i + ' deja los tenedores ' + st.orden[i][0] + ' y ' + st.orden[i][1] + ' y piensa'; }
+  }
+  else if (st.modo === 'mutex') {
+    if (f === 0) { st.estado[i] = HAMBRIENTO; st.fase[i] = 1; ev = 'F' + i + ' tiene hambre'; }
+    else if (f === 1) { st.mutex = 0; st.fase[i] = 2; ev = 'F' + i + ' hace down(mutex): la mesa queda para el solo'; }
+    else if (f === 2) { st.tenedor[i] = i; st.fase[i] = 3; ev = 'F' + i + ' toma el tenedor ' + i; }
+    else if (f === 3) { st.tenedor[(i + 1) % N] = i; st.fase[i] = 4; st.estado[i] = COMIENDO;
+      ev = 'F' + i + ' toma el tenedor ' + ((i + 1) % N) + ' y EMPIEZA A COMER'; }
+    else { st.tenedor[i] = null; st.tenedor[(i + 1) % N] = null; st.estado[i] = PENSANDO;
+      st.mutex = 1; st.fase[i] = 0; ev = 'F' + i + ' deja los tenedores y hace up(mutex)'; }
+  }
+  else { // dijkstra
+    if (f === 0) { st.fase[i] = 1; ev = 'F' + i + ' tiene hambre'; }
+    else if (f === 1) {
+      st.estado[i] = HAMBRIENTO;
+      const ok = probar(st, i);
+      st.fase[i] = 2;
+      ev = 'F' + i + ' tomar_tenedores: estado=HAMBRIENTO, probar(' + i + ') -> ' +
+           (ok ? 'puede, up(s[' + i + '])' : 'un vecino come, NO puede');
+    }
+    else if (f === 2) {
+      st.s[i] = 0;
+      st.tenedor[i] = i; st.tenedor[(i + 1) % N] = i;
+      st.fase[i] = 3;
+      ev = 'F' + i + ' pasa down(s[' + i + ']) y EMPIEZA A COMER (tenedores ' + i + ' y ' + ((i + 1) % N) + ')';
+    }
+    else {
+      st.estado[i] = PENSANDO;
+      st.tenedor[i] = null; st.tenedor[(i + 1) % N] = null;
+      const a = probar(st, izqDe(st, i)), b = probar(st, derDe(st, i));
+      st.fase[i] = 0;
+      ev = 'F' + i + ' poner_tenedores: estado=PENSANDO, probar(' + izqDe(st, i) + ')' +
+           (a ? ' DESPIERTA' : ' nada') + ', probar(' + derDe(st, i) + ')' + (b ? ' DESPIERTA' : ' nada');
+    }
+  }
+  st.log.push(ev); st.pasos++;
+  return ev;
+}
+
+const comiendo = st => st.fase.map((f, i) => ({ f, i }))
+  .filter(x => x.f === (st.modo === 'mutex' ? 4 : 3)).map(x => x.i);
+
+const bloqueado = st => {
+  for (let i = 0; i < st.N; i++) if (puede(st, i)) return false;
+  return true;
+};
+
+if (typeof module !== 'undefined') module.exports =
+  { crear, puede, avanzar, comiendo, bloqueado, probar, izqDe, derDe, PENSANDO, HAMBRIENTO, COMIENDO, FASES };
+
+// ===================== INTERFAZ =====================
+
+const MODOS = {
+  izq: {
+    nom: '1. Todos el izquierdo',
+    desc: 'La solución obvia de la figura 2-45, y está mal. Cada filósofo toma su tenedor izquierdo y después el derecho. ' +
+          'Si los cinco toman el izquierdo a la vez, ninguno consigue el derecho: espera circular e INTERBLOQUEO. ' +
+          'Fijate que al trabarse nadie consume CPU: los cinco quedan bloqueados en un semáforo.',
+  },
+  asim: {
+    nom: '2. El filósofo zurdo',
+    desc: 'Un solo cambio: el filósofo 4 pide primero el DERECHO (tenedor 0) y después el izquierdo (tenedor 4). ' +
+          'Eso basta para romper la espera circular, porque F4 y F0 pelean por el mismo tenedor y uno de los dos ' +
+          'se queda sin nada, dejando un tenedor libre que desarma la cadena. Sin anillo no hay interbloqueo.',
+  },
+  mutex: {
+    nom: '3. Un mutex para toda la mesa',
+    desc: 'Se protege todo el acto de comer con un semáforo binario. Es correcto: no hay interbloqueo ni inanición. ' +
+          'Pero sólo puede comer UN filósofo a la vez, cuando con 5 tenedores deberían poder comer DOS. ' +
+          'Se desperdicia la mitad del paralelismo: el candado es demasiado grande.',
+  },
+  dijkstra: {
+    nom: '4. Solución de Dijkstra ★',
+    desc: 'La figura 2-46. Un arreglo estado[] con PENSANDO / HAMBRIENTO / COMIENDO, un mutex que protege sólo ' +
+          'la consulta de ese arreglo, y UN SEMÁFORO POR FILÓSOFO para bloquear al que no puede comer todavía. ' +
+          'Al terminar de comer, el filósofo hace probar() sobre sus dos vecinos: despierta a quien ahora pueda. ' +
+          'Sin interbloqueo y con el máximo paralelismo posible.',
+  },
+};
+
+const CODIGO = {
+  izq: `#define N 5
+
+void filosofo(int i) {
+    while (TRUE) {
+        pensar();
+        <b>tomar_tenedor(i);</b>            /* el IZQUIERDO */
+        <b>tomar_tenedor((i+1) % N);</b>    /* el DERECHO   */
+        comer();
+        poner_tenedor(i);
+        poner_tenedor((i+1) % N);
+    }
+}
+
+/* Los cinco piden en el MISMO orden -> anillo de espera -> interbloqueo. */`,
+
+  asim: `#define N 5
+
+void filosofo(int i) {
+    while (TRUE) {
+        pensar();
+        <b>if (i == N-1) {                  /* el ZURDO */
+            tomar_tenedor((i+1) % N);    /* primero el DERECHO */
+            tomar_tenedor(i);
+        } else {</b>
+            tomar_tenedor(i);            /* el IZQUIERDO */
+            tomar_tenedor((i+1) % N);
+        <b>}</b>
+        comer();
+        poner_tenedor(i);
+        poner_tenedor((i+1) % N);
+    }
+}
+
+/* Un solo filosofo al reves rompe la espera circular. */`,
+
+  mutex: `#define N 5
+semaforo mutex = 1;
+
+void filosofo(int i) {
+    while (TRUE) {
+        pensar();
+        <b>down(&amp;mutex);</b>                  /* toda la mesa para mi */
+        tomar_tenedor(i);
+        tomar_tenedor((i+1) % N);
+        comer();
+        poner_tenedor(i);
+        poner_tenedor((i+1) % N);
+        <b>up(&amp;mutex);</b>
+    }
+}
+
+/* Correcto, pero come UNO a la vez. Deberian poder comer DOS. */`,
+
+  dijkstra: `#define N          5
+#define IZQUIERDO  (i+N-1)%N
+#define DERECHO    (i+1)%N
+#define PENSANDO   0
+#define HAMBRIENTO 1
+#define COMIENDO   2
+
+int estado[N];
+semaforo mutex = 1;        /* protege el arreglo estado[] */
+<b>semaforo s[N];</b>             /* UN SEMAFORO POR FILOSOFO  */
+
+void filosofo(int i) {
+    while (TRUE) {
+        pensar();
+        tomar_tenedores(i);    /* adquiere dos tenedores o se bloquea */
+        comer();
+        poner_tenedores(i);
+    }
+}
+
+void tomar_tenedores(int i) {
+    down(&amp;mutex);
+    estado[i] = HAMBRIENTO;
+    <b>probar(i);</b>                 /* trata de adquirir 2 tenedores */
+    up(&amp;mutex);
+    <b>down(&amp;s[i]);</b>               /* se bloquea si no los consiguio */
+}
+
+void poner_tenedores(int i) {
+    down(&amp;mutex);
+    estado[i] = PENSANDO;
+    <b>probar(IZQUIERDO);</b>         /* puede comer mi vecino izquierdo? */
+    <b>probar(DERECHO);</b>           /* y el derecho?                    */
+    up(&amp;mutex);
+}
+
+void probar(int i) {
+    if (estado[i] == HAMBRIENTO
+        &amp;&amp; estado[IZQUIERDO] != COMIENDO
+        &amp;&amp; estado[DERECHO]   != COMIENDO) {
+        estado[i] = COMIENDO;
+        <b>up(&amp;s[i]);</b>
+    }
+}`,
+};
+
+const FASETXT = {
+  izq:      ['pensando', 'va a tomar el 1º tenedor', 'va a tomar el 2º tenedor', 'comiendo'],
+  asim:     ['pensando', 'va a tomar el 1º tenedor', 'va a tomar el 2º tenedor', 'comiendo'],
+  mutex:    ['pensando', 'va a hacer down(mutex)', 'va a tomar el 1º tenedor', 'va a tomar el 2º tenedor', 'comiendo'],
+  dijkstra: ['pensando', 'va a llamar a tomar_tenedores()', 'va a hacer down(s[i])', 'comiendo'],
+};
+
+let modo = 'izq', st = crear(modo, 5), maxSim = 0;
+let sem = 7;
+const rnd = n => { sem = (sem * 1103515245 + 12345) & 0x7fffffff; return sem % n; };
+
+const $ = id => document.getElementById(id);
+
+function botonesModo() {
+  const cont = $('modos'); cont.innerHTML = '';
+  for (const k of Object.keys(MODOS)) {
+    const b = document.createElement('button');
+    b.textContent = MODOS[k].nom;
+    if (k === modo) b.className = 'on';
+    b.onclick = () => { modo = k; reiniciar(); };
+    cont.appendChild(b);
+  }
+  $('descModo').textContent = MODOS[modo].desc;
+  $('codigo').innerHTML = CODIGO[modo];
+  $('bTrabar').style.display = (modo === 'izq' || modo === 'asim') ? '' : 'none';
+}
+
+function reiniciar() {
+  st = crear(modo, 5); maxSim = 0;
+  botonesModo(); pintar();
+}
+
+function paso(i) {
+  if (!puede(st, i)) return;
+  avanzar(st, i);
+  const n = comiendo(st).length;
+  if (n > maxSim) maxSim = n;
+  pintar();
+}
+
+function pasoAzar() {
+  const libres = [];
+  for (let i = 0; i < st.N; i++) if (puede(st, i)) libres.push(i);
+  if (!libres.length) return;
+  paso(libres[rnd(libres.length)]);
+}
+
+function forzar() {
+  st = crear(modo, 5); maxSim = 0;
+  for (let i = 0; i < st.N; i++) avanzar(st, i);   // los cinco tienen hambre
+  for (let i = 0; i < st.N; i++) avanzar(st, i);   // los cinco toman su primer tenedor
+  pintar();
+}
+
+const R = 128, CX = 200, CY = 200;
+const ang = k => (-90 + k * (360 / st.N)) * Math.PI / 180;
+const posFilo = i => ({ x: CX + R * Math.cos(ang(i)), y: CY + R * Math.sin(ang(i)) });
+const posTen  = t => {                                  // el tenedor t va entre F(t-1) y F(t)
+  const a = (-90 + (t - 0.5) * (360 / st.N)) * Math.PI / 180;
+  return { x: CX + (R - 52) * Math.cos(a), y: CY + (R - 52) * Math.sin(a) };
+};
+
+function pintar() {
+  const com = comiendo(st);
+  const trabado = bloqueado(st);
+
+  // ----- mesa -----
+  let g = '<circle cx="200" cy="200" r="78" fill="var(--panel2)" stroke="var(--borde)"/>';
+  g += '<text x="200" y="196" text-anchor="middle" font-size="12" fill="var(--suave)">mesa</text>';
+  g += '<text x="200" y="212" text-anchor="middle" font-size="12" fill="var(--suave)">' +
+       com.length + ' comiendo</text>';
+
+  // tenedores (y la linea hacia quien los tiene)
+  for (let t = 0; t < st.N; t++) {
+    const p = posTen(t), duenio = st.tenedor[t];
+    if (duenio !== null) {
+      const q = posFilo(duenio);
+      g += '<line x1="' + p.x.toFixed(1) + '" y1="' + p.y.toFixed(1) + '" x2="' + q.x.toFixed(1) +
+           '" y2="' + q.y.toFixed(1) + '" stroke="var(--comiendo)" stroke-width="2.5" opacity=".55"/>';
+    }
+    g += '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="15" fill="' +
+         (duenio !== null ? 'var(--comiendo)' : 'var(--panel)') +
+         '" stroke="var(--tened)" stroke-width="1.5"/>';
+    g += '<text x="' + p.x.toFixed(1) + '" y="' + (p.y + 4).toFixed(1) +
+         '" text-anchor="middle" font-size="11" font-weight="700" fill="' +
+         (duenio !== null ? '#fff' : 'var(--tened)') + '">' + t + '</text>';
+  }
+
+  // filosofos
+  for (let i = 0; i < st.N; i++) {
+    const p = posFilo(i), e = st.estado[i], ok = puede(st, i);
+    const col = e === COMIENDO ? 'var(--comiendo)' : e === HAMBRIENTO ? 'var(--hambriento)' : 'var(--pensando)';
+    g += '<g class="filo' + (ok ? '' : ' bloq') + '" data-i="' + i + '" opacity="' + (ok ? '1' : '.5') + '">';
+    g += '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="30" fill="' + col +
+         '" stroke="' + (ok ? 'var(--acento)' : 'var(--borde)') + '" stroke-width="' + (ok ? '3' : '1.5') + '"/>';
+    g += '<text x="' + p.x.toFixed(1) + '" y="' + (p.y + 1).toFixed(1) +
+         '" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">F' + i + '</text>';
+    g += '<text x="' + p.x.toFixed(1) + '" y="' + (p.y + 15).toFixed(1) +
+         '" text-anchor="middle" font-size="11" fill="#fff">' +
+         (ok ? '▸' : '🔒') + '</text>';
+    g += '</g>';
+  }
+  $('mesa').innerHTML = g;
+  Array.prototype.forEach.call(document.querySelectorAll('.filo'), el => {
+    el.onclick = () => paso(+el.dataset.i);
+  });
+
+  // ----- tabla -----
+  let h = '<tr><th>Filósofo</th><th>estado[i]</th><th>Próximo paso</th><th class="mono">tenedores</th></tr>';
+  for (let i = 0; i < st.N; i++) {
+    const e = st.estado[i];
+    const cl = e === COMIENDO ? 'c' : e === HAMBRIENTO ? 'h' : 'p';
+    const mios = [];
+    for (let t = 0; t < st.N; t++) if (st.tenedor[t] === i) mios.push(t);
+    h += '<tr><td><strong>F' + i + '</strong></td>' +
+         '<td><span class="chip ' + cl + '">' + e + '</span></td>' +
+         '<td style="font-size:.82rem">' + (puede(st, i) ? '' : '🔒 ') + FASETXT[modo][st.fase[i]] + '</td>' +
+         '<td class="mono">' + (mios.length ? mios.join(', ') : '—') + '</td></tr>';
+  }
+  $('tabla').innerHTML = h;
+
+  // ----- internos -----
+  let n = '<table><tr><th>Variable</th><th class="mono">valor</th></tr>';
+  if (modo === 'mutex' || modo === 'dijkstra')
+    n += '<tr><td>mutex</td><td class="mono">' + st.mutex +
+         (st.mutex === 0 ? '  (tomado)' : '  (libre)') + '</td></tr>';
+  if (modo === 'dijkstra')
+    n += '<tr><td>s[0..4]</td><td class="mono">[' + st.s.join(', ') + ']</td></tr>' +
+         '<tr><td>estado[0..4]</td><td class="mono">[' +
+         st.estado.map(e => e === COMIENDO ? 'COM' : e === HAMBRIENTO ? 'HAM' : 'PEN').join(', ') +
+         ']</td></tr>';
+  n += '<tr><td>tenedor[0..4]</td><td class="mono">[' +
+       st.tenedor.map(t => t === null ? '·' : 'F' + t).join(', ') + ']</td></tr>';
+  n += '<tr><td>orden de pedido</td><td class="mono">' +
+       st.orden.map((o, i) => 'F' + i + ':' + o[0] + '→' + o[1]).join('  ') + '</td></tr>';
+  n += '</table>';
+  $('internos').innerHTML = n;
+
+  // ----- metricas -----
+  $('mPasos').textContent = st.pasos;
+  $('mAhora').textContent = com.length;
+  $('mMax').textContent = maxSim;
+
+  // ----- alerta -----
+  const al = $('alerta');
+  if (trabado) {
+    al.className = 'ver mal';
+    al.innerHTML = '<strong>🔒 INTERBLOQUEO.</strong> Ningún filósofo puede ejecutar su próximo paso. ' +
+      'Cada uno tiene un tenedor y espera el del vecino: espera circular. ' +
+      'Y fijate que <strong>nadie consume CPU</strong>: los cinco están bloqueados, la máquina está libre. ' +
+      'No se sale de acá: hay que reiniciar.';
+  } else if (modo === 'mutex' && st.pasos > 0 && maxSim <= 1 && st.pasos > 12) {
+    al.className = 'ver bien';
+    al.innerHTML = '<strong>Correcto, pero mirá «Máximo simultáneo»: nunca pasa de 1.</strong> ' +
+      'Con 5 tenedores podrían comer 2 filósofos a la vez (F0+F2, F0+F3, F1+F3, F1+F4 o F2+F4). ' +
+      'El candado es demasiado grande y desperdicia la mitad del paralelismo.';
+  } else if (modo === 'dijkstra' && maxSim >= 2) {
+    al.className = 'ver bien';
+    al.innerHTML = '<strong>✓ Dos filósofos comiendo a la vez.</strong> Ése es el máximo posible: ' +
+      'tres filósofos necesitarían 6 tenedores y sólo hay 5. Esta solución no se traba y no desperdicia nada.';
+  } else if (modo === 'asim' && maxSim >= 2) {
+    al.className = 'ver bien';
+    al.innerHTML = '<strong>✓ Sin interbloqueo y con 2 comiendo a la vez.</strong> ' +
+      'Y lo único que cambió respecto del intento 1 es el orden en que pide UN filósofo.';
+  } else {
+    al.className = '';
+  }
+
+  // ----- bitacora -----
+  const b = $('bitacora');
+  b.innerHTML = st.log.length
+    ? st.log.map((l, k) => '<div>' + (k + 1) + '. ' + l + '</div>').join('')
+    : '<div style="color:var(--suave)">Hacé clic en un filósofo para empezar.</div>';
+  b.scrollTop = b.scrollHeight;
+}
+
+$('bAzar').onclick = pasoAzar;
+$('bTrabar').onclick = forzar;
+$('bReset').onclick = reiniciar;
+document.addEventListener('keydown', e => {
+  if (e.key >= '0' && e.key <= '4') paso(+e.key);
+  if (e.key === ' ') { e.preventDefault(); pasoAzar(); }
+});
+
+reiniciar();
+</script>
+</body>
+</html>

@@ -1,7 +1,1419 @@
 <html><body>
-
 <h1>Unidad 1 — Introducción, hardware y estructura de los SO</h1>
-<p class="sub">Sistemas Operativos — UTN FRM — Repaso de la clase completa, 9 temas</p>
+<p class="sub">Sistemas Operativos — UTN FRM — Repaso de la clase completa en el chat: 9 temas, correcciones y cierre</p>
+<div class="clave"><b>Cómo leer este repaso.</b> Es la clase tal como se dio, tema por tema, con los mismos
+diagramas y las re-explicaciones que pediste. Al final de cada tema están las <b>preguntas de control</b> y su
+<b>corrección</b>, donde quedaron marcados los errores que conviene no repetir. La referencia al Tanenbaum está al
+final de cada tema. El resumen de todo está en el <b>Cierre de la Unidad 1</b>, en las últimas páginas.</div>
+
+<h2>Mapa de la unidad</h2>
+<p>Antes de arrancar, mirá cómo se conectan los temas, porque no es una lista suelta: es una cadena causal.</p>
+<pre>          ¿QUÉ ES UN SO?  (tema 1)
+         máquina extendida + administrador de recursos
+                    │
+                    │ ¿sobre qué hardware?
+                    ▼
+          REPASO DE HARDWARE  (tema 2)
+          CPU · modo kernel/usuario · jerarquía de memoria
+                    │
+        ┌───────────┴───────────┐
+        ▼                       ▼
+   E/S: 3 formas (3)      ARRANQUE (4)
+   programada             BIOS → sector booteo
+   interrupciones         → cargador → SO
+   DMA                          │
+        │                       │
+        └───────────┬───────────┘
+                    ▼
+        LLAMADAS AL SISTEMA  (tema 5)
+        la puerta usuario → kernel (TRAP)
+                    │
+                    │ ¿cómo se llegó hasta acá?
+                    ▼
+            HISTORIA (6) ──► TIPOS DE SO (7)
+                    │
+                    ▼
+            ESTRUCTURAS (8)
+    monolítico · capas · microkernel · cliente-servidor · VM</pre>
+<p><b>La idea que atraviesa todo:</b> el SO existe para esconder un hardware incómodo y para repartirlo entre varios que lo quieren al mismo tiempo. Temas 2 a 4 son <i>el hardware que hay que esconder</i>. Tema 5 es <i>la puerta por donde se pide</i>. Temas 6 a 8 son <i>cómo se fue organizando por dentro</i>.</p>
+<p>Son 8 temas. Te los doy de a uno.</p>
+<hr/>
+<h2>Tema 1 — ¿Qué es un sistema operativo?</h2>
+<h4>La intuición</h4>
+<p>Pensá en un consorcio de un edificio.</p>
+<p>El encargado hace <b>dos cosas que no tienen nada que ver entre sí</b>:</p>
+<ul><li>Te <b>simplifica la vida</b>: vos no sabés dónde está la bomba de agua ni cómo se purga la caldera. Abrís la canilla y sale agua. Él te vende una abstracción cómoda.</li><li>Te <b>reparte lo escaso</b>: hay una sola cochera para visitas y ocho departamentos. Alguien tiene que decidir turnos.</li></ul>
+<p>El sistema operativo es eso. Y Tanenbaum es muy explícito en que son <b>dos funciones básicas que no están relacionadas</b> — por eso cuesta definirlo.</p>
+<h4>El concepto formal</h4>
+<p><b>Función 1 — El SO como máquina extendida.</b></p>
+<p>La arquitectura a nivel de lenguaje máquina es <i>primitiva y compleja de programar</i>. La <b>abstracción</b> es la clave para lidiar con esa complejidad. La abstracción que todo el mundo entiende es el <b>archivo</b>.</p>
+<p>Mirá la diferencia concreta:</p>
+<pre>LEER UN ARCHIVO                 LEER UN ARCHIVO
+SIN sistema operativo           CON sistema operativo
+─────────────────────           ──────────────────────
+1. encender motor del disco
+2. esperar velocidad
+3. mover brazo al cilindro      ┌──────────────────────┐
+4. esperar que pase el sector   │ read(fd, buf, nbytes)│
+5. leer los bits                └──────────────────────┘
+6. verificar código de error
+7. apagar el motor</pre>
+<div class="clave">"El trabajo del sistema operativo es <b>crear buenas abstracciones</b> para después implementar y administrar los objetos abstractos entonces creados."</div>
+<p><b>Función 2 — El SO como administrador de recursos.</b></p>
+<p>Proporciona una <b>asignación ordenada y controlada</b> de procesadores, memorias y dispositivos de E/S entre los programas que compiten por ellos. Y eso lo hace <b>multiplexando</b> de dos formas:</p>
+<table><tr><th></th><th>Multiplexaje en el <b>TIEMPO</b></th><th>Multiplexaje en el <b>ESPACIO</b></th></tr><tr><td>Idea</td><td>Toman <b>turnos</b></td><td>Cada uno recibe <b>una parte</b></td></tr><tr><td>Esquema</td><td><code>A──B──A──C──A──B──►</code></td><td><code>┌─A─┬──B──┬─C─┐</code></td></tr><tr><td>Recursos</td><td>CPU, impresora</td><td>Memoria principal, disco</td></tr><tr><td>Problema que genera</td><td>¿Quién va primero? → <b>planificación</b> (U2)</td><td>¿Y si uno pisa al otro? → <b>protección</b> (U3)</td></tr></table>
+<p>Fijate que esa última fila es el programa entero de la materia. Las unidades que siguen son, básicamente, resolver esas dos preguntas.</p>
+<h4>Ejemplo concreto</h4>
+<p>Abrís el navegador y Spotify al mismo tiempo en una máquina con 1 CPU:</p>
+<ul><li><b>Tiempo:</b> la CPU va alternando entre los dos, decenas de veces por segundo. Vos percibís que suenan y navegás "a la vez", pero nunca están los dos ejecutando en el mismo instante.</li><li><b>Espacio:</b> la RAM está partida. El navegador ocupa su pedazo, Spotify el suyo, y ninguno puede leer el del otro.</li></ul>
+<h4>Referencia</h4>
+<p>(Tanenbaum, cap. 1.1, págs. impresas <b>3 a 7</b> → PDF <b>33 a 37</b>). También en <code>fuentes/resumen_catedra_u01.pdf</code>, sección 1.1.</p>
+<hr/>
+<h3>Preguntas de control</h3>
+<p><b>1.</b> Un disco duro, ¿se multiplexa en el tiempo o en el espacio? ¿Y por qué podría discutirse que es en los dos?</p>
+<p><b>2.</b> Te digo: <i>"el sistema operativo es el programa que te deja usar la computadora más fácil"</i>. Según Tanenbaum, esa definición está <b>incompleta</b>. ¿Qué le falta?</p>
+<p>Respondeme y seguimos con el tema 2.</p>
+<h3>Corrección</h3>
+<p><b>Pregunta 1 — Bien la primera parte.</b> El disco se multiplexa <b>en el espacio</b>: cada usuario recibe <i>una parte</i> (sus bloques), no un turno.</p>
+<p>Tu justificación del "en los dos" apunta a algo real, pero la razón precisa es otra. Mirá:</p>
+<pre>EL DISCO SON DOS RECURSOS DISTINTOS
+
+  Superficie magnética  →  hay MUCHA  →  se reparte  →  ESPACIO
+  (los bloques)                            en partes
+
+  El brazo / cabezal    →  hay UNO    →  se turna    →  TIEMPO
+
+  ┌─────────────────────────────┐
+  │ bloques de Ana │ de Juan │..│   ← espacio: cada uno su pedazo
+  └─────────────────────────────┘
+           ▲
+           │ un solo brazo         ← tiempo: Ana, después Juan,
+       ═══════                        después Ana...</pre>
+<p>Vos pensaste "lo del espacio depende de lo del tiempo" — y es cierto, pero el motivo de fondo es que <b>hay dos recursos físicos adentro del mismo aparato</b>, y cada uno se multiplexa distinto. Esa diferencia la vas a usar en serio en la Unidad 5, cuando veas los algoritmos de planificación de disco (FCFS, SSTF, SCAN): ahí lo único que se discute es cómo repartir el brazo <b>en el tiempo</b>.</p>
+<p><b>Pregunta 2 — Correcta.</b> Le falta administrador de recursos, y lo dijiste. Un solo retoque de vocabulario para el examen: la frase del libro es <i>"proporcionar una <b>asignación ordenada y controlada</b> de los procesadores, memorias y dispositivos de E/S entre los programas que compiten por ellos"</i>. Las palabras <i>ordenada y controlada</i> valen puntos.</p>
+<p>Vamos al tema 2.</p>
+<hr/>
+<hr/>
+<h2>Tema 2 — Repaso del hardware</h2>
+<h4>La intuición</h4>
+<p>Para entender al SO hay que ver primero con qué está peleando. Tres cosas: una CPU que ejecuta una instrucción por vez, una memoria que siempre es demasiado lenta o demasiado chica, y un montón de dispositivos lentísimos.</p>
+<h4>2.1 La CPU y sus registros</h4>
+<p>El ciclo básico de toda CPU, textual del libro: <b>obtener</b> la instrucción de memoria, <b>decodificarla</b> para determinar su tipo y operandos, <b>ejecutarla</b>, y volver a empezar.</p>
+<p>Tres registros especiales que te van a pedir con nombre y apellido:</p>
+<table><tr><th>Registro</th><th>Qué contiene</th><th>Por qué le importa al SO</th></tr><tr><td><b>Contador de programa</b> (PC)</td><td>Dirección de la <b>siguiente</b> instrucción a obtener</td><td>Para suspender y reanudar un proceso</td></tr><tr><td><b>Apuntador de pila</b> (SP)</td><td>Tope de la pila actual: valores de los procedimientos llamados y no retornados</td><td>Cada proceso tiene su propia pila</td></tr><tr><td><b>PSW</b> (palabra de estado del programa)</td><td>Bits de código de condición <b>y el bit de modo</b></td><td>Acá vive la protección</td></tr></table>
+<div class="clave">El sistema operativo <b>debe estar al tanto de todos los registros</b>, porque cuando cambia de proceso tiene que guardarlos y restaurarlos todos. Eso se llama cambio de contexto y lo vemos en la Unidad 2.</div>
+<h4>2.2 El tema que SÍ o SÍ te toman: modo kernel y modo usuario</h4>
+<p>Un bit del PSW decide en qué modo está la CPU.</p>
+<pre>┌─────────────────────────────────────────────────┐
+│  MODO USUARIO                                   │
+│  programas comunes                              │
+│  • solo un SUBCONJUNTO de instrucciones         │
+│  • solo un SUBCONJUNTO del hardware             │
+│  • NO puede: apagar interrupciones, tocar E/S,  │
+│    acceder a memoria ajena                      │
+└────────────────────┬────────────────────────────┘
+                     │
+                   TRAP        ← única puerta legal
+                     │
+                     ▼
+┌─────────────────────────────────────────────────┐
+│  MODO KERNEL                                    │
+│  el sistema operativo                           │
+│  • CUALQUIER instrucción del repertorio         │
+│  • TODO el hardware                             │
+└─────────────────────────────────────────────────┘</pre>
+<p><b>Por qué esto es el corazón de todo:</b> sin estos dos modos no habría protección, no habría multiprogramación segura, y cualquier programa podría formatearte el disco. Toda la materia se apoya acá.</p>
+<p>La frase para el examen: <i>"Para obtener servicios del SO, un programa de usuario debe lanzar una <b>llamada al sistema</b>, que se <b>atrapa</b> en el kernel. La instrucción <b>TRAP</b> cambia del modo usuario al modo kernel e inicia el sistema operativo."</i></p>
+<h4>2.3 La jerarquía de memoria</h4>
+<p>La regla: <b>más rápido ⇒ más caro ⇒ más chico</b>.</p>
+<pre>        ▲ más rápido, más caro, menos capacidad
+        │
+  ┌─────────────┐   Registros      ~igual que la CPU      &lt; 1 KB
+  │   ┌─────────┴─┐ Caché L1/L2    1 a 2 ciclos           KB a MB
+  │   │  ┌────────┴─┐ RAM          decenas de ns          GB
+  │   │  │  ┌───────┴──┐ Disco     milisegundos           TB
+  │   │  │  │  ┌───────┴──┐ Cinta  segundos               enorme
+        │
+        ▼ más lento, más barato, más capacidad
+           ─────────────────────────────────
+           volátiles ↑          no volátiles ↓</pre>
+<p><b>Cómo funciona la caché:</b> la memoria principal se divide en <b>líneas de caché</b>. Las líneas más usadas se mantienen en una caché rápida dentro o muy cerca de la CPU. Cuando el programa pide una palabra, el hardware revisa si la línea está ahí:</p>
+<ul><li><b>Acierto de caché</b> → se resuelve ahí, <b>no se envía petición por el bus</b> a la memoria principal.</li><li><b>Fallo</b> → hay que ir a la RAM y pagar el precio completo.</li></ul>
+<p>L1 está siempre dentro de la CPU y se accede <b>sin retraso</b>; L2 tiene varios MB y cuesta <b>uno o dos ciclos de reloj</b>.</p>
+<h4>Ejemplo resuelto — ¿cuánto sirve realmente la caché?</h4>
+<p>Caché L1 = <b>1 ns</b> · RAM = <b>10 ns</b> · aciertos = <b>95 %</b></p>
+<pre>Paso 1   95% de las veces:  está en caché       →  1 ns
+Paso 2    5% de las veces:  fallo               →  1 ns (mirar) + 10 ns (RAM) = 11 ns
+Paso 3   promedio ponderado:
+         Tm = 0,95 × 1  +  0,05 × 11
+            = 0,95      +  0,55
+            = 1,50 ns
+Paso 4   sin caché sería 10 ns  →  10 / 1,50 = 6,67 veces más rápido</pre>
+<p>Lo fuerte: una caché <b>ínfima</b> comparada con la RAM te da casi 7× de mejora. Eso funciona por la <b>localidad de referencia</b>, y es exactamente la misma idea que vas a reencontrar en la Unidad 3 con la memoria virtual (la RAM como caché del disco) y en la Unidad 4 con la caché de bloques del sistema de archivos. Es el mismo truco tres veces.</p>
+<h4>2.4 El resto, más rápido</h4>
+<ul><li><b>Memoria no volátil:</b> ROM (de fábrica, no se modifica) · EEPROM y flash (sí se reescriben) · <b>CMOS</b> (volátil, con batería: guarda fecha, hora y config del BIOS).</li><li><b>Disco:</b> platos que giran a 5400, 7200 o 10800 rpm. <b>Pista</b> = región anular que lee una cabeza. <b>Cilindro</b> = todas las pistas para una misma posición del brazo. <i>(Guardá estos dos términos: en U5 hacés cuentas con ellos.)</i></li><li><b>MMU</b> (Memory Management Unit): la parte de la CPU que traduce la dirección que genera el programa en la dirección física real de la RAM. Es el hardware de la memoria virtual (U3).</li><li><b>Dispositivos de E/S:</b> siempre son <b>dos partes</b>, el dispositivo + su <b>controlador</b> (chip). El software que le habla al controlador es el <b>driver</b>, y tiene que correr en modo kernel.</li><li><b>Buses:</b> ISA (viejo) → PCI · USB para dispositivos lentos (teclado, mouse) · SCSI para dispositivos veloces.</li></ul>
+<h4>Referencia</h4>
+<p>(Tanenbaum, cap. 1.3, págs. impresas <b>19 a 33</b> → PDF <b>49 a 63</b>).</p>
+<hr/>
+<h3>Preguntas de control</h3>
+<p><b>1.</b> Un programa de usuario ejecuta una instrucción que apaga las interrupciones de la máquina. ¿Qué pasa y por qué? ¿Qué tendría que haber hecho si de verdad necesitaba ese servicio?</p>
+<p><b>2.</b> Misma máquina del ejemplo (L1 = 1 ns, RAM = 10 ns), pero el programa tiene <b>mala localidad</b> y la tasa de aciertos cae al <b>50 %</b>. Calculá el tiempo medio de acceso. ¿Vale la pena la caché todavía?</p>
+<h3>Corrección</h3>
+<p><b>Pregunta 2 — Perfecto el cálculo.</b> Tm = 0,5 × 1 + 0,5 × 11 = <b>6,00 ns</b>, y 10/6 = <b>1,67×</b>. Clavado.</p>
+<p>Y tu conclusión es la correcta: la caché <b>vale lo que vale la localidad del programa</b>. Con 95 % de aciertos da 6,67×; con 50 % da 1,67×. El hardware es el mismo — lo que cambió es el programa. Por eso la localidad de referencia es un concepto de software, no de hardware, y por eso en la Unidad 3 vas a ver programas que generan cuatro veces más fallos de página solo por recorrer una matriz por columnas en vez de por filas.</p>
+<hr/>
+<p><b>Pregunta 1 — Acá hay un error que te conviene corregir ahora</b>, porque es muy tomado.</p>
+<p>Tu segunda mitad está impecable (TRAP → modo kernel → servicio → protección). El problema está en la primera: dijiste que <i>"el sistema operativo deja de responder"</i>.</p>
+<p>Eso es lo que pasaría <b>si la instrucción llegara a ejecutarse</b>. Y es justamente lo que el hardware <b>impide</b>:</p>
+<pre>Programa de usuario ejecuta  CLI  (apagar interrupciones)
+                │
+                ▼
+   ¿bit de modo del PSW = usuario?
+                │
+               SÍ
+                ▼
+   ┌────────────────────────────────────┐
+   │ Es una INSTRUCCIÓN PRIVILEGIADA.   │
+   │ El HARDWARE la rechaza.            │
+   │ NO se ejecuta.                     │
+   └────────────┬───────────────────────┘
+                ▼
+     genera un trap / excepción
+                ▼
+     el SO toma el control y
+     normalmente MATA al proceso
+     ("instrucción ilegal")</pre>
+<p>La diferencia es clave: <b>no es que el SO se cuelgue y después reaccione. Es que la instrucción nunca llega a ejecutarse.</b> La protección no es un castigo posterior, es una barrera previa.</p>
+<p>Dos términos para el examen:</p>
+<ul><li><b>Instrucción privilegiada</b>: la que solo corre en modo kernel. Apagar interrupciones, tocar registros de E/S y cambiar la MMU son privilegiadas.</li><li>La defensa del SO es <b>preventiva</b>: el hardware verifica el bit de modo <i>antes</i> de ejecutar.</li></ul>
+<p>Pregunta de control rápida, respondeme en una línea: <b>¿quién detecta que la instrucción es privilegiada — el sistema operativo o el hardware?</b></p>
+<hr/>
+<p>Ahora el tema 3, que es el más tomado de toda la unidad. Te armo una visualización para este.</p>
+<p><b>El hardware.</b> Exacto. El SO se entera después, cuando el hardware le entrega el control por el trap. Esa es la idea de fondo: <b>la protección la impone el hardware, el sistema operativo la configura.</b> Un SO sin hardware que lo respalde no puede proteger nada.</p>
+<hr/>
+<hr/>
+<h2>Tema 3 — Las tres formas de hacer E/S</h2>
+<div class="clave">Te abrí un simulador en el navegador. Si lo cerrás:<br/>es_programada_interrupciones_dma.html — también está linkeado desde visuales/index.html</div>
+<h4>La intuición</h4>
+<p>Pusiste la pava. Son 4 minutos. Tenés tres opciones:</p>
+<ol><li><b>Quedarte mirando la pava</b> hasta que hierva → no hacés nada más.</li><li><b>Que la pava silbe</b> cuando hierve → mientras tanto hacés otra cosa, pero si silbara cada 5 segundos para avisar cómo viene, no servirías de nada.</li><li><b>Pava eléctrica que se apaga sola</b> y te avisa una vez al final → te olvidás por completo.</li></ol>
+<p>Esas son, en orden, la E/S programada, la E/S por interrupciones y el DMA.</p>
+<h4>El concepto formal</h4>
+<p><b>1. E/S programada (espera ocupada / polling)</b></p>
+<p>El programa emite la llamada al sistema, el kernel llama al driver, el driver inicia la operación y <b>entra en un ciclo cerrado sondeando continuamente al dispositivo</b> para ver si terminó.</p>
+<pre>CPU:  [sondea][sondea][sondea][sondea][sondea][sondea]  ← 100% quemada
+DISP: [═══════════ transfiriendo ═══════════════════]</pre>
+<div class="clave">Defecto: <i>"mantiene ocupada la CPU sondeando al dispositivo hasta que éste termina"</i>.</div>
+<p><b>2. E/S controlada por interrupciones</b></p>
+<p>El driver inicia el dispositivo, <b>le pide que genere una interrupción cuando termine</b>, y retorna. El SO bloquea al proceso llamador si hace falta y <b>busca otro trabajo por hacer</b>.</p>
+<pre>CPU:  [otros procesos][i][otros procesos][i][otros...][i]
+                       ↑                  ↑            ↑
+DISP: [═══byte═══][═══byte═══][═══byte═══][═══byte═══]
+      i = interrupción: la CPU se desvía un instante</pre>
+<p>La CPU se libera, pero paga <b>una interrupción por cada unidad de datos</b>.</p>
+<p><b>3. E/S con DMA (Direct Memory Access)</b></p>
+<p>Un chip especial controla el flujo de bits entre la memoria y el controlador <b>sin intervención constante de la CPU</b>. La CPU lo configura — cuántos bytes, qué direcciones de dispositivo y memoria, qué operación — y lo deja trabajar. Cuando termina, <b>genera una única interrupción</b>.</p>
+<pre>CPU:  [c][═══════ otros procesos ═══════════════][i]
+       ↑                                          ↑
+       configura el DMA                    1 sola interrupción
+DISP: [════════════ el DMA transfiere ═══════════]</pre>
+<h4>Comparación</h4>
+<table><tr><th></th><th>Programada</th><th>Interrupciones</th><th>DMA</th></tr><tr><td>¿CPU libre durante la espera?</td><td><b>No</b></td><td>Sí</td><td>Sí</td></tr><tr><td>Interrupciones</td><td>0</td><td><b>una por byte/bloque</b></td><td><b>1</b></td></tr><tr><td>Hardware extra</td><td>ninguno</td><td>controlador de interrupciones</td><td><b>chip DMA</b></td></tr><tr><td>Dónde se usa</td><td>dispositivos muy simples, arranque</td><td>teclado, mouse</td><td><b>disco, red, placa de video</b></td></tr></table>
+<h4>Ejemplo resuelto — el que te toman</h4>
+<p><b>1000 bytes</b>, el dispositivo entrega <b>un byte cada 100 µs</b>, atender una interrupción cuesta <b>5 µs</b>.</p>
+<pre>Paso 1  Duración total = 1000 × 100 µs = 100.000 µs = 100 ms
+        ⚠ IGUAL EN LOS TRES. La impone el dispositivo.
+
+Paso 2  PROGRAMADA   → CPU = 100 ms           → 100 %
+Paso 3  INTERRUPC.   → 1000 × 5 µs = 5 ms     → 5 %
+Paso 4  DMA          → 1 × 5 µs = 0,005 ms    → 0,005 %</pre>
+<p><b>La trampa clásica del examen:</b> preguntan <i>"¿cuál es más rápido?"</i>. La respuesta es <b>ninguno: los tres tardan 100 ms</b>. Lo que cambia no es la velocidad de la transferencia, sino <b>cuánta CPU queda libre para otra cosa</b>.</p>
+<p>Metele mano al simulador y probá esto: poné <b>5 µs por byte</b> y dejá los <b>5 µs por interrupción</b>. Vas a ver saltar el aviso rojo — cuando atender la interrupción cuesta lo mismo que transferir el dato, el método por interrupciones se vuelve inútil. <b>Ese es el motivo de existir del DMA.</b></p>
+<h4>Referencia</h4>
+<p>(Tanenbaum, cap. 1.3.5, págs. impresas <b>27 a 30</b> → PDF <b>57 a 60</b>, y cap. 5.2, págs. impresas <b>343 a 348</b> → PDF <b>373 a 378</b>).</p>
+<hr/>
+<h3>Preguntas de control</h3>
+<p><b>1.</b> El teclado entrega una tecla cada varios cientos de milisegundos, cuando vos escribís. El disco entrega millones de bytes por segundo. <b>¿Por qué el teclado usa interrupciones y el disco usa DMA?</b> Pensalo en términos de cuántas interrupciones por segundo generaría cada uno.</p>
+<p><b>2.</b> Verdadero o falso, justificá: <i>"Usar DMA en lugar de espera ocupada hace que el archivo se lea más rápido."</i></p>
+<h3>Corrección</h3>
+<p><b>Las dos correctas.</b> Vamos a ponerle números a la primera, porque el contraste es brutal:</p>
+<pre>TECLADO escribiendo rápido:  ~10 teclas/s
+   10 int/s × 5 µs = 50 µs de CPU por segundo  →  0,005 % de la CPU
+   Perfecto. Interrupciones.
+
+DISCO a 100 MB/s, con una interrupción por byte:
+   100.000.000 int/s × 5 µs = 500 segundos de CPU... por cada segundo
+   →  IMPOSIBLE. Harían falta 500 CPUs solo para atender interrupciones.
+   Por eso: DMA.</pre>
+<p>Y fijate el matiz que vale la pena: el disco <b>sí usa interrupciones</b>, pero <b>una por transferencia completa</b>, no una por byte. DMA e interrupciones no son rivales — el DMA <i>reduce la cantidad</i> de interrupciones a una sola.</p>
+<p><b>Respuesta 2 impecable.</b> "No más rápido, sino CPU libre para otros procesos". Esa es exactamente la frase que te da el punto.</p>
+<p>Vas 3 de 8. Seguimos.</p>
+<hr/>
+<hr/>
+<h2>Tema 4 — El arranque y el sector de booteo</h2>
+<h4>La intuición</h4>
+<p>Problema del huevo y la gallina: el sistema operativo está en el disco, pero para leer el disco hace falta... el sistema operativo. ¿Cómo arranca la máquina si nadie puede leer nada todavía?</p>
+<p>La solución es una <b>cadena de cargadores</b>, cada uno más grande y más capaz que el anterior. El primero es tan chico que entra en un chip.</p>
+<h4>El concepto formal</h4>
+<pre>┌──────────────────────────────────────────────────────┐
+│ 1. SE ENCIENDE LA MÁQUINA                            │
+│    La CPU empieza a ejecutar el BIOS (está en ROM/   │
+│    flash, en la motherboard → NO depende del disco)  │
+└──────────────────────┬───────────────────────────────┘
+                       ▼
+┌──────────────────────────────────────────────────────┐
+│ 2. EL BIOS SE AUTOEXAMINA                            │
+│    • cuánta RAM hay                                  │
+│    • teclado y dispositivos básicos responden        │
+│    • explora buses ISA y PCI, registra dispositivos  │
+│      heredados y plug and play                       │
+└──────────────────────┬───────────────────────────────┘
+                       ▼
+┌──────────────────────────────────────────────────────┐
+│ 3. ELIGE EL DISPOSITIVO DE ARRANQUE                  │
+│    consulta la lista guardada en la memoria CMOS     │
+│    (la que vos editás entrando al setup del BIOS)    │
+└──────────────────────┬───────────────────────────────┘
+                       ▼
+┌──────────────────────────────────────────────────────┐
+│ 4. LEE EL PRIMER SECTOR  ← el SECTOR DE BOOTEO       │
+│    lo carga en memoria y lo EJECUTA                  │
+└──────────────────────┬───────────────────────────────┘
+                       ▼
+┌──────────────────────────────────────────────────────┐
+│ 5. EL SECTOR DE BOOTEO busca en su tabla de          │
+│    particiones cuál está ACTIVA, y de ahí lee el     │
+│    CARGADOR SECUNDARIO                               │
+└──────────────────────┬───────────────────────────────┘
+                       ▼
+┌──────────────────────────────────────────────────────┐
+│ 6. EL CARGADOR SECUNDARIO lee el SO y lo inicia      │
+└──────────────────────┬───────────────────────────────┘
+                       ▼
+┌──────────────────────────────────────────────────────┐
+│ 7. EL SO consulta al BIOS la configuración, carga    │
+│    los drivers en el kernel, inicializa sus tablas,  │
+│    crea los procesos de segundo plano y arranca el   │
+│    login o la GUI                                    │
+└──────────────────────────────────────────────────────┘</pre>
+<p><b>La pregunta que te van a hacer:</b> <i>¿por qué hacen falta dos cargadores?</i> Porque el primero <b>tiene 446 bytes</b>. En 446 bytes no entra un cargador que entienda ext4, menús, varios sistemas operativos. Entra solo lo justo para encontrar la partición activa y leer un programa más grande.</p>
+<h4>Ejemplo resuelto — adentro de los 512 bytes</h4>
+<pre>SECTOR DE BOOTEO MAESTRO (MBR) — un sector de disco = 512 bytes
+
+byte 0                                  445  446      509 510  511
+├────────────────────────────────────────┤├──────────┤├────────┤
+│      CÓDIGO DE ARRANQUE                ││  TABLA   ││ 55 AA  │
+│      446 bytes                         ││    DE    ││ firma  │
+│      (en ensamblador, por el tamaño)   ││PARTICION.││ 2 bytes│
+└────────────────────────────────────────┘└──────────┘└────────┘
+                                           4 entradas
+                                           × 16 bytes
+                                           = 64 bytes
+
+Paso 1   Firma 55AA al final                      =   2 bytes
+Paso 2   Tabla: 4 particiones primarias × 16      =  64 bytes
+Paso 3   Lo que sobra para el código: 512−64−2    = 446 bytes
+Paso 4   Verificación: 446 + 64 + 2               = 512 ✓</pre>
+<p>Cada entrada de 16 bytes guarda: si la partición está <b>activa</b>, el <b>tipo</b> de sistema de archivos, el <b>sector de inicio</b> y la <b>cantidad de sectores</b>.</p>
+<p><b>Dato que explica cosas:</b> si la firma <code>55AA</code> no está, el BIOS considera que el disco <b>no es arrancable</b>. Por eso una sola corrupción de 2 bytes te deja la máquina sin bootear, aunque todos tus archivos estén intactos.</p>
+<h4>Referencia</h4>
+<p>(Tanenbaum, cap. 1.3.7, pág. impresa <b>33</b> → PDF <b>63</b>). El reparto interno de los 512 bytes es complemento mío, no está en el libro — está marcado así en <code>notebooklm_u01.md</code>.</p>
+<hr/>
+<h3>Preguntas de control</h3>
+<p><b>1.</b> ¿Por qué el BIOS está en ROM o flash y no en el disco duro, como todo lo demás?</p>
+<p><b>2.</b> Un disco tiene 4 particiones primarias y todas tienen un sistema operativo instalado y funcionando. <b>Ninguna</b> está marcada como activa. ¿Qué pasa al encender la máquina y en qué paso exacto de la cadena se rompe?</p>
+<p>Dale, lo vemos de nuevo desde cero y con otra analogía. El problema es que mezclé dos cosas distintas. Vamos de a una.</p>
+<hr/>
+<h3>Primero: ¿qué es una partición? (olvidate del booteo por un rato)</h3>
+<p>Imaginate que comprás un <b>galpón enorme y vacío</b>.</p>
+<p>Podés usarlo así, todo junto. O podés <b>levantar paredes adentro</b> y hacer, digamos, 4 depósitos independientes:</p>
+<pre>        GALPÓN (= el disco físico, una sola pieza de hardware)
+┌───────────────┬─────────────────┬──────────────┬────────────┐
+│   Depósito 1  │   Depósito 2    │  Depósito 3  │ Depósito 4 │
+│               │                 │              │            │
+│   Windows     │     Linux       │   tus fotos  │   vacío    │
+│   (NTFS)      │     (ext4)      │   (FAT32)    │            │
+└───────────────┴─────────────────┴──────────────┴────────────┘
+   ↑ cada uno con su propia organización interna, sin verse entre sí</pre>
+<p><b>Eso es una partición: un pedazo del disco separado del resto por una "pared".</b> Para el sistema operativo, cada partición se comporta como si fuera un disco aparte.</p>
+<p>Lo importante: <i>las paredes no existen físicamente</i>. El disco sigue siendo una tira continua de sectores numerados. Las paredes son <b>puramente información anotada en algún lado</b>: "del sector 2048 al 500000 es el depósito 1, del 500001 al 900000 es el depósito 2…".</p>
+<p><b>¿Y dónde se anota eso?</b> En la <b>primera hoja del galpón</b>. El sector 0. El MBR.</p>
+<hr/>
+<h3>Ahora sí: la historia del arranque, de corrido</h3>
+<p>Te la cuento como una sola escena, sin cortes.</p>
+<p><b>Apretás el botón de encendido.</b></p>
+<p>La CPU despierta y no sabe absolutamente nada. No sabe que existe un disco, ni qué es un archivo. Lo único que sabe hacer es empezar a ejecutar instrucciones desde una dirección fija, que está cableada de fábrica.</p>
+<p>En esa dirección hay un chip soldado a la placa: <b>el BIOS</b>. Está ahí, en la placa, no en el disco — justamente porque todavía nadie sabe leer el disco.</p>
+<p>El BIOS se despereza: cuenta la RAM, pregunta si el teclado está, revisa qué hay conectado. Después mira una notita que tiene guardada en la memoria CMOS (esa que vos editás cuando entrás al setup): <b>"el disco de arranque es este"</b>.</p>
+<p>Y acá viene lo único que el BIOS sabe hacer con un disco: <b>leer el primerísimo sector, 512 bytes, cargarlo en memoria y ejecutarlo a ciegas</b>. Nada más. No sabe qué es un archivo, no sabe qué es NTFS ni ext4. Lee 512 bytes y los ejecuta.</p>
+<pre>BIOS ──lee 512 bytes──► ┌─────────────┐
+                        │  SECTOR 0   │  ← el MBR
+                        │  del disco  │
+                        └─────────────┘</pre>
+<p><b>Esos 512 bytes son el MBR</b>, y adentro tiene dos cosas: un programita chiquito y el plano del galpón.</p>
+<pre>┌──────────────────────────────┬──────────────┬────────┐
+│   programita (446 bytes)     │  EL PLANO    │ 55 AA  │
+│                              │  (64 bytes)  │        │
+└──────────────────────────────┴──────────────┴────────┘
+            ↑                        ↑
+    "código de arranque"    "tabla de particiones":
+                             4 renglones, uno por depósito.
+                             Cada renglón dice:
+                               · dónde empieza ese depósito
+                               · cuánto mide
+                               · qué tipo es
+                               · ★ SI ES EL ACTIVO</pre>
+<p>El programita de 446 bytes se ejecuta y hace <b>una sola cosa</b>: mira el plano que tiene al lado, busca el renglón que tiene la estrellita de <b>activo</b>, y va a ese depósito.</p>
+<div class="clave"><b>¿Por qué tan poquito?</b> Porque le quedan 446 bytes. Eso es menos que un mensaje de WhatsApp largo. No le entra nada más.</div>
+<p>Llega al depósito marcado como activo — digamos el 2, donde está Linux. En el <b>primer sector de ese depósito</b> hay otro programa, <b>el cargador secundario</b> (GRUB, en Linux). Este ya no está encerrado en 446 bytes: puede ocupar lo que quiera.</p>
+<p>Y como es grande, <b>sí</b> sabe entender ext4, sí sabe buscar archivos, sí puede mostrarte un menú. Busca el archivo del kernel en la partición, lo carga en memoria, y le pasa el control.</p>
+<p><b>Recién ahí existe el sistema operativo.</b> Carga los drivers, arma sus tablas, levanta los procesos de fondo y te muestra la pantalla de login.</p>
+<hr/>
+<h3>La cadena, en una línea</h3>
+<pre>chip en la placa          sector 0 del disco      primer sector de
+(no depende del disco)    446 bytes               la partición activa      archivo en la partición
+      │                        │                         │                         │
+      ▼                        ▼                         ▼                         ▼
+   ┌──────┐   lee 512b    ┌────────┐   "¿cuál     ┌────────────┐  "buscá el   ┌──────────┐
+   │ BIOS │ ───────────►  │  MBR   │ ──es activa?─►│  CARGADOR  │ ──kernel"──► │    SO    │
+   └──────┘               │        │               │ SECUNDARIO │              └──────────┘
+   no sabe                └────────┘               └────────────┘              ya sabe todo
+   leer archivos          sabe leer                sabe leer
+                          el plano                 archivos
+
+   cada eslabón es más grande y más capaz que el anterior,
+   y cada uno existe solo para poder cargar al siguiente</pre>
+<p><b>La idea de fondo, en una frase:</b> cada cargador es demasiado chico para hacer el trabajo final, así que su único trabajo es <b>buscar a alguien más grande que él</b>.</p>
+<p>Te armo la animación de esto, que creo que es lo que te falta ver.</p>
+<p>Las dos, cortito.</p>
+<hr/>
+<h3>1. Cómo el BIOS lee el sector 0 sin saber leer archivos</h3>
+<p>Son dos niveles muy distintos:</p>
+<pre>"Dame el SECTOR 0"           "Dame el archivo /boot/vmlinuz"
+        │                                │
+        ▼                                ▼
+Es una orden al hardware.     Es una abstracción construida con
+La controladora del disco     software, arriba de miles de sectores.
+la entiende sola.             Hay que saber de directorios, tablas,
+                              i-nodos o FAT, bloques encadenados...
+UNA operación.                CIENTOS de operaciones + conocer el
+                              formato exacto de ESE sistema de archivos.</pre>
+<p>El disco, físicamente, es <b>una tira de sectores numerados: 0, 1, 2, 3…</b>. Pedir uno por número es gratis — es lo que el hardware hace nativamente.</p>
+<p>El concepto de "archivo" <b>no existe en el disco</b>. Lo inventa el sistema operativo. Son esas abstracciones del tema 1: el archivo es una ficción cómoda construida sobre sectores.</p>
+<div class="clave">Analogía: el BIOS sabe <b>abrir el libro en la página 237</b>. No sabe <b>buscar el capítulo "Interbloqueos"</b> — para eso haría falta entender el índice, y cada editorial arma el índice distinto (ext4, NTFS, FAT32…).</div>
+<p>Por eso el BIOS puede arrancar cualquier disco del mundo sin saber qué sistema de archivos tiene: nunca lee un archivo.</p>
+<hr/>
+<h3>2. Los 446 y los 64 — acá está el nudo, y es bueno que lo preguntes</h3>
+<p>Ojo, estás comparando dos cosas que no se comparan. Mirá:</p>
+<pre>┌──────────────────────────────┬──────────────┐
+│   446 bytes                  │   64 bytes   │
+│   ES UN PROGRAMA             │   SON DATOS  │
+│   instrucciones que SE       │   números    │
+│   EJECUTAN                   │   anotados   │
+└──────────────────────────────┴──────────────┘</pre>
+<p><b>Los 64 bytes no son las particiones. Son la DESCRIPCIÓN de las particiones.</b></p>
+<p>Volvamos al galpón:</p>
+<pre>EL GALPÓN                           EL PLANO
+2.000 m²                            una hoja A4
+
+┌──────┬──────┬──────┬──────┐      ┌─────────────────────┐
+│ Dep1 │ Dep2 │ Dep3 │ Dep4 │      │ Dep1: del m2 1 al 500│
+│      │      │      │      │      │ Dep2: del 501 al 900 │
+│ 500m²│ 400m²│ 600m²│ 500m²│      │ Dep3: del 901 al 1500│
+└──────┴──────┴──────┴──────┘      │ Dep4: del 1501 al    │
+                                    │       2000           │
+                                    └─────────────────────┘</pre>
+<p>La hoja <b>no tiene que medir 2.000 m²</b> para describir un galpón de 2.000 m². Alcanza con anotar dónde empieza y dónde termina cada cosa.</p>
+<p>Lo mismo en el disco. Un renglón de <b>16 bytes</b> describe una partición de <b>200 GB</b>:</p>
+<pre>UN RENGLÓN = 16 bytes:
+   1 byte  → ¿es la activa? (sí/no)
+   1 byte  → tipo (NTFS, ext4, FAT32...)
+   4 bytes → sector donde EMPIEZA     ← ej: 409.602.048
+   4 bytes → cuántos sectores MIDE    ← ej: 300.000.000
+   6 bytes → otros datos (geometría)
+  ─────────
+  16 bytes  describen 300.000.000 de sectores = ~150 GB</pre>
+<p><b>Un número grande ocupa poco.</b> El número 300.000.000 entra en 4 bytes. Para escribir "150 GB" no hacen falta 150 GB.</p>
+<p>Y ahora sí, por qué 446 es poco:</p>
+<pre>446 bytes de CÓDIGO  ≈  unas 150 instrucciones de máquina
+
+Con eso hacés:  ✓ leer la tabla de al lado
+                ✓ buscar cuál tiene el bit de activa
+                ✓ pedirle al BIOS el primer sector de esa partición
+                ✓ saltar ahí
+
+Con eso NO hacés: ✗ entender ext4
+                  ✗ dibujar un menú de arranque
+                  ✗ buscar un archivo entre carpetas
+                  ✗ descomprimir el kernel</pre>
+<p>GRUB, el cargador secundario, ocupa <b>cientos de kilobytes</b>. Es unas mil veces más grande que los 446 bytes. <i>Por eso hacen falta dos.</i></p>
+<hr/>
+<p><b>En una línea:</b> los 446 bytes son chicos porque son <b>instrucciones y tienen que hacer un trabajo</b>; los 64 bytes alcanzan de sobra porque son <b>cuatro renglones de números</b>.</p>
+<p>¿Se destrabó? Si sí, decime <b>"seguí"</b> y vamos al tema 5 (llamadas al sistema). Si querés, antes te hago una pregunta de control de esto.</p>
+<hr/>
+<p><b>1.</b> Un disco tiene una partición de <b>2 TB</b>. ¿Cuántos bytes de la tabla de particiones ocupa la descripción de esa partición? ¿Y si fuera de 50 MB?</p>
+<hr/>
+<p><b>2.</b> Te dicen: <i>"el MBR no puede arrancar un disco con ext4 porque sus 446 bytes de código no saben leer ext4"</i>.</p>
+<p>¿Verdadero o falso? Justificá.</p>
+<hr/>
+<p><b>3.</b> Ponele que alguien escribe basura encima de los <b>primeros 446 bytes</b> del disco, pero deja intactos los 64 bytes de la tabla y la firma.</p>
+<ul><li>¿Se perdieron tus archivos?</li><li>¿Arranca la máquina?</li><li>¿Qué habría que hacer para repararlo?</li></ul>
+<h3>Corrección</h3>
+<p><b>2 — Correcta.</b> Falso, y por el motivo exacto: el MBR <b>no lee ext4</b>, solo salta al primer sector de la partición. El que entiende ext4 es el cargador secundario. Buen punto.</p>
+<p><b>3 — Bien las dos primeras.</b> Archivos intactos ✓, máquina no arranca ✓. El término para la reparación es <b>reinstalar el código de arranque del MBR</b> (<code>bootrec /fixmbr</code> en Windows, <code>grub-install</code> en Linux). Como la tabla de particiones quedó sana, se repara sin tocar un solo archivo tuyo.</p>
+<hr/>
+<p><b>1 — Acá seguís con el nudo</b>, y es importante que lo destrabes, así que insisto.</p>
+<p>Me contestaste <b>2.000.000.000.000</b>, que es el tamaño <b>de la partición</b>. Pero yo te pregunté cuánto ocupa <b>la descripción</b> en la tabla.</p>
+<p>Pensalo así:</p>
+<div class="clave">Te pido que anotes en un papel: <i>"el depósito mide 2 billones de metros cuadrados"</i>.<br/><b>¿Cuánto papel gastaste?</b> Un renglón.<br/>No hacen falta 2 billones de hojas para escribir el número "2 billones".</div>
+<p>La respuesta es: <b>16 bytes</b>. Y si la partición fuera de 50 MB, también <b>16 bytes</b>. Y si fuera de 500 TB, <b>16 bytes</b>.</p>
+<pre>Partición de   50 MB  →  16 bytes de tabla
+Partición de    2 TB  →  16 bytes de tabla
+Partición de  500 TB  →  16 bytes de tabla
+
+SIEMPRE 16. El renglón tiene tamaño FIJO.</pre>
+<p>Porque el renglón no guarda los datos de la partición — guarda <b>dos números</b>: dónde empieza y cuántos sectores mide. Y un número ocupa lo mismo sea chico o grande (4 bytes), igual que <code>7</code> y <code>9.999.999</code> ocupan los dos un casillero en una planilla.</p>
+<p><b>La frase para fijarlo:</b> <i>la tabla de particiones no contiene las particiones, las describe.</i> Es un índice, no el contenido.</p>
+<p>Dato que lo cierra: por eso MBR tiene un límite famoso de <b>2 TB por partición</b>. Como el campo "cuántos sectores mide" tiene solo 4 bytes, el número más grande que entra es 2³² − 1, y multiplicado por 512 bytes por sector da ~2 TB. <b>El límite no viene del disco, viene del tamaño del casillero.</b> Para pasarlo se inventó GPT, que usa campos de 8 bytes.</p>
+<hr/>
+<p>Reformulo para confirmar, una línea:</p>
+<p><b>Un disco tiene 4 particiones: 500 GB, 1 TB, 300 GB y 200 GB. ¿Cuántos bytes ocupa la tabla de particiones completa?</b></p>
+<p>Casi. <b>Entendiste el concepto</b> — 16 bytes por partición, sin importar el tamaño. Te faltó multiplicar:</p>
+<pre>Partición 1 (500 GB)  →  16 bytes
+Partición 2 (1 TB)    →  16 bytes
+Partición 3 (300 GB)  →  16 bytes
+Partición 4 (200 GB)  →  16 bytes
+                         ─────────
+                         64 bytes  ← la tabla completa</pre>
+<p><b>4 × 16 = 64 bytes.</b> Y ahí cerrás el círculo: por eso el MBR reserva exactamente 64 bytes, y por eso <b>solo hay 4 particiones primarias</b>. No es un capricho — es que en 64 bytes entran 4 renglones de 16.</p>
+<pre>512 bytes  =  446 (código)  +  64 (4 renglones × 16)  +  2 (firma 55AA)</pre>
+<p>Ahora sí está cerrado el tema 4. Vas <b>4 de 8</b>.</p>
+<hr/>
+<h2>Tema 5 — Ensamblador e interrupciones del 8086</h2>
+<h4>La intuición</h4>
+<p>Un organismo público con muchas ventanillas.</p>
+<pre>VENTANILLA 10h → Video        ¿a qué ventanilla voy?        → INT 10h
+VENTANILLA 16h → Teclado
+VENTANILLA 17h → Impresora
+VENTANILLA 21h → DOS          ¿qué trámite hago ahí?        → AH
+                               ¿los datos del trámite?       → los otros registros</pre>
+<p>Vas a la ventanilla (<code>INT 21h</code>), decís qué trámite querés (<code>AH = 09h</code>, mostrar cadena) y entregás los papeles (<code>DS:DX</code> apunta a la cadena). La ventanilla hace el trabajo y te devuelve el resultado en otro registro.</p>
+<p><b>Eso es todo el mecanismo.</b> El resto es saber qué número de trámite es cada cosa.</p>
+<h4>Por qué aparece el ensamblador justo acá</h4>
+<p>Porque es el único lenguaje donde vos elegís <b>qué registro usar</b>. Y estos servicios se piden <i>poniendo valores en registros específicos</i>. En C no tenés forma de decir "poné 09h en AH".</p>
+<p>Además, ya lo viste en el tema 4: el código del MBR está en ensamblador <b>porque tiene 446 bytes</b>.</p>
+<h4>Los registros que vas a usar</h4>
+<pre>    ┌─────────────────┐
+AX  │   AH   │   AL   │   ← dos mitades de 8 bits, direccionables por separado
+    └─────────────────┘      AH = la de arriba (high), AL = la de abajo (low)
+BX  │   BH   │   BL   │
+CX  │   CH   │   CL   │
+DX  │   DH   │   DL   │
+    └─────────────────┘
+       16 bits total
+
+DS, ES  → registros de SEGMENTO (dónde están los datos)
+SI, DI, BP, SP → índice y punteros</pre>
+<p><b>Un par <code>DS:DX</code> significa</b>: <code>DS</code> dice en qué segmento está el dato, <code>DX</code> dice en qué posición dentro de ese segmento. Es una dirección completa partida en dos.</p>
+<h4>La regla de oro</h4>
+<div class="clave"><b><code>INT xxh</code> elige la FAMILIA. <code>AH</code> elige la FUNCIÓN dentro de esa familia. Los demás registros llevan los datos.</b></div>
+<p>Y el apunte de la cátedra avisa explícitamente de la trampa:</p>
+<div class="clave"><i>"<b>No todo va en AH</b>: AH selecciona la función; los datos pueden ir en AL, DL, DX, BX, CX, DS:DX, etc."</i></div>
+<hr/>
+<h4>INT 21h — funciones de DOS (la más importante)</h4>
+<table><tr><th>AH</th><th>Qué hace</th><th>Dónde van los datos</th></tr><tr><td><code>01h</code></td><td>Lee un carácter <b>con eco</b></td><td>retorna en <code>AL</code></td></tr><tr><td><code>02h</code></td><td>Muestra <b>un carácter</b></td><td>el carácter va en <b><code>DL</code></b></td></tr><tr><td><code>07h</code></td><td>Lee <b>sin eco</b></td><td>retorna en <code>AL</code></td></tr><tr><td><code>08h</code></td><td>Lee sin eco + controla Ctrl-Break</td><td>retorna en <code>AL</code></td></tr><tr><td><b><code>09h</code></b></td><td>Muestra <b>una cadena</b></td><td><b><code>DS:DX</code></b>, la cadena termina en <b><code>$</code></b></td></tr><tr><td><code>0Ah</code></td><td>Lee una cadena a un buffer</td><td><code>DS:DX</code> apunta al buffer</td></tr><tr><td><code>0Bh</code></td><td>¿Hay entrada disponible?</td><td><code>AL</code> = FFh sí, 00h no</td></tr><tr><td><code>2Ah</code> / <code>2Ch</code></td><td>Fecha / Hora</td><td><code>CX</code> año, <code>DH</code> mes, <code>DL</code> día / <code>CH:CL:DH</code> hora</td></tr><tr><td><code>3Ch</code>→<code>42h</code></td><td>Archivos: crear, abrir, cerrar, leer, escribir, borrar, seek</td><td><code>BX</code> handle, <code>CX</code> cantidad, <code>DS:DX</code> buffer</td></tr><tr><td><b><code>4Ch</code></b></td><td><b>Termina el proceso</b></td><td><code>AL</code> = código de retorno</td></tr></table>
+<p><b>El par que más confunden:</b> <code>02h</code> → <b>un</b> carácter, en <b>DL</b>. <code>09h</code> → una <b>cadena</b>, en <b>DS:DX</b>, terminada en <b><code>$</code></b>.</p>
+<h4>INT 10h — video</h4>
+<table><tr><th>AH</th><th>Qué hace</th><th>Datos</th><th>¿Avanza el cursor?</th></tr><tr><td><code>02h</code></td><td>Posicionar cursor</td><td><code>DH</code>=fila, <code>DL</code>=columna, <code>BH</code>=página</td><td>—</td></tr><tr><td><code>09h</code></td><td>Carácter <b>con atributo</b> (color)</td><td><code>AL</code>=char, <code>BL</code>=atributo, <code>CX</code>=cantidad</td><td><b>NO</b></td></tr><tr><td><code>0Ah</code></td><td>Carácter <b>sin atributo nuevo</b></td><td><code>AL</code>=char, <code>CX</code>=cantidad</td><td><b>NO</b></td></tr><tr><td><code>0Eh</code></td><td>Carácter <b>y avanza</b></td><td><code>AL</code>=char</td><td><b>SÍ</b></td></tr><tr><td><code>13h</code></td><td>Cadena completa</td><td><code>ES:BP</code>=dirección, <code>CX</code>=<b>longitud</b>, <code>DH</code>/<code>DL</code>=posición, <code>BL</code>=atributo</td><td>—</td></tr></table>
+<p>El apunte marca que <code>09h</code>, <code>0Ah</code>, <code>0Eh</code> y <code>13h</code> <b>son las más fáciles de confundir</b>. La diferencia operativa:</p>
+<pre>09h → pone el carácter con color, pero el cursor NO se mueve
+0Eh → pone el carácter y el cursor SÍ avanza  ← la cómoda para escribir seguido</pre>
+<h4>INT 16h — teclado (BIOS)</h4>
+<table><tr><th>AH</th><th>Qué hace</th></tr><tr><td><code>00h</code></td><td>Lee tecla, <b>espera</b> hasta que haya una. <code>AL</code>=ASCII, <code>AH</code>=scan code</td></tr><tr><td><code>01h</code></td><td><b>Consulta</b> si hay tecla, no bloquea. <code>ZF=0</code> hay, <code>ZF=1</code> no hay</td></tr><tr><td><code>02h</code></td><td>Estado de Shift, Ctrl, Alt, Caps Lock → en <code>AL</code></td></tr></table>
+<p>Fijate el paralelo con el tema 3: <code>00h</code> <b>bloquea</b> (espera), <code>01h</code> <b>sondea</b> (polling). Es espera ocupada contra bloqueo, a nivel de teclado.</p>
+<hr/>
+<h4>Ejemplo resuelto — el ejercicio de tu examen</h4>
+<p>Este es, casi textual, el ejercicio del final práctica que tenés escaneado:</p>
+<pre>ORG 100h
+JMP MAIN
+MSG  DB  ______________
+MAIN:
+     MOV DX, MSG
+     MOV AH, ____
+     INT 21
+     RET</pre>
+<p><b>Resolución paso a paso:</b></p>
+<pre>Paso 1  ¿Qué quiero hacer?  Mostrar una CADENA (no un carácter suelto).
+        → Familia: INT 21h.  Función: AH = 09h.
+
+Paso 2  ¿Qué pide la 09h?   La dirección en DS:DX, y la cadena
+        terminada en el signo $.
+
+Paso 3  La cadena:   MSG DB 'ESTA ES LA CADENA A MOSTRAR$'
+                                                      ↑
+                                            SIN el $ no funciona
+
+Paso 4  MOV DX, MSG   →  ya está: carga el desplazamiento
+        MOV AH, 09h   →  selecciona la función
+        INT 21        →  DOS recorre desde DS:DX hasta encontrar el $
+
+Paso 5  RET           →  en un .COM con ORG 100h, vuelve a DOS.
+                         (En un .EXE sería MOV AX,4C00h / INT 21h)</pre>
+<h4>Los 4 errores típicos que marca la cátedra</h4>
+<pre>✗ usar DL en lugar de DX        → DL es para UN carácter (02h), no para cadenas
+✗ olvidar el $ final            → DOS sigue mostrando basura de memoria
+                                   hasta encontrar un $ por casualidad
+✗ no cargar DS                  → la dirección apunta a cualquier lado
+✗ usar AH=02h para una cadena   → te muestra un solo carácter</pre>
+<p>Para cargar <code>DS</code> (en un <code>.EXE</code>, donde hace falta):</p>
+<pre>MOV AX, @data     ; no se puede cargar un inmediato directo en DS,
+MOV DS, AX        ; por eso se pasa por AX</pre>
+<h4>Referencia</h4>
+<p>(Apunte: <code>Interrupciones (1).pdf</code>) y (Apunte: <code>Tp5 - Tabla Interrupciones.pdf</code>, Cartilla de Interrupciones UTN-FRM). Este tema <b>no está en el Tanenbaum</b> — es material propio de la cátedra.</p>
+<hr/>
+<p>Te armo el simulador para que practiques armar las llamadas.</p>
+<h3>Preguntas de control</h3>
+<p><b>1.</b> Querés mostrar en pantalla la palabra <code>FINAL</code>. Tenés dos caminos: <code>INT 21h</code> con <code>AH=09h</code>, o <code>INT 10h</code> con <code>AH=13h</code>.</p>
+<p><b>¿En qué se diferencian en cuanto a cómo le decís al servicio dónde termina la cadena?</b></p>
+<hr/>
+<p><b>2.</b> Un compañero escribió esto y no le anda:</p>
+<pre>MSG  DB  'HOLA MUNDO$'
+...
+     MOV DL, MSG
+     MOV AH, 09h
+     INT 21h</pre>
+<p><b>¿Cuál es el error y cómo lo arreglás?</b> (Hay uno solo.)</p>
+<p>Dale, lo tiro todo y empiezo de nuevo. Me fui muy rápido con las tablas.</p>
+<hr/>
+<h3>El problema de fondo</h3>
+<p>En ensamblador <b>no existe una instrucción para mostrar texto en pantalla</b>.</p>
+<p>Las instrucciones del procesador son nada más que estas: mover un dato, sumar, restar, comparar, saltar. Nada de "escribir". El procesador no sabe qué es una pantalla.</p>
+<pre>MOV   mover un dato de un lado a otro
+ADD   sumar
+SUB   restar
+CMP   comparar
+JMP   saltar
+...</pre>
+<p>Buscá "mostrar texto" en esa lista. <b>No está.</b> No existe.</p>
+<hr/>
+<h3>La solución: rutinas que ya escribió otro</h3>
+<p>Alguien ya se tomó el trabajo de escribir, instrucción por instrucción, el código que habla con la placa de video. Ese código está <b>guardado en la memoria de la máquina</b> desde que arranca.</p>
+<ul><li>Lo escribió el <b>BIOS</b> (ese chip del tema 4) → son las rutinas <code>INT 10h</code>, <code>16h</code>, <code>17h</code></li><li>Y lo escribió el <b>DOS</b> → son las rutinas <code>INT 21h</code></li></ul>
+<p>Vos no tenés que escribirlas. Solo tenés que <b>llamarlas</b>.</p>
+<hr/>
+<h3>¿Y cómo las llamo?</h3>
+<p>Con la instrucción <code>INT</code>. Eso es todo lo que hace <code>INT</code>: <b>ejecuta una rutina que ya está en memoria</b>.</p>
+<pre>INT 21h   ←  "ejecutá la rutina de DOS"</pre>
+<hr/>
+<h3>Pero falta algo: ¿cómo le paso los datos?</h3>
+<p>Acá está el quid.</p>
+<p>En C vos escribirías <code>printf("HOLA")</code> — le pasás el texto entre paréntesis. <b>En ensamblador no hay paréntesis ni parámetros.</b></p>
+<p>Entonces se usa un <b>acuerdo previo</b>:</p>
+<div class="clave"><i>"Yo dejo los datos en ciertos registros, y la rutina sabe que tiene que ir a buscarlos ahí."</i></div>
+<p>Es como dejarle una nota a alguien en un lugar convenido. No se lo decís: lo dejás donde quedaron en que lo ibas a dejar.</p>
+<hr/>
+<h3>Ahora sí, un ejemplo completo. Uno solo.</h3>
+<p>Quiero que aparezca <code>HOLA</code> en la pantalla.</p>
+<pre>MOV DX, MSG      ← línea 1
+MOV AH, 09h      ← línea 2
+INT 21h          ← línea 3</pre>
+<p>Tres líneas. Vamos una por una, despacio:</p>
+<p><b>Línea 3 — <code>INT 21h</code></b> Es la que hace el trabajo: ejecuta la rutina de DOS. Pero la rutina de DOS sabe hacer <b>muchas cosas distintas</b> (mostrar texto, leer el teclado, abrir archivos, dar la hora). Hay que decirle cuál.</p>
+<p><b>Línea 2 — <code>MOV AH, 09h</code></b> Acá le decís cuál. El acuerdo es: <b>DOS mira el registro <code>AH</code> para saber qué querés</b>.</p>
+<pre>si AH vale 09h  →  DOS entiende "mostrar una cadena"
+si AH vale 02h  →  DOS entiende "mostrar un carácter"
+si AH vale 4Ch  →  DOS entiende "terminar el programa"</pre>
+<p><code>AH</code> es, literalmente, <b>el número de trámite</b>.</p>
+<p><b>Línea 1 — <code>MOV DX, MSG</code></b> Ya le dijiste <i>qué</i> querés (mostrar una cadena). Ahora falta <i>cuál</i> cadena. El acuerdo para la función 09h es: <b>la cadena tiene que estar apuntada por <code>DX</code></b>.</p>
+<p>Entonces en <code>DX</code> ponés la dirección de dónde está tu texto.</p>
+<hr/>
+<h3>En un dibujo</h3>
+<pre>       VOS                                      DOS
+       ───                                      ───
+
+  pongo en DX  →  ┌──────────────┐
+  la dirección    │ DX = dónde   │
+  del texto       │ está el texto│
+                  ├──────────────┤
+  pongo en AH  →  │ AH = 09h     │
+  el nº de        │ (mostrar     │
+  trámite         │  cadena)     │
+                  └──────┬───────┘
+                         │
+  ejecuto INT 21h  ──────┼──────────►  "me llamaron"
+                         │              mira AH → 09h → "ah, quiere
+                         │              mostrar una cadena"
+                         │              mira DX → va a esa dirección
+                         │              lee el texto y lo pinta
+                         ▼
+                   HOLA aparece en pantalla</pre>
+<hr/>
+<p><b>La idea completa, en una frase:</b></p>
+<div class="clave"><code>INT</code> llama a una rutina ya escrita. <code>AH</code> le dice qué función querés. Los otros registros llevan los datos, en el lugar que esa función tiene acordado.</div>
+<p>Todo lo demás —las tablas, los <code>09h</code>, <code>0Eh</code>, <code>13h</code>— es <b>nada más que la lista de qué número es cada trámite y en qué registro va cada dato</b>. Es información de consulta, no es concepto. Eso se mira en la cartilla, no se entiende.</p>
+<hr/>
+<p>Decime en qué punto estás parado:</p>
+<ul><li><b>"esto sí lo entendí"</b> → seguimos y recién ahí miramos qué otras funciones hay</li><li><b>"no entiendo qué es un registro"</b> → volvemos un paso atrás, al tema 2</li><li><b>"no entiendo lo de la dirección en DX"</b> → te explico qué significa que un registro "apunte" a algo</li><li><b>"no entiendo para qué sirve todo esto"</b> → te muestro qué te van a preguntar en el examen y por qué</li></ul>
+<p>Perfecto. Ahora un solo paso más.</p>
+<hr/>
+<h3>Segundo ejemplo: la misma mecánica, otro trámite</h3>
+<p>Ahora quiero mostrar <b>un solo carácter</b>: la letra <code>A</code>.</p>
+<pre>MOV DL, 'A'      ← el dato
+MOV AH, 02h      ← el número de trámite
+INT 21h          ← ejecutar</pre>
+<p>Idéntica estructura. <b>Cambiaron dos cosas:</b></p>
+<pre>                 MOSTRAR CADENA        MOSTRAR UN CARÁCTER
+                 ───────────────        ───────────────────
+nº de trámite    AH = 09h               AH = 02h
+dónde va el dato DX                     DL        ← ¡otro registro!</pre>
+<p><b>Esto es lo único "molesto" del tema:</b> cada función eligió su propio registro para recibir los datos. No hay una regla general. La <code>09h</code> quiere la dirección en <code>DX</code>; la <code>02h</code> quiere el carácter en <code>DL</code>.</p>
+<p>¿Por qué? Porque las escribieron hace 40 años y cada una eligió lo que le vino bien. <b>No hay lógica que deducir — se consulta en la cartilla.</b></p>
+<hr/>
+<h3>Por qué <code>DX</code> en un caso y <code>DL</code> en el otro</h3>
+<p>Esto sí tiene una razón, y es linda:</p>
+<pre>    ┌─────────────────┐
+DX  │   DH   │   DL   │     DX entero = 16 bits
+    └─────────────────┘     DL solo   =  8 bits</pre>
+<ul><li>Un <b>carácter</b> es 1 byte = 8 bits → entra en <code>DL</code>. Sobra con la mitad.</li><li>Una <b>dirección de memoria</b> es grande → necesita los 16 bits de <code>DX</code> entero.</li></ul>
+<p>O sea: el tamaño del registro se eligió según el tamaño del dato. <code>DL</code> para una letra, <code>DX</code> para una dirección.</p>
+<hr/>
+<h3>Las familias</h3>
+<p>Hasta acá usamos <code>INT 21h</code>, que es la familia de <b>DOS</b>. Pero hay otras, escritas por el <b>BIOS</b>:</p>
+<pre>INT 10h  →  rutinas de VIDEO       (escritas por el BIOS)
+INT 16h  →  rutinas de TECLADO     (escritas por el BIOS)
+INT 17h  →  rutinas de IMPRESORA   (escritas por el BIOS)
+INT 21h  →  rutinas de DOS         (escritas por el DOS)</pre>
+<p><b>Cuidado con esta trampa:</b> el número de <code>AH</code> significa cosas distintas según la familia.</p>
+<pre>AH = 09h  con  INT 21h   →   mostrar una CADENA
+AH = 09h  con  INT 10h   →   mostrar UN carácter con color</pre>
+<p>Mismo <code>09h</code>, dos cosas totalmente distintas. Por eso siempre van de a pares: <b>primero mirás la <code>INT</code>, después el <code>AH</code></b>.</p>
+<div class="clave">Como dos empresas que tienen un "formulario 09". No es el mismo formulario.</div>
+<hr/>
+<h3>Chequeo rápido, 2 preguntas cortas</h3>
+<p><b>1.</b> Querés mostrar la letra <code>Z</code> en pantalla con DOS. Escribime las tres líneas.</p>
+<p><b>2.</b> Ves este código en un parcial:</p>
+<pre>MOV AH, 4Ch
+INT 21h</pre>
+<p>Sabiendo que <code>4Ch</code> es "terminar el programa", <b>¿por qué esta vez no hay una línea que cargue datos en otro registro?</b></p>
+<p><b>1 — Correcta.</b> Un detalle de convención nomás: escribilo <code>02h</code> con la <code>h</code>. Acá da igual porque 02 decimal y 02 hexa son el mismo número, pero con <code>10</code> ya no: <code>10</code> decimal es <code>0Ah</code> hexa. Acostumbrate a poner siempre la <code>h</code>.</p>
+<p><b>2 — Bien.</b> No hace falta pasarle datos porque no hay nada que informarle: "cerrá" es toda la orden.</p>
+<p>Un matiz que suma punto: <code>4Ch</code> <b>sí acepta un dato opcional</b>, el <i>código de retorno</i>, en <code>AL</code>. Es un número que el programa le deja a DOS diciendo "terminé bien" (<code>00h</code>) o "terminé con error". Por eso muchas veces vas a ver:</p>
+<pre>MOV AH, 4Ch
+MOV AL, 00h      ; "terminé sin errores"
+INT 21h</pre>
+<p>que se escribe más corto cargando las dos mitades juntas:</p>
+<pre>MOV AX, 4C00h    ; AH=4Ch y AL=00h de una
+INT 21h</pre>
+<p>Esas dos líneas las vas a ver en <b>todos</b> los programas. Es el final obligatorio.</p>
+<hr/>
+<h3>Última pieza del tema: el <code>$</code></h3>
+<p>Volvamos a la cadena. Hay un detalle que te van a tomar sí o sí.</p>
+<p>Cuando hacés <code>MOV DX, MSG</code>, le estás dando a DOS <b>dónde empieza</b> el texto. Pero… <b>¿dónde termina?</b></p>
+<pre>MEMORIA:
+
+dirección → ... H  O  L  A  [?] [?] [?] [?] [?] ...
+               ↑
+               DX apunta acá
+
+DOS empieza a leer... H, O, L, A, ¿y ahora? ¿sigo? ¿paro?
+La memoria no tiene "final". Después de la A hay más bytes,
+que son basura de otros programas.</pre>
+<p>La solución de DOS: <b>vos marcás el final con el signo <code>$</code></b>.</p>
+<pre>MSG  DB  'HOLA$'
+                ↑
+          la marca de "hasta acá"</pre>
+<p>DOS lee carácter por carácter y <b>se detiene cuando encuentra el <code>$</code></b>. El <code>$</code> no se imprime, es solo la señal.</p>
+<p><b>Si te lo olvidás:</b> DOS no sabe dónde parar, sigue leyendo memoria ajena y escupe basura en pantalla hasta toparse con un <code>$</code> por pura casualidad. (Eso es lo que probás en el simulador borrando el <code>$</code>.)</p>
+<hr/>
+<h3>El ejercicio de tu examen, ahora completo</h3>
+<pre>MSG  DB  'ESTA ES LA CADENA A MOSTRAR$'
+...
+     MOV DX, MSG      ; dónde está el texto
+     MOV AH, 09h      ; trámite: mostrar cadena
+     INT 21h          ; ejecutar</pre>
+<p>Eso es todo el ejercicio del final. Nada más.</p>
+<hr/>
+<p>Y ahora sí te repito las dos preguntas de antes, que ahora deberían salir solas:</p>
+<p><b>1.</b> El error en este código de un compañero (hay uno solo):</p>
+<pre>MSG  DB  'HOLA MUNDO$'
+     MOV DL, MSG
+     MOV AH, 09h
+     INT 21h</pre>
+<p><b>2.</b> ¿Qué pasa si la cadena se declara <code>MSG DB 'HOLA MUNDO'</code> (sin el <code>$</code>) y todo lo demás está bien?</p>
+<p><b>1 — Correcta.</b> <code>MOV DX, MSG</code>. La <code>09h</code> quiere la dirección completa de 16 bits.</p>
+<p><b>2 — Acá ajustamos.</b> En mi pregunta "todo lo demás está bien" quería decir que el <code>DL</code> ya estaba corregido. El punto era solo el <code>$</code>.</p>
+<p>Y el efecto no son espacios vacíos — es peor:</p>
+<pre>MSG  DB  'HOLA MUNDO'     ← sin $
+
+MEMORIA:  H O L A _ M U N D O ▓ ▒ ░ ? § ╣ ╗ ░ ▒ ▓ ... $ ...
+                            └──────────────────────┘    ↑
+                            esto también lo imprime      acá recién para,
+                                                         por pura casualidad
+
+PANTALLA:  HOLA MUNDO▓▒░?§╣╗░▒▓</pre>
+<p>DOS <b>no sabe que tu texto terminó</b>. Sigue leyendo bytes de la memoria —que son restos de otros programas, código, lo que sea— y los interpreta como caracteres. Sale basura, símbolos raros.</p>
+<p>Se detiene recién cuando encuentra un <code>$</code> en algún lado de la memoria, por azar. Podrían ser 5 caracteres de basura o 500.</p>
+<p><b>La frase para el examen:</b> <i>sin el <code>$</code>, la función 09h sigue mostrando contenido de memoria hasta encontrar un <code>$</code> por casualidad.</i></p>
+<hr/>
+<p>Metele al simulador y borrale el <code>$</code> para verlo. Vas <b>5 de 9</b>.</p>
+<p>Dos preguntas muy buenas. Las dos cortitas.</p>
+<hr/>
+<h3>1. No — el código se ejecuta de arriba hacia abajo</h3>
+<p>Siempre. Línea 1, línea 2, línea 3.</p>
+<pre>MOV DX, MSG      ← se ejecuta PRIMERO
+MOV AH, 09h      ← después
+INT 21h          ← último</pre>
+<p>Lo que pasó es que <b>yo te lo expliqué al revés</b> para que tuviera sentido. Te dije "mirá la línea 3 primero" porque es la que hace el trabajo, y las dos de arriba existen solo para prepararla.</p>
+<p>Pensalo como una receta:</p>
+<pre>1. Poné la olla con agua        ← preparación
+2. Prendé el fuego              ← preparación
+3. Tirá los fideos              ← LA acción</pre>
+<p>Se hace en ese orden. Pero si alguien pregunta "¿qué estás haciendo?", la respuesta es "fideos" — el paso 3. Los pasos 1 y 2 están para que el 3 funcione.</p>
+<p>Igual acá: <b><code>INT 21h</code> es la acción. Las líneas de arriba son la preparación.</b> Pero se ejecutan en el orden escrito.</p>
+<hr/>
+<h3>2. Qué es <code>DS</code></h3>
+<p>El 8086 parte las direcciones de memoria <b>en dos pedazos</b>.</p>
+<p>Pensalo como una dirección postal:</p>
+<pre>    DS      :      DX
+ ────────       ────────
+ el barrio      el número de casa
+
+ "Palermo"   :  "1234"</pre>
+<p>Ninguno de los dos solo te sirve. "1234" sin el barrio no significa nada, hay un 1234 en cada barrio de la ciudad.</p>
+<p>En la máquina:</p>
+<pre>DS  = SEGMENTO DE DATOS   → en qué bloque de memoria están tus datos
+DX  = DESPLAZAMIENTO      → a cuántos bytes del inicio de ese bloque</pre>
+<p>Por eso se escribe <code>DS:DX</code>, con dos puntos. <b>Es una sola dirección partida en dos registros.</b></p>
+<pre>MEMORIA COMPLETA
+┌─────────┬─────────┬─────────┬─────────┐
+│ código  │  DATOS  │  pila   │  otros  │
+└─────────┴────▲────┴─────────┴─────────┘
+               │
+          DS apunta acá (el inicio del bloque de datos)
+               │
+               └──► DX dice: 30 bytes más adelante está MSG</pre>
+<h4>Por qué te lo nombro</h4>
+<p>Porque la función <code>09h</code> busca tu cadena en <code>DS:DX</code>. Si <code>DX</code> está bien pero <code>DS</code> apunta a otro bloque, DOS va a buscar al lugar equivocado y muestra basura. Es uno de los 4 errores típicos.</p>
+<h4>Cuándo te tenés que preocupar</h4>
+<pre>Programa .COM  →  DS ya viene cargado solo. NO hacés nada.
+                  (los ejercicios de tu cátedra con ORG 100h son .COM)
+
+Programa .EXE  →  lo tenés que cargar vos:
+                  MOV AX, @data
+                  MOV DS, AX</pre>
+<p>Y fijate el detalle: <b>son dos líneas, no una.</b> No se puede hacer <code>MOV DS, @data</code> directo — el procesador no permite cargar un valor fijo en un registro de segmento. Hay que pasar por <code>AX</code> como intermediario. Eso también lo preguntan.</p>
+<hr/>
+<hr/>
+<h2>Tema 6 — Llamadas al sistema</h2>
+<h4>Arrancamos de lo que ya sabés</h4>
+<p>Lo que hiciste en el tema 5 <b>ya era una llamada al sistema</b>.</p>
+<pre>MOV AH, 09h
+INT 21h        ←  esto es una llamada al sistema de DOS</pre>
+<p>Le pediste un servicio al sistema operativo. Eso es todo el concepto. Lo que cambia hoy es el nombre, el sistema operativo y los detalles — pero el mecanismo es el mismo.</p>
+<hr/>
+<h4>Por qué existen</h4>
+<p>Acordate del tema 2: hay dos modos, usuario y kernel.</p>
+<pre>┌──────────────────────────────┐
+│  MODO USUARIO                │   tu programa
+│  no puede tocar el disco     │
+└──────────────┬───────────────┘
+               │  ¿y si necesito leer un archivo?
+               ▼
+          ┌─────────┐
+          │  ????   │
+          └─────────┘
+               │
+               ▼
+┌──────────────────────────────┐
+│  MODO KERNEL                 │   el SO
+│  acá sí se puede             │
+└──────────────────────────────┘</pre>
+<p>Tu programa <b>necesita</b> hacer cosas que no tiene permitido hacer. La llamada al sistema es <b>la puerta</b>: el único lugar por donde se puede cruzar.</p>
+<div class="clave"><b>Definición para el examen:</b> las llamadas al sistema son <i>la interfaz que permite a los programas de usuario solicitar servicios al sistema operativo</i>.</div>
+<hr/>
+<h4>Cómo se cruza: la instrucción TRAP</h4>
+<pre>     tu programa                      el kernel
+     ───────────                      ─────────
+         │
+    ejecuta TRAP  ───────────────────────►  cambia a modo kernel
+         │                                  y empieza a ejecutar
+         │                                  en una dirección FIJA
+         │                                         │
+         │                                   hace el trabajo
+         │                                         │
+    continúa  ◄───────────────────────────────────┘
+    (vuelve a modo usuario)</pre>
+<p><code>TRAP</code> se parece a una llamada a procedimiento común, pero <b>tiene dos diferencias que te van a preguntar</b>:</p>
+<pre>                        Llamada a         TRAP
+                        procedimiento
+                        ─────────────     ────
+¿cambia el modo?        NO                SÍ  ← pasa a kernel
+¿a dónde salta?         a donde quieras   a una dirección FIJA</pre>
+<p><b>La segunda es la clave de la seguridad.</b> Si <code>TRAP</code> pudiera saltar a cualquier lado, un programa entraría al kernel por donde se le antoje y haría lo que quisiera. Como solo puede saltar a un punto fijo, el kernel controla la entrada.</p>
+<div class="clave">Es la misma idea que <code>INT 21h</code>: no saltás a cualquier parte del DOS, saltás a su puerta de entrada y ahí el DOS decide.</div>
+<hr/>
+<h4>Las llamadas que te van a pedir (POSIX)</h4>
+<p>POSIX tiene unas 100. Estas son las que importan:</p>
+<p><b>Para procesos:</b></p>
+<table><tr><th><code>fork</code></th><th>Crea un proceso hijo <b>idéntico al padre</b></th></tr><tr><td><code>execve</code></td><td><b>Reemplaza</b> el programa que corre en el proceso</td></tr><tr><td><code>exit</code></td><td>Termina el proceso</td></tr><tr><td><code>waitpid</code></td><td>Espera a que un hijo termine</td></tr></table>
+<p><b>Para archivos:</b></p>
+<table><tr><th><code>open</code></th><th>Abre un archivo</th></tr><tr><td><code>read</code></td><td>Lee datos y los pone en un buffer</td></tr><tr><td><code>write</code></td><td>Escribe datos desde un buffer</td></tr><tr><td><code>close</code></td><td>Cierra el archivo</td></tr><tr><td><code>lseek</code></td><td>Mueve el puntero dentro del archivo</td></tr></table>
+<p>Esas cinco de archivos son <b>exactamente</b> las que el programa dice que entran en tu examen (<i>"Análisis de las llamadas al sistema de Linux relacionadas con archivos: open, close, read, write, lseek"</i>).</p>
+<hr/>
+<h4><code>strace</code> — esto está en tus exámenes reales</h4>
+<p>En las fotos de exámenes que tenés, la primera pregunta del integrador es literalmente esta:</p>
+<div class="clave"><i>"Se desea utilizar strace para rastrear las llamadas realizadas por <code>ls -la</code>, guardando la salida en un archivo llamado salida.txt. La sintaxis del comando es:"</i></div>
+<p>La respuesta: <b><code>strace -o salida.txt ls -la</code></b></p>
+<p>La opción <code>-o</code> manda la salida al archivo. Las otras opciones del múltiple choice (<code>&gt;</code>, <code>|</code>, <code>-s</code>) son los distractores.</p>
+<p><b>Y lo que ves al abrir ese archivo son las llamadas al sistema:</b></p>
+<pre>openat()      abre archivos o directorios     → abre "." (el directorio actual)
+read()        lee desde un descriptor
+getdents64()  lee las entradas de un directorio → la lista de archivos
+newfstatat()  obtiene info de un archivo      → permisos, tamaño, fechas
+write()       escribe en pantalla             → la salida de ls en la terminal
+close()       cierra un descriptor</pre>
+<p>Eso es <b>literalmente ver la frontera</b> entre tu programa y el kernel. <code>ls</code> no sabe leer un disco: le pide todo al sistema operativo, y <code>strace</code> te muestra cada pedido.</p>
+<hr/>
+<h4>Ejemplo resuelto — por qué conviene un buffer grande</h4>
+<p>Querés leer un archivo de <b>8 KB</b>.</p>
+<pre>Paso 1   8 KB = 8 × 1024 = 8192 bytes
+
+Paso 2   Con buffer de 512 bytes:
+         8192 / 512 = 16 llamadas a read()
+
+Paso 3   Con buffer de 4096 bytes:
+         8192 / 4096 = 2 llamadas a read()
+
+Paso 4   Se leen los MISMOS datos.
+         Pero en un caso cruzás la frontera usuario→kernel 16 veces,
+         y en el otro 2 veces.</pre>
+<p>Cada cruce cuesta: guardar registros, cambiar de modo, buscar en la tabla del kernel, volver. <b>Ocho veces menos trabajo de kernel</b>, leyendo exactamente lo mismo.</p>
+<div class="clave">Por eso existen los buffers. No ahorran lectura de disco — <b>ahorran llamadas al sistema</b>.</div>
+<hr/>
+<h4>Referencia</h4>
+<p>(Tanenbaum, cap. 1.6, págs. impresas <b>49 a 62</b> → PDF <b>79 a 92</b>) y (Apunte: <code>Comandos_Linux-SO (1).pdf</code>).</p>
+<hr/>
+<h3>Preguntas de control</h3>
+<p><b>1.</b> ¿Cuál es la diferencia entre <code>TRAP</code> y una llamada a procedimiento común? (Son dos cosas.)</p>
+<p><b>2.</b> Corrés <code>strace -o salida.txt ls -la</code> y en el archivo aparece <code>write()</code>. <b>¿Por qué <code>ls</code> necesita pedirle al sistema operativo que escriba en la pantalla, en vez de escribir él directamente?</b></p>
+<h3>Llamadas a procedimiento</h3>
+<p>Un <b>procedimiento</b> es un pedazo de código con nombre que podés ejecutar desde varios lugares. En otros lenguajes se llama función, método o subrutina. Es lo mismo.</p>
+<h4>Para qué</h4>
+<p>Si tenés que mostrar un mensaje en 20 lugares distintos del programa, no escribís el código 20 veces. Lo escribís una vez y lo <b>llamás</b> 20 veces.</p>
+<h4>El problema que hay que resolver</h4>
+<pre>línea 10:  CALL MOSTRAR     ← saltás al procedimiento
+línea 11:  ...                 ¿y cómo volvés acá?
+
+línea 50:  MOSTRAR:
+línea 51:    ...código...
+línea 52:    RET            ← "volver"... ¿volver A DÓNDE?</pre>
+<p>El procedimiento <b>no sabe quién lo llamó</b>. Si lo llamaste desde la línea 10, tiene que volver a la 11. Pero si lo llamaste desde la línea 200, tiene que volver a la 201.</p>
+<h4>La solución: la pila</h4>
+<p>Acordate del tema 2, el <b>apuntador de pila (SP)</b>. Acá es donde se usa.</p>
+<pre>CALL hace DOS cosas:
+  1. guarda en la PILA la dirección de la línea siguiente  ← "la dirección de retorno"
+  2. salta al procedimiento
+
+RET hace UNA cosa:
+  1. saca de la PILA esa dirección y salta ahí</pre>
+<p>En dibujo:</p>
+<pre>    tu programa                      PILA
+
+    línea 10: CALL MOSTRAR   ──┐   ┌──────────┐
+    línea 11: sigue acá  ◄───┐ │   │          │
+                             │ └──►│   11     │  ← CALL guardó esto
+                             │     └──────────┘
+    línea 50: MOSTRAR:       │
+    línea 51:   ...          │     ┌──────────┐
+    línea 52:   RET  ────────┘     │          │  ← RET lo sacó
+                                   └──────────┘</pre>
+<p><b>Por eso se llama pila (stack):</b> lo último que entra es lo primero que sale. Si un procedimiento llama a otro, que llama a otro, las direcciones de retorno se van apilando y se desapilan en orden inverso.</p>
+<pre>PRINCIPAL llama a A
+          A llama a B
+            B llama a C
+
+PILA:  ┌─────────────┐
+       │ volver a B  │ ← último que entró, primero que sale
+       │ volver a A  │
+       │ volver a PRINCIPAL │
+       └─────────────┘</pre>
+<h4>Y ahora sí, la comparación con TRAP</h4>
+<p>Esto es lo que te van a preguntar:</p>
+<pre>                         CALL (procedimiento)      TRAP (llamada al sistema)
+                         ────────────────────      ─────────────────────────
+¿guarda dir. de retorno?  SÍ, en la pila            SÍ
+¿a dónde salta?           a CUALQUIER dirección     a una dirección FIJA
+¿cambia el modo?          NO, seguís en usuario     SÍ, pasás a kernel</pre>
+<p><b>Son casi iguales. Las dos diferencias son todo el asunto de la seguridad.</b></p>
+<div class="clave">Una llamada a procedimiento te mueve <b>dentro de tu casa</b>. Un TRAP te lleva <b>a la oficina del gobierno</b>, y solo por la puerta principal.</div>
+<h4>Dato que cierra el círculo con el tema 5</h4>
+<p>Cuando hacés <code>INT 21h</code>, el procesador hace algo <b>muy parecido a un CALL</b>: apila la dirección de retorno (y además el PSW, con el bit de modo), salta a la rutina del DOS, y al final la rutina hace un <code>IRET</code> ("retorno de interrupción") que desapila todo y te devuelve donde estabas, en modo usuario.</p>
+<p>Por eso te decía que <code>INT</code> <i>"llama a una rutina"</i>: es un CALL con control de seguridad.</p>
+<hr/>
+<p>Ahora te armo el archivo de continuidad.</p>
+<p>Las dos <b>perfectas</b>. La 1 completa, con las dos diferencias. La 2 clavada: la pantalla es un dispositivo, y los dispositivos solo se tocan en modo kernel.</p>
+<p>Vas <b>6 de 9</b>. Los dos que siguen son livianos.</p>
+<hr/>
+<hr/>
+<h2>Tema 7 — Historia por generaciones</h2>
+<h4>Cómo estudiar esto</h4>
+<p>Las fechas no importan. Lo que se toma es <b>por qué apareció cada invento</b>. Cada generación resuelve el problema que dejó la anterior:</p>
+<pre>1ª gen → problema: todo a mano, una persona por vez
+            ↓
+2ª gen → solución: PROCESAMIENTO POR LOTES
+         problema nuevo: la CPU se queda quieta esperando E/S
+            ↓
+3ª gen → solución: MULTIPROGRAMACIÓN + SPOOLING
+         problema nuevo: tardás horas en ver el resultado
+            ↓
+         solución: TIEMPO COMPARTIDO
+            ↓
+4ª gen → la computadora es personal</pre>
+<hr/>
+<h4>1ª generación (1945–1955) — tubos al vacío</h4>
+<pre>Programación:     cables en tableros de conexiones
+Lenguajes:        no existían (ni el ensamblador)
+Sistema operativo: NO HABÍA
+Modo de trabajo:  te anotabas en una hoja de firmas, entrabas al
+                  cuarto, y esperabas horas rezando que no se
+                  quemara ninguno de los 20.000 bulbos</pre>
+<p>A principios de los 50 aparecen las <b>tarjetas perforadas</b>: ya no cableás, escribís en tarjetas. Lo demás sigue igual.</p>
+<hr/>
+<h4>2ª generación (1955–1965) — transistores y <b>procesamiento por lotes</b></h4>
+<p>Las máquinas (<i>mainframes</i>) se vuelven confiables y carísimas. Aparecen los <b>operadores profesionales</b>: el programador ya no toca la máquina.</p>
+<p><b>El problema:</b> se perdía muchísimo tiempo mientras los operadores caminaban llevando tarjetas y papeles de un lado a otro.</p>
+<p><b>La solución — procesamiento por lotes:</b> juntar muchos trabajos, pasarlos todos a una cinta, y que la máquina los ejecute uno atrás del otro sin pausas.</p>
+<pre>(a) tarjetas  →  (b) 1401 las pasa a cinta  →  (c) llevan la cinta
+                     (máquina barata)              a mano
+
+(d) 7094 calcula  →  (e) llevan la cinta de vuelta  →  (f) 1401 imprime
+    (máquina cara)</pre>
+<p>Aparecen las <b>tarjetas de control</b> (<code>$JOB</code>, <code>$FORTRAN</code>, <code>$LOAD</code>, <code>$RUN</code>, <code>$END</code>). Dato para el examen: <b>son las precursoras de los shells actuales.</b></p>
+<hr/>
+<h4>3ª generación (1965–1980) — circuitos integrados</h4>
+<p>Acá nacen tres cosas que todavía usás.</p>
+<p><b>IBM System/360:</b> la primera <b>familia de computadoras compatibles</b>. Mismo software en la chica y en la grande. Su SO, el OS/360, era tan enorme y lleno de errores que corregir unos introducía otros — <i>la cantidad total de bugs se mantenía constante</i>.</p>
+<p><b>🔑 Multiprogramación</b> — el concepto más importante de esta generación:</p>
+<pre>PROBLEMA: en datos comerciales, la CPU espera E/S el 80-90% del tiempo
+
+SOLUCIÓN: partir la memoria y meter VARIOS trabajos a la vez
+
+      ┌──────────────┐
+      │  Trabajo 3   │   mientras el trabajo 1 espera el disco,
+      ├──────────────┤   el 2 usa la CPU
+      │  Trabajo 2   │
+      ├──────────────┤
+      │  Trabajo 1   │
+      ├──────────────┤
+      │      SO      │
+      └──────────────┘</pre>
+<p>Esto <b>necesita hardware de protección</b> — si no, un trabajo pisa al otro. Ahí se cierra con el tema 2.</p>
+<p><b>Spooling:</b> leer los trabajos al disco apenas llegan, así cuando una partición queda libre se carga otro al instante.</p>
+<p><b>Tiempo compartido:</b> cada usuario con su terminal. Si hay 20 conectados y 17 están pensando, la CPU atiende a los 3 que piden. Primer sistema: <b>CTSS</b> (MIT).</p>
+<p><b>MULTICS:</b> la idea de "computadora como servicio eléctrico" — te enchufás y tenés poder de cómputo. Fracasó comercialmente <b>pero influyó en todo lo que vino después</b>.</p>
+<p><b>UNIX:</b> Ken Thompson, que venía de MULTICS, encontró una PDP-7 sin usar y escribió una versión simple para un usuario. Después: System V y BSD (incompatibles) → estándar <b>POSIX</b> para unificar → <b>MINIX</b> (Tanenbaum, educativo) → <b>Linux</b> (Torvalds, inspirado en MINIX).</p>
+<hr/>
+<h4>4ª generación (1980–hoy) — computadoras personales</h4>
+<pre>1974  Intel 8080  →  Kildall escribe CP/M
+                     (Intel le regaló los derechos: no creía en el disco)
+
+1980  IBM busca SO para la PC → va a Kildall → Kildall no lo atiende
+      → vuelve a Bill Gates → Gates compra DOS por 75.000 dólares
+      → lo rebautiza MS-DOS
+
+      La jugada: Gates se lo VENDE A LAS FABRICANTES para que
+      venga incluido. Kildall intentaba venderlo de a un usuario.</pre>
+<p><b>La interfaz gráfica:</b> la inventó <b>Doug Engelbart</b> (ventanas, iconos, menús, mouse). La adoptó <b>Xerox PARC</b>. Steve Jobs la vio ahí y entendió lo que valía — Xerox no. → Lisa (fracaso) → Macintosh (éxito) → Microsoft responde con <b>Windows</b>.</p>
+<hr/>
+<h4>El patrón que se toma</h4>
+<div class="clave"><i>"La ontogenia recapitula la filogenia"</i></div>
+<p>Ideas que se inventaron, se descartaron cuando el contexto cambió, <b>y volvieron una década después en otro contexto</b>: la programación en ensamblador, la monoprogramación, los directorios de un solo nivel. Desaparecieron de las máquinas grandes y reaparecieron en los sistemas embebidos y las tarjetas inteligentes.</p>
+<h4>Referencia</h4>
+<p>(Tanenbaum, cap. 1.2, págs. impresas <b>7 a 19</b> → PDF <b>37 a 49</b>).</p>
+<hr/>
+<h3>Preguntas de control</h3>
+<p><b>1.</b> ¿Cuál es la diferencia entre <b>procesamiento por lotes</b> y <b>multiprogramación</b>? (Ojo: no son lo mismo, y es una confusión clásica.)</p>
+<p><b>2.</b> ¿Por qué la multiprogramación <b>no era posible</b> en la segunda generación, aunque a alguien se le hubiera ocurrido la idea?</p>
+<p>Dale. De nuevo, pero contado distinto: <b>una sola historia</b>, con una pregunta que la atraviesa.</p>
+<div class="clave"><b>La pregunta de toda la historia:<br/>¿cómo hacemos para que la computadora no esté parada?</b></div>
+<p>Las computadoras eran carísimas. Cada minuto parada era plata tirada. Toda la historia de los sistemas operativos son intentos de <b>tapar agujeros de tiempo muerto</b>.</p>
+<p>Vamos agujero por agujero.</p>
+<hr/>
+<h3>Agujero 1: la máquina espera al humano</h3>
+<p><b>Años 40 y 50.</b> No hay sistema operativo. Vos reservás un turno, entrás al cuarto, conectás cables en un tablero, y la máquina es tuya por tres horas.</p>
+<pre>┌──────────────────────────────────────────────────┐
+│ vos cableando │ CORRE │ vos cableando │ CORRE │  │
+│   45 minutos  │ 3 min │   50 minutos  │ 2 min │  │
+└──────────────────────────────────────────────────┘
+   ▲                       ▲
+   la máquina está PARADA mirándote trabajar</pre>
+<p>La máquina trabaja 5 minutos de cada hora. <b>El resto espera a que el humano haga algo.</b></p>
+<hr/>
+<h3>Agujero 2: la máquina espera al operador</h3>
+<p><b>Solución al agujero 1:</b> sacar al programador de la sala. Vos entregás tus tarjetas en una ventanilla y te vas a tomar un café. Un <b>operador profesional</b> las carga.</p>
+<p>Mejoró, pero apareció otro agujero: el operador <b>camina</b>. Busca las tarjetas, las carga, saca el papel de la impresora, lo lleva al otro cuarto, vuelve, carga las siguientes…</p>
+<pre>┌───────────────────────────────────────────────┐
+│ CORRE │ operador caminando │ CORRE │ caminando│
+│       │     4 minutos      │       │          │
+└───────────────────────────────────────────────┘</pre>
+<p><b>Solución: el procesamiento por lotes.</b></p>
+<p>Junto <b>un montón</b> de trabajos, los paso todos a una cinta, y la máquina los ejecuta <b>uno atrás del otro sin que nadie toque nada</b>.</p>
+<pre>CINTA con 50 trabajos:
+
+┌────────────────────────────────────────────────┐
+│ trab1 │ trab2 │ trab3 │ trab4 │ trab5 │ ...    │
+└────────────────────────────────────────────────┘
+  ▲
+  la máquina pasa del 1 al 2 sola, sin esperar a nadie</pre>
+<div class="clave"><b>Lote = montón.</b> Un lote de trabajos es un montón de trabajos juntos.</div>
+<p><b>Esto es procesamiento por lotes: ejecutar trabajos uno después del otro, sin pausas entre ellos.</b></p>
+<p>Fijate bien: <b>de a uno por vez</b>. El trabajo 2 empieza cuando el 1 terminó. Nunca hay dos a la vez.</p>
+<hr/>
+<h3>Agujero 3: la CPU espera al disco ⭐</h3>
+<p>Este es el importante.</p>
+<p>Ya no hay tiempo muerto <i>entre</i> trabajos. Pero hay tiempo muerto <b>adentro</b> de cada trabajo.</p>
+<p>Un programa de facturación hace esto:</p>
+<pre>leer un registro del disco  →  calcular  →  escribir  →  leer otro  →  ...
+      40 milisegundos          0,1 ms      40 ms         40 ms</pre>
+<p>La CPU calcula un instante y después <b>se queda esperando al disco</b>. En trabajos comerciales, la CPU espera E/S el <b>80 o 90 % del tiempo</b>.</p>
+<pre>UN SOLO TRABAJO EN MEMORIA:
+
+CPU:   ▓░░░░░░░░░▓░░░░░░░░░▓░░░░░░░░░
+       ↑ calcula  ↑ esperando el disco, sin hacer NADA</pre>
+<p>El lote no arregla esto. El lote solo garantiza que apenas termine el trabajo 1 arranque el 2 — pero mientras el trabajo 1 espera el disco, <b>la CPU sigue parada</b>.</p>
+<p><b>Solución: la multiprogramación.</b></p>
+<p>Parto la memoria y meto <b>varios trabajos a la vez</b>. Cuando uno se pone a esperar el disco, la CPU <b>se pasa a otro</b>.</p>
+<pre>      MEMORIA
+┌──────────────┐
+│  Trabajo 3   │
+├──────────────┤
+│  Trabajo 2   │
+├──────────────┤
+│  Trabajo 1   │
+├──────────────┤
+│      SO      │
+└──────────────┘
+
+CPU:   ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+       1  2  3  1  2  3  1  2  ← siempre hay alguien listo</pre>
+<hr/>
+<h3>🔑 Lotes vs multiprogramación — la diferencia</h3>
+<p>Esta es la que te pregunté y la que confunde todo el mundo:</p>
+<pre>PROCESAMIENTO POR LOTES          MULTIPROGRAMACIÓN
+─────────────────────────        ──────────────────
+UNO en memoria por vez           VARIOS en memoria a la vez
+
+trab1 ──► trab2 ──► trab3        trab1 ┐
+                                 trab2 ├─ todos juntos
+en fila india                    trab3 ┘
+
+Tapa el agujero ENTRE            Tapa el agujero DENTRO
+trabajos                         de un trabajo
+
+(el operador caminando)          (la CPU esperando el disco)</pre>
+<p><b>No son lo mismo y no se reemplazan: se suman.</b> Un sistema de tercera generación hace lotes <i>y</i> multiprogramación al mismo tiempo.</p>
+<hr/>
+<h3>El precio de la multiprogramación</h3>
+<p>Si hay 3 trabajos en memoria a la vez, <b>¿qué impide que el trabajo 1 escriba encima del trabajo 2?</b></p>
+<p>Nada. Salvo que el hardware lo impida.</p>
+<p>Por eso la multiprogramación <b>no era posible antes</b>: hacía falta <b>hardware de protección</b>, y recién lo trajo la tercera generación (la IBM 360). Es lo mismo del tema 2 — modo kernel, modo usuario, el hardware vigilando.</p>
+<div class="clave"><i>Idea que se repite en toda la materia: compartir un recurso siempre exige protección.</i></div>
+<hr/>
+<h3>Agujero 4: ahora el que espera sos vos</h3>
+<p>La máquina está al 100 %. Pero vos entregás tus tarjetas y <b>el resultado te llega en seis horas</b>. Si pusiste una coma de más, perdiste el día.</p>
+<p><b>Solución: el tiempo compartido.</b> Cada usuario con su terminal. La CPU va rotando entre todos.</p>
+<pre>20 usuarios conectados, 17 pensando o tomando café
+→ la CPU atiende por turnos a los 3 que piden algo
+
+Funciona porque los pedidos interactivos son CORTOS.</pre>
+<p>Es multiprogramación, pero con personas sentadas esperando en vez de trabajos en cinta.</p>
+<hr/>
+<h3>Agujero 5: ya no hay agujero</h3>
+<p><b>Años 80.</b> El chip hace que la computadora sea <b>barata</b>. Ya no hay que exprimirla: si está parada, no importa, costó 2.000 dólares y no 2 millones.</p>
+<p>Ahí el objetivo cambia por primera vez: ya no es <i>aprovechar la máquina</i>, es <b>que sea cómoda para la persona</b>. Y aparece la interfaz gráfica.</p>
+<hr/>
+<h3>La historia completa en un cuadro</h3>
+<table><tr><th>Agujero</th><th>¿Quién esperaba?</th><th>Solución</th></tr><tr><td>1</td><td>La máquina esperaba al programador</td><td>Sacarlo de la sala: <b>operadores</b></td></tr><tr><td>2</td><td>La máquina esperaba al operador</td><td><b>Procesamiento por lotes</b></td></tr><tr><td>3</td><td>La <b>CPU</b> esperaba al <b>disco</b></td><td><b>Multiprogramación</b> (+ spooling)</td></tr><tr><td>4</td><td>El <b>usuario</b> esperaba el resultado</td><td><b>Tiempo compartido</b></td></tr><tr><td>5</td><td>Ya no importa: la máquina es barata</td><td><b>Computadora personal</b> y GUI</td></tr></table>
+<p><b>Si te acordás de este cuadro, tenés el tema.</b> Los nombres (IBM 360, MULTICS, UNIX, CP/M, MS-DOS) son anécdotas que cuelgan de acá.</p>
+<h4>Referencia</h4>
+<p>(Tanenbaum, cap. 1.2, págs. impresas <b>7 a 19</b> → PDF <b>37 a 49</b>).</p>
+<hr/>
+<h3>Preguntas de control</h3>
+<p><b>1.</b> Un sistema ejecuta trabajos uno atrás del otro desde una cinta, sin pausas, pero con <b>un solo trabajo en memoria por vez</b>. ¿Es lotes, es multiprogramación, o es las dos?</p>
+<p><b>2.</b> ¿Por qué la multiprogramación <b>necesita</b> hardware de protección? Contestá pensando qué pasaría sin él.</p>
+<p>Las dos <b>correctas</b>. La 1 es exactamente el punto: lotes sin multiprogramación. La 2 también — y notá que "pisar a otro" es lo mismo que decía el tema 2 cuando hablábamos de multiplexaje en el espacio: <b>repartir memoria obliga a proteger</b>.</p>
+<p>Vas <b>7 de 9</b>. Este es cortito.</p>
+<hr/>
+<hr/>
+<h2>Tema 8 — Tipos de sistemas operativos</h2>
+<h4>La intuición</h4>
+<p>Un SO está diseñado para el tamaño de máquina donde va a correr. El de una mainframe con 1000 discos y el de un microondas resuelven problemas <b>opuestos</b>.</p>
+<p>Tanenbaum describe <b>nueve</b>, ordenados de más grande a más chico:</p>
+<pre>MAINFRAME ──► SERVIDOR ──► MULTIPROCESADOR ──► PERSONAL ──► BOLSILLO
+                                                               │
+                                                               ▼
+        TARJETA INTELIGENTE ◄── TIEMPO REAL ◄── NODO SENSOR ◄── INTEGRADO</pre>
+<hr/>
+<h4>Los nueve, en una línea cada uno</h4>
+<p><b>1. De mainframe.</b> Lo que los distingue <b>no es la CPU, es la capacidad de E/S</b>: mil discos y millones de gigabytes. Ofrecen tres servicios:</p>
+<pre>por lotes        → trabajos de rutina, sin usuario presente
+                   (reclamos de una aseguradora)
+transacciones    → MUCHOS pedidos CHICOS: cientos o miles por segundo
+                   (cheques de un banco, reservas de aerolínea)
+tiempo compartido→ varios usuarios remotos a la vez</pre>
+<p><b>2. De servidores.</b> Dan servicio a varios usuarios por red y les permiten compartir recursos. Linux, Windows Server, Solaris, FreeBSD.</p>
+<p><b>3. De multiprocesadores.</b> Varias CPU en un sistema. Son variantes de los de servidor con agregados de comunicación y consistencia. Hoy esto bajó a tu notebook por los chips <b>multinúcleo</b>.</p>
+<p><b>4. De computadoras personales.</b> Su trabajo es <b>dar buen soporte a un solo usuario</b>. Windows, Linux, macOS.</p>
+<p><b>5. De computadoras de bolsillo.</b> Celulares y PDA — que en la práctica se fusionaron. CPU de 32 bits con modo protegido.</p>
+<p><b>6. Integrados</b> (embebidos, incrustados). Microondas, autos, televisores, reproductores de música.</p>
+<p><b>7. De nodos sensores.</b> Redes de computadoras minúsculas a batería, que se comunican por radio: detectar incendios forestales, vigilar fronteras, medir temperatura. Sistema chico y manejador de eventos. Ejemplo: TinyOS.</p>
+<p><b>8. De tiempo real.</b> Ver abajo — este sí se toma.</p>
+<p><b>9. De tarjetas inteligentes.</b> El más chico: un chip en una tarjeta de crédito. A veces hace <b>una sola función</b>, como el pago electrónico.</p>
+<hr/>
+<h4>⭐ Lo que te van a preguntar: tiempo real duro vs suave</h4>
+<pre>TIEMPO REAL DURO                 TIEMPO REAL SUAVE
+────────────────                 ─────────────────
+La acción DEBE ocurrir en        Es aceptable fallar
+el instante exacto.              MUY ocasionalmente.
+SIN EXCEPCIÓN.
+
+Garantías ABSOLUTAS.             Sin garantías absolutas.
+
+Si falla → desastre físico       Si falla → molestia
+
+Ejemplos:                        Ejemplos:
+· robot soldador en una línea    · audio digital
+  de montaje                     · multimedia
+· aeronáutica                    · teléfonos digitales
+· control de procesos
+  industriales
+· aplicaciones militares</pre>
+<p><b>El ejemplo del libro, palabra por palabra:</b> <i>si un robot soldador suelda antes o después de tiempo, el auto se arruina.</i></p>
+<p>Y el de tiempo real suave: si tu música se corta 20 milisegundos, te molesta. Nadie se muere.</p>
+<hr/>
+<h4>⭐ La otra pregunta típica: integrados vs de bolsillo</h4>
+<p>Parecen lo mismo — los dos son chiquitos. <b>No lo son</b>, y la diferencia tiene una consecuencia grande:</p>
+<pre>DE BOLSILLO (celular)            INTEGRADO (microondas)
+─────────────────────            ──────────────────────
+Instalás apps de terceros        NO se instala nada.
+                                 Todo el software está en ROM.
+         ↓                                  ↓
+Puede correr software            CERTEZA de que nunca correrá
+NO CONFIABLE                     software no confiable
+         ↓                                  ↓
+NECESITA protección              NO necesita protección
+                                            ↓
+                                 el diseño se SIMPLIFICA</pre>
+<p><b>La frase del libro:</b> <i>la propiedad principal que diferencia a los sistemas integrados de los de bolsillo es la certeza de que nunca se podrá ejecutar software que no sea confiable.</i></p>
+<p>Fijate que es <b>el mismo razonamiento del tema anterior</b>, al revés: si no compartís con nadie desconocido, no necesitás protección, y te ahorrás toda esa complejidad.</p>
+<h4>Referencia</h4>
+<p>(Tanenbaum, cap. 1.4, págs. impresas <b>33 a 37</b> → PDF <b>63 a 67</b>).</p>
+<hr/>
+<h3>Preguntas de control</h3>
+<p><b>1.</b> El sistema de frenos ABS de un auto y Spotify. <b>¿Cuál es tiempo real duro y cuál suave? ¿Por qué?</b></p>
+<p><b>2.</b> ¿Por qué un sistema operativo <b>integrado</b> puede darse el lujo de no implementar protección de memoria, y uno de <b>celular</b> no?</p>
+<p>Las dos <b>perfectas</b>. La 2 clavada: sin software de terceros, no hay de quién protegerse.</p>
+<p>Vas <b>8 de 9</b>. Último tema.</p>
+<hr/>
+<hr/>
+<h2>Tema 9 — Estructuras de los sistemas operativos</h2>
+<h4>La pregunta que define todo</h4>
+<p>Las cinco estructuras son <b>cinco respuestas a una sola pregunta</b>:</p>
+<div class="clave"><b>¿Quién corre en modo kernel?</b></div>
+<p>Acordate del tema 2: lo que corre en modo kernel puede hacer <b>cualquier cosa</b> con la máquina. Entonces:</p>
+<pre>MÁS cosas en modo kernel  →  más rápido, pero un error tumba todo
+MENOS cosas en modo kernel →  más seguro, pero más lento</pre>
+<p><b>Todo el tema es ese intercambio: rendimiento contra confiabilidad.</b> Vamos de un extremo al otro.</p>
+<hr/>
+<h4>1. Monolítico — <i>todo adentro</i></h4>
+<pre>┌─────────────────────────────────────────┐
+│          MODO KERNEL                    │
+│  ┌───────────────────────────────────┐  │
+│  │  TODO el sistema operativo:       │  │
+│  │  planificador, memoria, archivos, │  │
+│  │  red, drivers de video, de disco, │  │
+│  │  de impresora, de todo            │  │
+│  └───────────────────────────────────┘  │
+└─────────────────────────────────────────┘</pre>
+<p>Es <b>un solo programa binario enorme</b>. Todo junto, enlazado. Cualquier procedimiento puede llamar a cualquier otro directamente.</p>
+<p>Por dentro se organiza en tres niveles:</p>
+<pre>   programa principal          ← recibe la llamada al sistema
+          ↓
+   procedimientos de servicio  ← uno por cada llamada
+          ↓
+   procedimientos utilitarios  ← ayudan a los anteriores</pre>
+<p><b>Ventaja:</b> rapidísimo. Llamar a otra parte del SO es una llamada a procedimiento común (acordate del tema 6b: <code>CALL</code> y listo).</p>
+<p><b>Desventaja:</b> <b>un error en cualquier módulo derriba el sistema entero.</b> El driver de una impresora trucha puede colgarte la máquina, porque está corriendo con todos los privilegios.</p>
+<div class="clave">Es la organización <b>más común</b>. Linux es monolítico.</div>
+<hr/>
+<h4>2. Por capas — <i>todo adentro, pero ordenado</i></h4>
+<pre>┌──────────────────────────┐
+│  5  el operador          │
+├──────────────────────────┤
+│  4  programas de usuario │
+├──────────────────────────┤
+│  3  administración de E/S│
+├──────────────────────────┤
+│  2  comunicación         │
+├──────────────────────────┤
+│  1  memoria              │
+├──────────────────────────┤
+│  0  procesador           │
+└──────────────────────────┘
+      cada capa usa SOLO la de abajo</pre>
+<p>Sigue estando todo en modo kernel, pero <b>con orden</b>: la capa 3 no puede meterse con la 1 sin pasar por la 2.</p>
+<p>El primer ejemplo fue el <b>sistema THE</b>, con 6 capas. <b>MULTICS</b> lo generalizó con <b>anillos concéntricos</b>: los anillos de adentro tienen más privilegios, y para llamar hacia adentro había que hacer el equivalente a una llamada al sistema.</p>
+<p><b>Ventaja:</b> claridad, se depura ordenado. <b>Desventaja:</b> no siempre se puede ordenar todo en capas estrictas, y atravesarlas cuesta.</p>
+<hr/>
+<h4>3. Microkernel — <i>casi todo afuera</i></h4>
+<p>Acá se da vuelta la idea:</p>
+<pre>┌──────────────────────────────────────────────┐
+│  MODO USUARIO                                │
+│  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ │
+│  │ driver │ │ driver │ │servidor│ │servidor│ │
+│  │ de     │ │ de     │ │ de     │ │ de     │ │
+│  │ video  │ │ disco  │ │archivos│ │ red    │ │
+│  └────────┘ └────────┘ └────────┘ └────────┘ │
+└──────────────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│  MODO KERNEL                                 │
+│        ┌──────────────────┐                  │
+│        │   MICROKERNEL    │  ← chiquito      │
+│        └──────────────────┘                  │
+└──────────────────────────────────────────────┘</pre>
+<p>Se divide el SO en <b>módulos chicos y bien definidos</b>. <b>Solo el microkernel</b> corre en modo kernel. Todo lo demás —<b>incluidos los drivers</b>— corre como <b>procesos de usuario comunes</b>, sin privilegios.</p>
+<p><b>La ganancia es enorme:</b> un driver con errores puede corromper sus propios datos, pero <b>no puede tumbar el sistema</b>. Y como es un proceso de usuario, el SO puede detectarlo, matarlo y reiniciarlo al instante.</p>
+<div class="clave">Esto importa porque <b>los drivers son la causa más frecuente de caídas</b>. Es código escrito por terceros, con menos control de calidad que el kernel.</div>
+<p>Ejemplo: <b>MINIX 3</b>.</p>
+<p><b>La regla de diseño que acompaña</b> (y que te pueden preguntar):</p>
+<div class="clave"><b>Mecanismo en el kernel, política en el espacio de usuario.</b></div>
+<p>El kernel provee <i>la capacidad</i> de hacer algo. <i>Quién y cuándo</i> se decide afuera. Ejemplo: el kernel sabe cambiar de proceso (mecanismo); qué proceso sigue lo decide un planificador que vive afuera (política).</p>
+<p><b>El costo:</b> lo que en un monolítico es un <code>CALL</code>, acá es <b>mandar un mensaje a otro proceso</b>. Mucho más lento.</p>
+<hr/>
+<h4>4. Cliente-servidor — <i>el microkernel, estirado</i></h4>
+<p>Es una variación leve del microkernel. Se distinguen dos tipos de procesos:</p>
+<pre>  CLIENTE  ──── pide ────►  SERVIDOR
+     ▲                          │
+     └────── responde ──────────┘
+          (mensajes)</pre>
+<p><b>Lo interesante:</b> el cliente <b>no sabe</b> si el servidor está en la misma máquina o del otro lado de la red. El mensaje se manda igual.</p>
+<div class="clave">Por eso este modelo es <b>la base conceptual de los sistemas distribuidos</b> (tu Unidad 8).</div>
+<hr/>
+<h4>5. Máquinas virtuales — <i>varios sistemas operativos a la vez</i></h4>
+<p>Acá se separan dos cosas que en los demás van juntas: la multiprogramación y la máquina extendida.</p>
+<pre>┌──────────┐ ┌──────────┐ ┌──────────┐
+│  Linux   │ │ Windows  │ │  MINIX   │   ← SO completos
+├──────────┤ ├──────────┤ ├──────────┤
+│  copia   │ │  copia   │ │  copia   │   ← cada uno cree tener
+│  exacta  │ │  exacta  │ │  exacta  │      una máquina entera
+│  del HW  │ │  del HW  │ │  del HW  │      para él solo
+└──────────┘ └──────────┘ └──────────┘
+┌───────────────────────────────────────┐
+│       MONITOR / HIPERVISOR            │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│          HARDWARE REAL                │
+└───────────────────────────────────────┘</pre>
+<p>El monitor <b>no ofrece una máquina cómoda</b> — ofrece <b>copias exactas del hardware real</b>, con su modo kernel, su modo usuario, sus interrupciones. Arriba de cada copia instalás el SO que quieras.</p>
+<p><b>Dos tipos (esto se toma):</b></p>
+<pre>HIPERVISOR TIPO 1              HIPERVISOR TIPO 2
+─────────────────              ─────────────────
+corre sobre el HARDWARE        corre como un PROGRAMA DE USUARIO
+directamente                   encima de un SO anfitrión
+
+el clásico, VM/370             VirtualBox sobre Windows</pre>
+<p><b>La JVM</b> es otra variante: una arquitectura de computadora <b>definida por software</b>, con un intérprete que ejecuta código byte. Por eso un <code>.class</code> corre en cualquier máquina que tenga la JVM.</p>
+<div class="clave">Esto conecta directo con tu <b>Unidad 7, Virtualización</b>.</div>
+<hr/>
+<h4>Comparación final</h4>
+<table><tr><th>Estructura</th><th>¿Quién en modo kernel?</th><th>Ventaja</th><th>Desventaja</th></tr><tr><td><b>Monolítica</b></td><td>Todo el SO</td><td>Rendimiento</td><td>Un error tumba todo</td></tr><tr><td><b>Por capas</b></td><td>Todo, pero ordenado</td><td>Claridad</td><td>Difícil ordenar, costo por capa</td></tr><tr><td><b>Microkernel</b></td><td>Solo el microkernel</td><td><b>Confiabilidad</b></td><td>Lento (mensajes)</td></tr><tr><td><b>Cliente-servidor</b></td><td>Microkernel + mensajes</td><td>Se extiende a la red</td><td>Latencia</td></tr><tr><td><b>Máquinas virtuales</b></td><td>El hipervisor</td><td>Aislamiento total</td><td>Sobrecarga</td></tr></table>
+<p><b>Linux hace trampa, y es la respuesta inteligente:</b> es monolítico, pero con <b>módulos cargables</b> — pedazos de código (típicamente drivers) que se insertan y se quitan del kernel <b>en caliente</b>, sin reiniciar. Un término medio entre el monolito rígido y el microkernel.</p>
+<h4>Referencia</h4>
+<p>(Tanenbaum, cap. 1.7, págs. impresas <b>62 a 72</b> → PDF <b>92 a 102</b>). También en <code>fuentes/resumen_catedra_u01.pdf</code>, sección 1.7.</p>
+<hr/>
+<p>Te armo la visualización para que veas el intercambio en acción.</p>
+<h3>Preguntas de control</h3>
+<p><b>1.</b> En un microkernel, los drivers corren en <b>modo usuario</b>. Pero un driver tiene que hablar con el hardware, y tocar el hardware <b>requiere modo kernel</b>.</p>
+<p><b>¿Cómo se resuelve esa contradicción?</b> (Pensalo con lo que ya sabés del tema 6.)</p>
+<hr/>
+<p><b>2.</b> Te dan a elegir el SO para dos sistemas:</p>
+<ul><li><b>(a)</b> Un servidor de base de datos donde cada microsegundo de latencia cuenta</li><li><b>(b)</b> El control de vuelo de un avión</li></ul>
+<p>¿Qué estructura elegís para cada uno y por qué?</p>
+<h3>Corrección</h3>
+<p><b>1 — Correcta.</b> El driver hace una <b>llamada al sistema</b> al microkernel, que es quien toca el hardware por él.</p>
+<p>Un detalle que lo redondea: el microkernel no le da acceso a <i>todo</i> el hardware. Le da acceso <b>solo a los puertos de su dispositivo</b>. El driver de video puede tocar la placa de video y nada más.</p>
+<p>Eso es exactamente <b>"mecanismo en el kernel, política afuera"</b>: el kernel provee la capacidad de tocar un puerto; qué puerto puede tocar cada driver es política, y está controlada.</p>
+<hr/>
+<p><b>2a — Acá hay una confusión que conviene desarmar ya</b>, porque es muy fácil de cometer.</p>
+<p>Mezclaste dos cosas que se llaman igual:</p>
+<pre>CLIENTE-SERVIDOR como               CLIENTE-SERVIDOR como
+ARQUITECTURA DE APLICACIÓN          ESTRUCTURA DEL SO
+──────────────────────────          ─────────────────────
+Tu app le manda consultas SQL       Cómo está organizado el
+a un motor de base de datos         kernel POR DENTRO
+
+Es de qué forma se conectan         Es qué corre en modo kernel
+dos programas por la red            y qué en modo usuario
+
+NO TIENE NADA QUE VER con           Es el tema de esta unidad
+la estructura del SO</pre>
+<p>El servidor de base de datos puede usar la arquitectura cliente-servidor <b>a nivel aplicación</b> y correr arriba de un SO <b>monolítico</b>. Son capas distintas del problema.</p>
+<p><b>La respuesta correcta para (a) es monolítica.</b> Lo dice tu propia consigna: <i>"cada microsegundo de latencia cuenta"</i>. Mirá las barras de la visualización:</p>
+<pre>Monolítica        rendimiento ████████████████████  95
+Cliente-servidor  rendimiento ████████              40  ← el más LENTO de todos</pre>
+<p>Cliente-servidor es el peor candidato posible para algo sensible a la latencia, porque <b>cada operación interna es un mensaje entre procesos</b> en vez de una llamada a procedimiento.</p>
+<div class="clave">Por eso los motores de base de datos serios corren sobre Linux, que es monolítico.</div>
+<hr/>
+<p><b>2b — Mismo problema, al revés.</b></p>
+<p>Las capas te dan <b>claridad para depurar</b>, sí. Pero volvé a la visualización y apretá el botón rojo en la pestaña "Por capas":</p>
+<pre>Por capas  →  el driver falla  →  EL SISTEMA SE CAE IGUAL</pre>
+<p><b>En las capas todo sigue corriendo en modo kernel.</b> Ordenado, pero en modo kernel. La protección no mejora un gramo.</p>
+<p><b>La respuesta correcta para (b) es microkernel.</b> Si falla el driver de un sensor en un avión, no podés permitirte que se caiga el sistema de control de vuelo. Necesitás que el driver muera solo y se reinicie sin tocar lo demás.</p>
+<p>Y encaja con el dato real: <b>QNX</b>, que es un microkernel, es el SO que se usa en aviónica, en sistemas médicos y en autos. No es casualidad.</p>
+<hr/>
+<h4>La regla que te queda</h4>
+<pre>¿Qué me duele más perder?
+
+  RENDIMIENTO  →  elegí MONOLÍTICA
+  CONFIABILIDAD →  elegí MICROKERNEL</pre>
+<p>Todo lo demás son variantes de esas dos. Y fijate que en tiempo real <b>duro</b> (el avión, tema 8) la respuesta es casi siempre microkernel, por la misma razón por la que es duro: no puede fallar.</p>
+<hr/>
+<p>Terminaste los <b>9 de 9</b> temas. ¿Te hago el <b>cierre de la unidad</b> — los puntos clave y qué se toma más en los exámenes?</p>
+<hr/>
+<h2>Cierre de la Unidad 1</h2>
+<h3>Los 8 puntos que tenés que tener firmes</h3>
+<p><b>1. El SO hace dos cosas que no tienen que ver entre sí.</b> Es <b>máquina extendida</b> (crea abstracciones, y la principal es el archivo) y es <b>administrador de recursos</b> (hace una <i>asignación ordenada y controlada</i>). Multiplexa en el <b>tiempo</b> (CPU) y en el <b>espacio</b> (memoria, disco).</p>
+<p><b>2. Modo kernel y modo usuario es el cimiento de todo.</b> Un bit del PSW decide. Las instrucciones privilegiadas <b>las rechaza el hardware antes de ejecutarlas</b>, no el SO después. Sin este par de modos no hay protección, no hay multiprogramación segura, no hay nada.</p>
+<p><b>3. Los tres métodos de E/S tardan lo mismo. Lo que cambia es la CPU.</b> <code>Programada 100% · Interrupciones 5% · DMA 0,005%</code>. La trampa de examen es preguntar cuál es "más rápido": <b>ninguno</b>, la duración la impone el dispositivo.</p>
+<p><b>4. La cadena de arranque es una cadena de cargadores</b>, cada uno más grande que el anterior, y cada uno existe solo para cargar al siguiente. <code>BIOS → MBR (446+64+2) → partición activa → cargador secundario → SO</code>.</p>
+<p><b>5. <code>INT</code> elige la familia, <code>AH</code> elige la función, los otros registros llevan los datos.</b> <code>INT 21h / AH=09h</code> muestra una cadena desde <code>DS:DX</code> terminada en <code>$</code>. <code>AH=02h</code> muestra <b>un</b> carácter desde <code>DL</code>.</p>
+<p><b>6. La llamada al sistema es la única puerta al kernel.</b> <code>TRAP</code> se diferencia de un <code>CALL</code> en dos cosas: <b>cambia el modo</b> y <b>salta a una dirección fija</b>. Esas dos diferencias son toda la seguridad.</p>
+<p><b>7. La historia es una cadena de agujeros de tiempo muerto que se van tapando.</b> Y la distinción que más confunden: <b>lotes = uno en memoria por vez, en fila; multiprogramación = varios en memoria a la vez.</b> La multiprogramación exige hardware de protección.</p>
+<p><b>8. Las cinco estructuras responden a una sola pregunta: ¿quién corre en modo kernel?</b> Y la respuesta es siempre un intercambio: <b>monolítico = rápido y frágil; microkernel = lento y robusto.</b></p>
+<hr/>
+<h3>Lo que más se toma de esta unidad</h3>
+<p>Sacado de tus 29 fotos de exámenes reales:</p>
+<h4>🔴 Casi seguro que cae</h4>
+<p><b><code>strace</code></b> — la sintaxis exacta:</p>
+<pre>strace -o salida.txt ls -la</pre>
+<p>Distractores habituales: <code>&gt;</code>, <code>|</code>, <code>-s</code>. Y saber qué llamadas aparecen: <code>openat</code>, <code>read</code>, <code>getdents64</code>, <code>write</code>, <code>newfstatat</code>, <code>close</code>.</p>
+<p><b>Comandos Linux de las cartillas:</b></p>
+<table><tr><th>Comando</th><th>Para qué</th></tr><tr><td>`ls -l /dev \</td><td>grep '^c'`</td><td>identificar dispositivos de <b>carácter</b> (con <code>^b</code>, de bloque)</td></tr><tr><td><code>pgrep firefox</code> / `ps -ef \</td><td>grep firefox`</td><td>obtener el <b>PID</b> de un proceso</td></tr><tr><td><code>vmstat</code></td><td>columna <b><code>id</code></b> = % de tiempo que la CPU está <b>inactiva</b></td></tr><tr><td><code>free -h</code> / <code>cat /proc/meminfo</code></td><td>RAM total y libre</td></tr><tr><td><code>lsblk -f</code></td><td>dispositivos de bloque, espacio usado y libre</td></tr><tr><td><code>cat /etc/fstab</code></td><td><b>tamaño de bloque</b> de una partición ext4</td></tr></table>
+<p><b><code>INT 21h</code></b> — completar el código para mostrar una cadena: <code>AH=09h</code>, la cadena con <code>$</code>, <code>DS:DX</code>.</p>
+<h4>🟡 Aparece seguido</h4>
+<ul><li>Las <b>tres formas de E/S</b> y cuál conviene según el dispositivo</li><li><b>Modo kernel vs usuario</b> y qué pasa con una instrucción privilegiada</li><li><b>Lotes vs multiprogramación</b> (verdadero/falso con justificación)</li><li><b>Tiempo real duro vs suave</b>, con ejemplos</li></ul>
+<h4>🟢 Más teórico, suele ser desarrollo</h4>
+<ul><li>Las cinco estructuras y su intercambio rendimiento/confiabilidad</li><li>Historia y por qué aparece cada invento</li></ul>
+<hr/>
+<h3>Los errores que ya cometiste y no vas a repetir</h3>
+<p>Te los anoto porque son exactamente lo que se cobra en un examen:</p>
+<ol><li>~~"El SO deja de responder"~~ → <b>el hardware rechaza</b> la instrucción privilegiada <i>antes</i> de ejecutarla</li><li>~~Los 64 bytes "son" las particiones~~ → la tabla <b>describe</b>, no contiene. 16 bytes por renglón, sea de 50 MB o de 2 TB</li><li>~~Cliente-servidor para algo sensible a latencia~~ → es <b>el más lento</b>. Y no confundir la estructura del SO con la arquitectura de una aplicación</li><li>~~Capas para tolerancia a fallos~~ → en capas <b>todo sigue en modo kernel</b>, un driver que falla tumba todo igual</li></ol>
+<hr/>
+<hr/><h2>Anexo — Resumen condensado de la unidad</h2>
+<div class="clave">La misma unidad en versión corta (la que se armó al cerrar la U1). Además de servir para un repaso rápido, tiene datos del libro que en el chat no se dijeron tal cual: la tabla de llamadas POSIX, POSIX contra Win32, <code>errno</code>, la salida de <code>strace</code>, el exokernel, Babbage y los comandos de las cartillas.</div>
+
+
+
 
 <div class="clave">
 <b>La idea que atraviesa toda la unidad:</b> el sistema operativo existe para esconder un hardware incómodo
@@ -41,12 +1453,12 @@ El tema 6 es <i>la puerta por donde se pide</i>. Los temas 7 a 9 son <i>cómo se
 
 <hr/>
 
-<h2>Tema 1 — ¿Qué es un sistema operativo?</h2>
+<h3>Resumen · Tema 1 — ¿Qué es un sistema operativo?</h3>
 
 <p>Es difícil definirlo más allá de decir que es el software que se ejecuta en modo kernel, y ni siquiera eso es
 siempre cierto. El problema es que cumple <b>dos funciones básicas que no están relacionadas entre sí</b>.</p>
 
-<h3>Función 1 — Máquina extendida</h3>
+<h4>Función 1 — Máquina extendida</h4>
 
 <p>La arquitectura de la mayoría de las computadoras a nivel de lenguaje máquina es <b>primitiva y compleja de
 programar</b>. La <b>abstracción</b> es la clave para lidiar con esa complejidad, y la abstracción que todo el mundo
@@ -66,7 +1478,7 @@ SIN sistema operativo           CON sistema operativo
 <p><i>"El trabajo del sistema operativo es crear buenas abstracciones para después implementar y administrar
 los objetos abstractos entonces creados."</i></p>
 
-<h3>Función 2 — Administrador de recursos</h3>
+<h4>Función 2 — Administrador de recursos</h4>
 
 <p>Proporciona una <b>asignación ordenada y controlada</b> de los procesadores, memorias y dispositivos de E/S
 entre los programas que compiten por ellos. Lo hace <b>multiplexando</b> de dos formas:</p>
@@ -84,7 +1496,7 @@ entre los programas que compiten por ellos. Lo hace <b>multiplexando</b> de dos 
 se multiplexa en el <b>tiempo</b>. De ahí salen los algoritmos de planificación de disco de la Unidad 5.
 </div>
 
-<h3>Ejemplo resuelto: por qué la multiprogramación mejora el uso de la CPU</h3>
+<h4>Ejemplo resuelto: por qué la multiprogramación mejora el uso de la CPU</h4>
 
 <div class="ej">
 <p>Un proceso pasa el 80 % de su tiempo esperando E/S. ¿Cuánto se aprovecha la CPU según cuántos procesos haya?</p>
@@ -107,9 +1519,9 @@ aprovechamiento es <b>1 − p^n</b>.</p>
 
 <hr/>
 
-<h2>Tema 2 — Repaso del hardware</h2>
+<h3>Resumen · Tema 2 — Repaso del hardware</h3>
 
-<h3>La CPU y sus registros</h3>
+<h4>La CPU y sus registros</h4>
 
 <p>Ciclo básico de toda CPU: <b>obtener</b> la instrucción de memoria, <b>decodificarla</b> para determinar su tipo
 y operandos, <b>ejecutarla</b>, y volver a empezar.</p>
@@ -121,7 +1533,7 @@ y operandos, <b>ejecutarla</b>, y volver a empezar.</p>
 <tr><td>PSW (palabra de estado)</td><td>Bits de código de condición <b>y el bit de modo</b></td><td>Acá vive la protección</td></tr>
 </table>
 
-<h3>Modo kernel y modo usuario — el cimiento de todo</h3>
+<h4>Modo kernel y modo usuario — el cimiento de todo</h4>
 
 <pre>+-------------------------------------------------+
 |  MODO USUARIO                                   |
@@ -150,7 +1562,7 @@ ejecutarla</b>, generando un trap. Recién ahí el SO toma el control y normalme
 <br/><b>La protección la impone el hardware; el sistema operativo la configura.</b>
 </div>
 
-<h3>La jerarquía de memoria</h3>
+<h4>La jerarquía de memoria</h4>
 
 <pre>        ^ más rápido, más caro, menos capacidad
         |
@@ -167,7 +1579,7 @@ mantienen en una caché rápida dentro o muy cerca de la CPU. Si la línea pedid
 no se envía petición por el bus a la memoria principal. Si no, hay <b>fallo</b> y se paga el acceso completo.
 La L1 está dentro de la CPU y se accede sin retraso; la L2 tiene varios MB y cuesta uno o dos ciclos de reloj.</p>
 
-<h3>Ejemplo resuelto: tiempo medio de acceso con caché</h3>
+<h4>Ejemplo resuelto: tiempo medio de acceso con caché</h4>
 
 <div class="ej">
 <p>Caché L1 = 1 ns, RAM = 10 ns, tasa de aciertos = 95 %.</p>
@@ -181,7 +1593,7 @@ solo <b>1,67×</b>. La caché <b>vale lo que vale la localidad del programa</b>:
 cambió es el software.</p>
 </div>
 
-<h3>El resto</h3>
+<h4>El resto</h4>
 <ul>
 <li><b>Memoria no volátil:</b> ROM (de fábrica, no se modifica), EEPROM y flash (sí se reescriben),
 CMOS (volátil, con batería: fecha, hora y configuración del BIOS).</li>
@@ -200,7 +1612,7 @@ asigne de forma centralizada los niveles de interrupción y las direcciones de E
 
 <hr/>
 
-<h2>Tema 3 — Las tres formas de hacer E/S</h2>
+<h3>Resumen · Tema 3 — Las tres formas de hacer E/S</h3>
 
 <div class="clave">
 <b>Lo más importante del tema:</b> los tres métodos transfieren los mismos datos y <b>tardan exactamente lo
@@ -208,20 +1620,20 @@ mismo</b>, porque la duración la impone el dispositivo. Lo que cambia radicalme
 La trampa de examen es preguntar "¿cuál es más rápido?": <b>ninguno</b>.
 </div>
 
-<h3>1. E/S programada (espera ocupada / polling)</h3>
+<h4>1. E/S programada (espera ocupada / polling)</h4>
 <p>El driver inicia la operación y entra en un <b>ciclo cerrado sondeando continuamente</b> al dispositivo para ver
 si terminó. Mantiene la CPU ocupada durante toda la transferencia.</p>
 <pre>CPU:  [sondea][sondea][sondea][sondea][sondea]  &lt;- 100% quemada
 DISP: [============ transfiriendo ===========]</pre>
 
-<h3>2. E/S controlada por interrupciones</h3>
+<h4>2. E/S controlada por interrupciones</h4>
 <p>El driver inicia el dispositivo, le pide que <b>genere una interrupción cuando termine</b>, y retorna. El SO
 bloquea al proceso llamador si hace falta y busca otro trabajo. Paga una interrupción por unidad de datos.</p>
 <pre>CPU:  [otros procesos][i][otros procesos][i][otros...][i]
 DISP: [===byte===][===byte===][===byte===][===byte===]
       i = interrupción</pre>
 
-<h3>3. E/S con DMA (Direct Memory Access)</h3>
+<h4>3. E/S con DMA (Direct Memory Access)</h4>
 <p>Un chip especial controla el flujo de bits entre la memoria y el controlador <b>sin intervención constante de la
 CPU</b>. La CPU lo configura (cuántos bytes, qué direcciones, qué operación) y lo deja trabajar. Al terminar,
 genera <b>una única interrupción</b>.</p>
@@ -230,11 +1642,11 @@ genera <b>una única interrupción</b>.</p>
        configura el DMA                1 sola interrupción
 DISP: [============ el DMA transfiere =========]</pre>
 
-<h3>Canales de datos</h3>
+<h4>Canales de datos</h4>
 <p>En las mainframes la idea se lleva al extremo: procesadores de E/S especializados, con su propio repertorio de
 instrucciones, que ejecutan programas de canal completos y manejan muchos dispositivos de forma autónoma.</p>
 
-<h3>Comparación</h3>
+<h4>Comparación</h4>
 <table>
 <tr><th></th><th>Programada</th><th>Interrupciones</th><th>DMA</th></tr>
 <tr><td>¿CPU libre durante la espera?</td><td>No</td><td>Sí</td><td>Sí</td></tr>
@@ -243,7 +1655,7 @@ instrucciones, que ejecutan programas de canal completos y manejan muchos dispos
 <tr><td>Dónde se usa</td><td>dispositivos simples, arranque</td><td>teclado, mouse</td><td>disco, red, video</td></tr>
 </table>
 
-<h3>Ejemplo resuelto: el que se toma</h3>
+<h4>Ejemplo resuelto: el que se toma</h4>
 
 <div class="ej">
 <p>1000 bytes, el dispositivo entrega un byte cada 100 µs, atender una interrupción cuesta 5 µs.</p>
@@ -268,13 +1680,13 @@ interrupciones: <b>reduce su cantidad a una sola</b>.
 
 <hr/>
 
-<h2>Tema 4 — El arranque y el sector de booteo</h2>
+<h3>Resumen · Tema 4 — El arranque y el sector de booteo</h3>
 
 <p><b>El problema del huevo y la gallina:</b> el sistema operativo está en el disco, pero para leer el disco hace
 falta el sistema operativo. La solución es una <b>cadena de cargadores</b>, cada uno más grande y más capaz que
 el anterior, y cada uno existe solo para poder cargar al siguiente.</p>
 
-<h3>Qué es una partición</h3>
+<h4>Qué es una partición</h4>
 
 <p>Un disco es una <b>tira continua de sectores numerados</b>. Particionarlo es como levantar paredes dentro de un
 galpón: las paredes <b>no existen físicamente</b>, son <b>información anotada</b> en el primer sector.</p>
@@ -287,7 +1699,7 @@ galpón: las paredes <b>no existen físicamente</b>, son <b>información anotada
 +---------------+-----------------+--------------+------------+
    cada uno con su organización interna, sin verse entre sí</pre>
 
-<h3>La cadena de arranque</h3>
+<h4>La cadena de arranque</h4>
 
 <pre>chip en la placa          sector 0 del disco      primer sector de
 (no depende del disco)    446 bytes               la partición activa      archivo en la partición
@@ -317,7 +1729,7 @@ y los plug and play.</li>
 procesos de segundo plano y arranca el login o la GUI.</li>
 </ol>
 
-<h3>Ejemplo resuelto: adentro de los 512 bytes</h3>
+<h4>Ejemplo resuelto: adentro de los 512 bytes</h4>
 
 <div class="ej">
 <pre>SECTOR DE BOOTEO MAESTRO (MBR) — un sector = 512 bytes
@@ -377,7 +1789,7 @@ es un complemento elaborado: el libro describe el proceso pero no la estructura 
 
 <hr/>
 
-<h2>Tema 5 — Ensamblador e interrupciones del 8086</h2>
+<h3>Resumen · Tema 5 — Ensamblador e interrupciones del 8086</h3>
 
 <div class="clave">
 <b>El problema de fondo:</b> en ensamblador <b>no existe una instrucción para mostrar texto en pantalla</b>.
@@ -386,7 +1798,7 @@ Las instrucciones del procesador son mover, sumar, restar, comparar y saltar. Na
 máquina. Vos solo las llamás.
 </div>
 
-<h3>La regla de oro</h3>
+<h4>La regla de oro</h4>
 
 <p><b><code>INT xxh</code> elige la FAMILIA. <code>AH</code> elige la FUNCIÓN dentro de esa familia.
 Los demás registros llevan los datos.</b></p>
@@ -411,7 +1823,7 @@ en AL, DL, DX, BX, CX, DS:DX, etc."</i></p>
                                        mira DX -> va a esa dirección,
                                        lee el texto y lo pinta</pre>
 
-<h3>Los registros</h3>
+<h4>Los registros</h4>
 
 <pre>    +-----------------+
 AX  |   AH   |   AL   |   dos mitades de 8 bits, direccionables por separado
@@ -431,7 +1843,7 @@ SI, DI, BP, SP -> índice y punteros</pre>
 admite un valor inmediato en un registro de segmento, se pasa por <code>AX</code>:
 <code>MOV AX, @data</code> y después <code>MOV DS, AX</code>.</p>
 
-<h3>INT 21h — funciones de DOS (la más importante)</h3>
+<h4>INT 21h — funciones de DOS (la más importante)</h4>
 
 <table>
 <tr><th>AH</th><th>Qué hace</th><th>Dónde van los datos</th></tr>
@@ -447,7 +1859,7 @@ admite un valor inmediato en un registro de segmento, se pasa por <code>AX</code
 <tr><td><b>4Ch</b></td><td><b>Termina el proceso</b></td><td>AL = código de retorno (o <code>MOV AX, 4C00h</code>)</td></tr>
 </table>
 
-<h3>INT 10h — video</h3>
+<h4>INT 10h — video</h4>
 
 <table>
 <tr><th>AH</th><th>Qué hace</th><th>Datos</th><th>¿Avanza el cursor?</th></tr>
@@ -460,7 +1872,7 @@ admite un valor inmediato en un registro de segmento, se pasa por <code>AX</code
 
 <p>La cartilla marca que 09h, 0Ah, 0Eh y 13h son <b>las más fáciles de confundir</b>.</p>
 
-<h3>INT 16h — teclado (BIOS)</h3>
+<h4>INT 16h — teclado (BIOS)</h4>
 <ul>
 <li><b>00h</b> — lee tecla y <b>espera</b> hasta que haya una. Retorna AL = ASCII, AH = scan code.</li>
 <li><b>01h</b> — <b>consulta</b> si hay tecla, no bloquea. ZF=0 hay, ZF=1 no hay.</li>
@@ -468,10 +1880,10 @@ admite un valor inmediato en un registro de segmento, se pasa por <code>AX</code
 </ul>
 <p>Fijate el paralelo con el tema 3: 00h <b>bloquea</b>, 01h <b>sondea</b> (polling).</p>
 
-<h3>INT 17h — impresora</h3>
+<h4>INT 17h — impresora</h4>
 <p>00h imprimir carácter (AL, con DX=0 para LPT1 y DX=1 para LPT2), 01h inicializar, 02h obtener estado (retorna en AH).</p>
 
-<h3>Ejemplo resuelto: el ejercicio del final práctica</h3>
+<h4>Ejemplo resuelto: el ejercicio del final práctica</h4>
 
 <div class="ej">
 <pre>ORG 100h
@@ -515,14 +1927,14 @@ la rutina, y al final la rutina hace <code>IRET</code> que desapila todo. Es <b>
 
 <hr/>
 
-<h2>Tema 6 — Llamadas al sistema</h2>
+<h3>Resumen · Tema 6 — Llamadas al sistema</h3>
 
 <p><b>Definición:</b> las llamadas al sistema son <b>la interfaz que permite a los programas de usuario solicitar
 servicios al sistema operativo</b>. Son la frontera exacta entre el modo usuario y el modo kernel.</p>
 
 <p>Lo que hiciste con <code>INT 21h</code> <b>ya era una llamada al sistema</b> (de DOS). El mecanismo es el mismo.</p>
 
-<h3>La instrucción TRAP</h3>
+<h4>La instrucción TRAP</h4>
 
 <table>
 <tr><th></th><th>Llamada a procedimiento (CALL)</th><th>TRAP</th></tr>
@@ -538,7 +1950,7 @@ al kernel por donde se le antoje. Como solo puede saltar a un punto fijo, el ker
 gobierno</i>, y solo por la puerta principal.
 </div>
 
-<h3>Llamadas a procedimiento: CALL, RET y la pila</h3>
+<h4>Llamadas a procedimiento: CALL, RET y la pila</h4>
 
 <p>Un procedimiento no sabe quién lo llamó. Si lo llamaste desde la línea 10 tiene que volver a la 11; si lo
 llamaste desde la 200, a la 201. Se resuelve con la <b>pila</b>:</p>
@@ -561,7 +1973,7 @@ RET hace UNA cosa:
 <p>Si un procedimiento llama a otro que llama a otro, las direcciones se <b>apilan</b> y se desapilan en orden
 inverso: lo último que entra es lo primero que sale.</p>
 
-<h3>Los once pasos de read()</h3>
+<h4>Los once pasos de read()</h4>
 
 <ol>
 <li>1 a 3 — El programa mete los parámetros en la pila, <b>en orden inverso</b> (nbytes, &amp;bufer, fd). El primero
@@ -583,7 +1995,7 @@ nada, el proceso se bloquea, el SO ejecuta otro, y recién cuando llega la entra
 <p><b>Valor de retorno:</b> devuelve la cantidad de bytes leídos, que puede ser menor que nbytes si se alcanzó el
 fin de archivo. Si falla, devuelve <b>−1</b> y el número de error queda en la variable global <b>errno</b>.</p>
 
-<h3>Las llamadas POSIX principales</h3>
+<h4>Las llamadas POSIX principales</h4>
 
 <table>
 <tr><th>Procesos</th><th>Archivos</th><th>Directorios y varias</th></tr>
@@ -606,13 +2018,13 @@ fin de archivo. Si falla, devuelve <b>−1</b> y el número de error queda en la
 <b>time</b> — tiempo desde el 1/1/1970</td></tr>
 </table>
 
-<h3>POSIX frente a Win32</h3>
+<h4>POSIX frente a Win32</h4>
 <p>En POSIX la correspondencia entre procedimientos de biblioteca y llamadas al sistema es casi <b>uno a uno</b>.
 La API <b>Win32</b> de Windows, en cambio, tiene miles de funciones <b>deliberadamente desacopladas</b> de las
 verdaderas llamadas al sistema: son procedimientos de biblioteca que pueden invocar o no al kernel. Esa indirección
 le permite a Microsoft cambiar el kernel sin romper los programas existentes.</p>
 
-<h3>strace — aparece en los exámenes</h3>
+<h4>strace — aparece en los exámenes</h4>
 
 <div class="ej">
 <p>Sintaxis exacta que piden: <code>strace -o salida.txt ls -la</code></p>
@@ -629,7 +2041,7 @@ le permite a Microsoft cambiar el kernel sin romper los programas existentes.</p
 </table>
 </div>
 
-<h3>Ejemplo resuelto: por qué conviene un buffer grande</h3>
+<h4>Ejemplo resuelto: por qué conviene un buffer grande</h4>
 
 <div class="ej">
 <pre>Leer un archivo de 8 KB:
@@ -647,7 +2059,7 @@ Los buffers no ahorran lectura de disco: <b>ahorran llamadas al sistema</b>.</p>
 
 <hr/>
 
-<h2>Tema 7 — Historia por generaciones</h2>
+<h3>Resumen · Tema 7 — Historia por generaciones</h3>
 
 <div class="clave">
 <b>Las fechas no importan. Lo que se toma es por qué apareció cada invento.</b> Toda la historia es una cadena
@@ -655,7 +2067,7 @@ de <b>agujeros de tiempo muerto</b> que se van tapando, porque las computadoras 
 parada era plata tirada.
 </div>
 
-<h3>Agujero 1 — la máquina espera al humano (1945–1955, tubos al vacío)</h3>
+<h4>Agujero 1 — la máquina espera al humano (1945–1955, tubos al vacío)</h4>
 
 <pre>+--------------------------------------------------+
 | vos cableando | CORRE | vos cableando | CORRE |  |
@@ -675,7 +2087,7 @@ ninguno de los 20.000 bulbos.</li>
 <p>Antecedente: <b>Charles Babbage</b> (1792–1871) diseñó la primera computadora digital verdadera, la máquina
 analítica, que nunca funcionó por limitaciones mecánicas. Contrató a <b>Ada Lovelace</b> como primera programadora.</p>
 
-<h3>Agujero 2 — la máquina espera al operador (1955–1965, transistores)</h3>
+<h4>Agujero 2 — la máquina espera al operador (1955–1965, transistores)</h4>
 
 <p>Se saca al programador de la sala y entran los <b>operadores profesionales</b>. Pero el operador <b>camina</b>:
 busca tarjetas, carga, saca papel de la impresora, lo lleva al otro cuarto.</p>
@@ -693,7 +2105,7 @@ y que la máquina los ejecute <b>uno atrás del otro sin que nadie toque nada</b
 <b>Son las precursoras de los shells e intérpretes de línea de comandos modernos.</b></p>
 <p>Sistemas operativos típicos: FMS (Fortran Monitor System) e IBSYS.</p>
 
-<h3>Agujero 3 — la CPU espera al disco (1965–1980, circuitos integrados)</h3>
+<h4>Agujero 3 — la CPU espera al disco (1965–1980, circuitos integrados)</h4>
 
 <p>Ya no hay tiempo muerto <b>entre</b> trabajos, pero sí <b>adentro</b> de cada uno. En procesamiento de datos
 comerciales la CPU espera E/S el <b>80 a 90 %</b> del tiempo.</p>
@@ -751,11 +2163,11 @@ System V y BSD → el IEEE creó el estándar <b>POSIX</b> para unificar. Despu�
 y <b>Linux</b> (Torvalds, inspirado en MINIX).</li>
 </ul>
 
-<h3>Agujero 4 — el usuario espera el resultado</h3>
+<h4>Agujero 4 — el usuario espera el resultado</h4>
 <p>La máquina está al 100 %, pero entregás las tarjetas y el resultado llega en seis horas. Una coma de más te
 cuesta el día. <b>Solución: el tiempo compartido</b>, ya mencionado.</p>
 
-<h3>Agujero 5 — ya no hay agujero (1980 a hoy, computadoras personales)</h3>
+<h4>Agujero 5 — ya no hay agujero (1980 a hoy, computadoras personales)</h4>
 
 <p>Con los circuitos <b>LSI</b> la computadora se vuelve <b>barata</b>. Por primera vez el objetivo cambia: ya no es
 aprovechar la máquina, es <b>que sea cómoda para la persona</b>.</p>
@@ -781,7 +2193,7 @@ la monoprogramación, los directorios de un solo nivel. Desaparecieron de las m�
 los sistemas embebidos y las tarjetas inteligentes.
 </div>
 
-<h3>La historia completa en un cuadro</h3>
+<h4>La historia completa en un cuadro</h4>
 
 <table>
 <tr><th>Agujero</th><th>¿Quién esperaba?</th><th>Solución</th></tr>
@@ -796,7 +2208,7 @@ los sistemas embebidos y las tarjetas inteligentes.
 
 <hr/>
 
-<h2>Tema 8 — Tipos de sistemas operativos</h2>
+<h3>Resumen · Tema 8 — Tipos de sistemas operativos</h3>
 
 <p>Tanenbaum describe <b>nueve</b>, ordenados de la máquina más grande a la más chica.</p>
 
@@ -822,7 +2234,7 @@ manejador de eventos.</td><td>TinyOS</td></tr>
 como el pago electrónico.</td><td>—</td></tr>
 </table>
 
-<h3>Tiempo real duro vs suave — esto se toma</h3>
+<h4>Tiempo real duro vs suave — esto se toma</h4>
 
 <pre>TIEMPO REAL DURO                 TIEMPO REAL SUAVE
 ----------------                 -----------------
@@ -842,7 +2254,7 @@ Ejemplos:                        Ejemplos:
 <p>El ejemplo del libro: <i>si un robot soldador suelda antes o después de tiempo, el auto se arruina.</i>
 En cambio, si la música se corta 20 milisegundos, molesta pero no pasa nada.</p>
 
-<h3>Integrados vs de bolsillo — la otra pregunta típica</h3>
+<h4>Integrados vs de bolsillo — la otra pregunta típica</h4>
 
 <pre>DE BOLSILLO (celular)            INTEGRADO (microondas)
 ---------------------            ----------------------
@@ -866,7 +2278,7 @@ bolsillo es la certeza de que nunca se podrá ejecutar software que no sea confi
 
 <hr/>
 
-<h2>Tema 9 — Estructuras de los sistemas operativos</h2>
+<h3>Resumen · Tema 9 — Estructuras de los sistemas operativos</h3>
 
 <div class="clave">
 Las cinco estructuras son <b>cinco respuestas a una sola pregunta: ¿quién corre en modo kernel?</b><br/>
@@ -875,7 +2287,7 @@ Menos cosas en modo kernel → más seguro, pero más lento.<br/>
 <b>Todo el tema es ese intercambio: rendimiento contra confiabilidad.</b>
 </div>
 
-<h3>1. Monolítica — todo adentro</h3>
+<h4>1. Monolítica — todo adentro</h4>
 
 <p>Es <b>un solo programa binario enorme</b>, todo enlazado, corriendo en modo kernel. Cualquier procedimiento puede
 llamar a cualquier otro directamente. Por dentro, tres niveles:</p>
@@ -890,7 +2302,7 @@ llamar a cualquier otro directamente. Por dentro, tres niveles:</p>
 <b>Desventaja:</b> un error en cualquier módulo <b>derriba el sistema entero</b>. Es la organización más común;
 Linux es monolítico.</p>
 
-<h3>2. Por capas — todo adentro, pero ordenado</h3>
+<h4>2. Por capas — todo adentro, pero ordenado</h4>
 
 <pre>+--------------------------+
 |  5  el operador          |
@@ -912,7 +2324,7 @@ estrictas, y atravesarlas cuesta.</p>
 que falla tumba el sistema igual que en la monolítica. Lo que mejora es la claridad para depurar.
 </div>
 
-<h3>3. Microkernel — casi todo afuera</h3>
+<h4>3. Microkernel — casi todo afuera</h4>
 
 <pre>+----------------------------------------------+
 |  MODO USUARIO                                |
@@ -946,7 +2358,7 @@ microkernel, que lo hace por él. Y el microkernel le da acceso <b>solo a los pu
 todo el hardware. Eso es exactamente "mecanismo en el kernel, política afuera".
 </div>
 
-<h3>4. Cliente-servidor — el microkernel, estirado</h3>
+<h4>4. Cliente-servidor — el microkernel, estirado</h4>
 
 <p>Variación leve del microkernel: <b>servidores</b> que proveen un servicio y <b>clientes</b> que lo usan,
 comunicados por <b>paso de mensajes</b>. Lo interesante: el cliente <b>no sabe</b> si el servidor está en la misma
@@ -959,7 +2371,7 @@ de base de datos). Son capas distintas del problema: un servidor de base de dato
 cliente-servidor a nivel aplicación y correr sobre un SO monolítico.
 </div>
 
-<h3>5. Máquinas virtuales — varios sistemas operativos a la vez</h3>
+<h4>5. Máquinas virtuales — varios sistemas operativos a la vez</h4>
 
 <pre>+----------+ +----------+ +----------+
 |  Linux   | | Windows  | |  MINIX   |   <- SO completos
@@ -992,7 +2404,7 @@ ejecuta código byte. Por eso un programa compilado a código byte corre en cual
 completa, le da <b>un subconjunto de los recursos reales</b> (por ejemplo, los cilindros 0 a 1023 del disco).
 Ahorra la capa de traducción entre direcciones virtuales y reales.</p>
 
-<h3>Comparación final</h3>
+<h4>Comparación final</h4>
 
 <table>
 <tr><th>Estructura</th><th>¿Quién en modo kernel?</th><th>Ventaja</th><th>Desventaja</th><th>Ejemplo</th></tr>
@@ -1017,7 +2429,7 @@ es duro: no puede fallar. (QNX, un microkernel, es el SO de aviónica, sistemas 
 
 <hr/>
 
-<h2>Cierre — los 8 puntos que hay que tener firmes</h2>
+<h3>Resumen · Cierre — los 8 puntos que hay que tener firmes</h3>
 
 <ol>
 <li><b>El SO hace dos cosas que no tienen que ver entre sí.</b> Máquina extendida (abstracciones, la principal es
@@ -1040,9 +2452,9 @@ exige hardware de protección.</li>
 monolítico = rápido y frágil; microkernel = lento y robusto.</li>
 </ol>
 
-<h2>Lo que más se toma de esta unidad</h2>
+<h3>Resumen · Lo que más se toma de esta unidad</h3>
 
-<h3>Casi seguro que cae</h3>
+<h4>Casi seguro que cae</h4>
 
 <p><b>strace</b> — la sintaxis exacta: <code>strace -o salida.txt ls -la</code>.
 Distractores habituales: <code>&gt;</code>, <code>|</code>, <code>-s</code>.</p>
@@ -1062,7 +2474,7 @@ Distractores habituales: <code>&gt;</code>, <code>|</code>, <code>-s</code>.</p>
 
 <p><b>INT 21h</b> — completar el código para mostrar una cadena: AH=09h, la cadena con <code>$</code>, DS:DX.</p>
 
-<h3>Aparece seguido</h3>
+<h4>Aparece seguido</h4>
 <ul>
 <li>Las tres formas de E/S y cuál conviene según el dispositivo</li>
 <li>Modo kernel vs usuario y qué pasa con una instrucción privilegiada</li>
@@ -1070,13 +2482,13 @@ Distractores habituales: <code>&gt;</code>, <code>|</code>, <code>-s</code>.</p>
 <li>Tiempo real duro vs suave, con ejemplos</li>
 </ul>
 
-<h3>Más teórico, suele ser desarrollo</h3>
+<h4>Más teórico, suele ser desarrollo</h4>
 <ul>
 <li>Las cinco estructuras y su intercambio rendimiento/confiabilidad</li>
 <li>Historia y por qué aparece cada invento</li>
 </ul>
 
-<h2>Los cuatro errores a no repetir</h2>
+<h3>Resumen · Los cuatro errores a no repetir</h3>
 
 <div class="err">
 <ol>
@@ -1091,7 +2503,7 @@ todo igual.</li>
 </ol>
 </div>
 
-<h2>Las cuatro visualizaciones interactivas</h2>
+<h3>Resumen · Las cuatro visualizaciones interactivas</h3>
 <p>Todas accesibles desde <code>visuales/index.html</code>:</p>
 <ul>
 <li><b>es_programada_interrupciones_dma.html</b> — las tres formas de E/S, con línea de tiempo y costo de CPU calculado.</li>
@@ -1099,5 +2511,7 @@ todo igual.</li>
 <li><b>interrupciones_8086.html</b> — simulador de INT 10h/16h/17h/21h con pantalla de DOS y detección de los errores típicos.</li>
 <li><b>estructuras_de_so.html</b> — las cinco estructuras y qué pasa en cada una cuando falla un driver.</li>
 </ul>
+
+
 
 </body></html>

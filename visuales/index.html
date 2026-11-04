@@ -36,6 +36,17 @@
   <h1>Visualizaciones interactivas</h1>
   <p class="sub">Sistemas Operativos &mdash; UTN FRM &mdash; preparación del final</p>
 
+  <h2>Repaso de todas las unidades</h2>
+  <a class="item" href="mapa_conceptual.html">
+    <strong>Mapa conceptual acumulativo ★</strong>
+    <span>Unidades 1 y 2 conectadas, con buscador y ramas colapsables. Tiene las secuencias para recitar, las trampas de examen, tus errores y las dudas que tuviste. Cada rama tiene dos referencias, al Tanenbaum y a la página del PDF de repaso, y los cruces entre unidades se pueden clickear. La versión para imprimir está en <code>plan/mapa_conceptual.pdf</code>.</span>
+  </a>
+
+  <a class="item" href="mapa_grafico.html">
+    <strong>Mapa gráfico: todo conectado en cajas y flechas</strong>
+    <span>Las Unidades 1 y 2 como un grafo de cajas, como un mapa conceptual de papel. Cada caja tiene una nota técnica de cómo se hace, las flechas están rotuladas ("se conforma por", "cómo se hace", "falla por") y los cruces entre unidades son líneas punteadas. Con un clic en una caja, abre esa rama en el mapa conceptual completo. Se puede ver solo una unidad, buscar una caja y hacer zoom.</span>
+  </a>
+
   <h2>Unidad 1 &mdash; Introducción, hardware y estructura</h2>
   <a class="item" href="../unidades/u01-introduccion/visuales/es_programada_interrupciones_dma.html">
     <strong>Las tres formas de hacer entrada/salida</strong>
@@ -69,6 +80,14 @@
   <a class="item" href="../unidades/u02-procesos/visuales/productor_consumidor.html">
     <strong>Productor-consumidor con semáforos</strong>
     <span>Vos decidís a quién le das la CPU en cada paso. Tres modos: con los semáforos bien usados, con los <code>down</code> invertidos (interbloqueo) y con sleep/wakeup (señal de despertar perdida). Muestra el búfer, las tres latas de fichas y la cola de bloqueados de cada semáforo.</span>
+  </a>
+  <a class="item" href="../unidades/u02-procesos/visuales/planificacion_cpu.html">
+    <strong>Planificación de CPU: simulador con diagrama de Gantt ★</strong>
+    <span>FCFS, SJF, SRTF, Round Robin con quantum ajustable y prioridades (apropiativas y no). Cargás llegadas y ráfagas, ves el Gantt, los tiempos de retorno, espera y respuesta, y <strong>la cola de preparados en cada instante</strong>. Trae cargados los ejercicios del parcial y del final de la cátedra, y aplica su regla de desempate. El tema que más puntos vale.</span>
+  </a>
+  <a class="item" href="../unidades/u02-procesos/visuales/filosofos_comelones.html">
+    <strong>Los filósofos comelones: los cuatro intentos</strong>
+    <span>Vos sos el planificador: hacés clic en cada filósofo y decidís el orden. Los cuatro esquemas del libro &mdash; todos el izquierdo (<strong>interbloqueo</strong>), el filósofo zurdo, el mutex para toda la mesa (correcto pero come uno a la vez) y la solución de Dijkstra con <code>estado[]</code> y un semáforo por filósofo. Botón para forzar el interbloqueo del libro y ver que nadie consume CPU.</span>
   </a>
 </div>
 </body>

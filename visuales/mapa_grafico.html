@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mapa gráfico — SO</title>
+<style>
+  :root{
+    --bg:#f3f4f7; --panel:#ffffff; --borde:#d5d9e0; --texto:#1b1f24; --suave:#5b6572;
+    --raiz:#2f4fa8; --raiz-t:#ffffff; --unidad:#3d63c9; --unidad-t:#ffffff;
+    --tema:#dfe8fb; --tema-b:#3d63c9; --tema-t:#16285c;
+    --conc:#ffffff; --conc-b:#8aa3dc; --nota:#4a5361;
+    --error:#c2410c; --error-bg:#fff1ea; --trampa:#b45309; --trampa-bg:#fff7e6;
+    --linea:#7d8aa3; --rotulo:#3c4656; --cruce:#0e7490; --hit:#f59e0b;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317; --panel:#1b1e24; --borde:#2e333c; --texto:#e6e9ee; --suave:#9aa4b2;
+      --raiz:#4a6ad0; --raiz-t:#ffffff; --unidad:#3f5fb8; --unidad-t:#ffffff;
+      --tema:#1d2a4a; --tema-b:#5b7fd8; --tema-t:#dbe5ff;
+      --conc:#1b1f27; --conc-b:#3f5591; --nota:#b3bccb;
+      --error:#fb923c; --error-bg:#2c1b12; --trampa:#fbbf24; --trampa-bg:#2b2210;
+      --linea:#5f6b82; --rotulo:#b9c2d0; --cruce:#22d3ee; --hit:#fbbf24;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317; --panel:#1b1e24; --borde:#2e333c; --texto:#e6e9ee; --suave:#9aa4b2;
+    --raiz:#4a6ad0; --raiz-t:#ffffff; --unidad:#3f5fb8; --unidad-t:#ffffff;
+    --tema:#1d2a4a; --tema-b:#5b7fd8; --tema-t:#dbe5ff;
+    --conc:#1b1f27; --conc-b:#3f5591; --nota:#b3bccb;
+    --error:#fb923c; --error-bg:#2c1b12; --trampa:#fbbf24; --trampa-bg:#2b2210;
+    --linea:#5f6b82; --rotulo:#b9c2d0; --cruce:#22d3ee; --hit:#fbbf24;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0; background:var(--bg); color:var(--texto); display:flex; flex-direction:column;
+       font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{background:var(--panel); border-bottom:1px solid var(--borde); padding:10px 16px}
+  h1{font-size:1.1rem; margin:0}
+  .sub{color:var(--suave); font-size:.82rem; margin:2px 0 8px}
+  .sub a{color:inherit}
+  .controles{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+  input[type=search]{flex:1 1 200px; min-width:0; padding:6px 10px; border-radius:7px; border:1px solid var(--borde);
+       background:var(--bg); color:var(--texto); font:inherit}
+  button,select{font:inherit; font-size:.82rem; padding:5px 9px; border-radius:7px; border:1px solid var(--borde);
+       background:var(--panel); color:var(--texto); cursor:pointer}
+  button:hover,select:hover{border-color:var(--unidad)}
+  label.chk{font-size:.82rem; color:var(--suave); display:flex; gap:4px; align-items:center; white-space:nowrap}
+  .leyenda{display:flex; flex-wrap:wrap; gap:12px; font-size:.75rem; color:var(--suave); margin-top:7px}
+  .leyenda span{display:inline-flex; align-items:center; gap:5px}
+  .sw{width:14px; height:10px; border-radius:3px; display:inline-block; border:1.5px solid}
+  #vista{flex:1; position:relative; overflow:hidden; touch-action:none; cursor:grab}
+  #vista.arrastrando{cursor:grabbing}
+  #mundo{position:absolute; left:0; top:0; transform-origin:0 0}
+  #aristas{position:absolute; left:0; top:0; overflow:visible; pointer-events:none}
+  .n{position:absolute; border-radius:9px; padding:7px 10px 8px; cursor:pointer; user-select:none;
+     border:1.5px solid var(--conc-b); background:var(--conc); color:var(--texto);
+     box-shadow:0 1px 2px rgba(0,0,0,.08); transition:box-shadow .12s, opacity .15s}
+  .n:hover{box-shadow:0 0 0 3px var(--hit)}
+  .n .t{font-weight:650; font-size:12.5px; line-height:1.3}
+  .n .no{font-size:11.2px; color:var(--nota); margin-top:3px; line-height:1.35}
+  .n.raiz{background:var(--raiz); border-color:var(--raiz); color:var(--raiz-t); text-align:center}
+  .n.raiz .t{font-size:17px} .n.raiz .no{color:#dfe6ff}
+  .n.unidad{background:var(--unidad); border-color:var(--unidad); color:var(--unidad-t); text-align:center}
+  .n.unidad .t{font-size:14.5px} .n.unidad .no{color:#e3e9ff}
+  .n.tema{background:var(--tema); border-color:var(--tema-b); color:var(--tema-t)}
+  .n.tema .t{font-size:13.5px}
+  .n.error{background:var(--error-bg); border-color:var(--error)}
+  .n.trampa{background:var(--trampa-bg); border-color:var(--trampa)}
+  .n.hit{box-shadow:0 0 0 3px var(--hit)}
+  .n.dim{opacity:.25}
+  .rot{font-size:10.5px; fill:var(--rotulo); font-style:italic}
+  .rotfondo{fill:var(--bg)}
+  path.a{fill:none; stroke:var(--linea); stroke-width:1.4}
+  path.x{fill:none; stroke:var(--cruce); stroke-width:1.6; stroke-dasharray:6 5; opacity:.45}
+  path.x.on{opacity:1; stroke-width:2.4}
+  g.xg text{fill:var(--cruce); font-size:11px; font-weight:600; opacity:.6}
+  g.xg.on text{opacity:1}
+  g.xg rect{fill:var(--bg); opacity:.85}
+  .oculto{display:none}
+  .zoom{position:absolute; right:12px; bottom:12px; display:flex; flex-direction:column; gap:6px; z-index:3}
+  .zoom button{width:36px; height:36px; font-size:1.05rem; padding:0}
+  .ayuda{position:absolute; left:12px; bottom:12px; z-index:3; max-width:330px; background:var(--panel);
+         border:1px solid var(--borde); border-radius:9px; padding:8px 11px; font-size:.78rem; color:var(--suave)}
+  @media (max-width:600px){
+    .sub,.leyenda{display:none}
+    .ayuda{display:none}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Mapa gráfico — Sistemas Operativos</h1>
+  <p class="sub">Unidades 1 y 2 conectadas. Cada caja es un concepto con su nota técnica; las flechas dicen cómo se relacionan.
+    Hacé clic en una caja para ir a esa rama del <a href="mapa_conceptual.html">mapa conceptual completo</a>.</p>
+  <div class="controles">
+    <select id="unidad" aria-label="Qué mostrar">
+      <option value="so">Todo el mapa</option>
+      <option value="u1">Solo la Unidad 1</option>
+      <option value="u2">Solo la Unidad 2</option>
+    </select>
+    <input type="search" id="buscar" placeholder="Buscar una caja (Enter = la siguiente)…" aria-label="Buscar">
+    <label class="chk"><input type="checkbox" id="vercruces" checked> Cruces</label>
+    <label class="chk"><input type="checkbox" id="nueva"> Abrir en otra pestaña</label>
+  </div>
+  <div class="leyenda">
+    <span><i class="sw" style="background:var(--unidad);border-color:var(--unidad)"></i>Unidad</span>
+    <span><i class="sw" style="background:var(--tema);border-color:var(--tema-b)"></i>Tema</span>
+    <span><i class="sw" style="background:var(--conc);border-color:var(--conc-b)"></i>Concepto</span>
+    <span><i class="sw" style="background:var(--error-bg);border-color:var(--error)"></i>⚠️ Error que ya cometí</span>
+    <span><i class="sw" style="background:var(--trampa-bg);border-color:var(--trampa)"></i>📌 Trampa de examen</span>
+    <span><svg width="26" height="8"><path d="M0 4H26" stroke="var(--cruce)" stroke-width="2" stroke-dasharray="5 4"/></svg>Cruce entre temas o unidades</span>
+  </div>
+</header>
+<div id="vista">
+  <div id="mundo"><svg id="aristas"></svg></div>
+  <div class="ayuda" id="ayuda">Rueda del mouse o los botones para acercar · arrastrá para moverte ·
+    pasá el mouse por una caja para ver sus cruces · clic para abrir esa rama en el mapa completo.</div>
+  <div class="zoom">
+    <button id="mas" title="Acercar">+</button>
+    <button id="menos" title="Alejar">−</button>
+    <button id="ajustar" title="Ver todo">⤢</button>
+  </div>
+</div>
+<script>
+// [clave, padre, rótulo de la flecha que llega, título, nota técnica, destino en mapa_conceptual.html, tipo]
+const NODOS = [
+["so", null, "", "Sistemas Operativos", "Esconde un hardware incómodo y lo reparte entre varios que lo quieren a la vez", "ideas"],
+
+["u1", "so", "se conforma por", "U1 — Introducción, hardware y estructura", "Qué es el SO, el hardware que esconde y cómo se organiza por dentro", "u1"],
+["u2", "so", "se conforma por", "U2 — Procesos, hilos, concurrencia y planificación", "Qué se ejecuta, cómo no se pisan y a quién le toca la CPU", "u2"],
+
+// ---------------- U1
+["u1t1", "u1", "abarca", "¿Qué es un SO?", "Dos funciones que no tienen relación entre sí", "u1-que-es"],
+["u1a", "u1t1", "cumple", "Máquina extendida", "Abstracciones limpias: el archivo. read(fd, buf, n) en vez de 7 pasos de disco", "u1-maquina-extendida"],
+["u1b", "u1t1", "cumple", "Administrador de recursos", "Multiplexa en el tiempo (CPU) y en el espacio (memoria, disco)", "u1-admin-recursos"],
+["u1c", "u1t1", "se mide con", "Modelo de multiprogramación", "Uso de CPU = 1 − pⁿ. Con p = 0,8 y n = 5 → 67 %", "u1-multiprog-modelo"],
+
+["u1t2", "u1", "abarca", "Hardware", "CPU, modos, memoria y dispositivos", "u1-hardware"],
+["u1d", "u1t2", "tiene", "CPU y registros", "Obtener → decodificar → ejecutar. PC, SP y PSW (bit de modo)", "u1-cpu"],
+["u1e", "u1t2", "protege con", "Modo kernel / usuario", "El hardware mira el bit del PSW y rechaza la instrucción privilegiada antes de ejecutarla", "u1-modos", "trampa"],
+["u1f", "u1t2", "organiza", "Jerarquía de memoria", "Registros → caché → RAM → disco. Tm = 0,95·1 + 0,05·11 = 1,5 ns", "u1-jerarquia"],
+["u1g", "u1t2", "habla con", "Driver ≠ controlador", "Controlador = chip del dispositivo. Driver = programa del SO, en modo kernel", "u1-hardware"],
+
+["u1t3", "u1", "abarca", "Tres formas de E/S", "Tardan lo mismo: cambia cuánta CPU gastan", "u1-es"],
+["u1h", "u1t3", "1.", "E/S programada", "La CPU sondea sin parar al dispositivo: 100 % ocupada", "u1-es-programada"],
+["u1i", "u1t3", "2.", "Por interrupciones", "El dispositivo avisa al terminar: una interrupción por byte (5 % en el ejemplo)", "u1-es-interrupciones"],
+["u1j", "u1i", "cómo se hace", "Tratamiento de una interrupción", "Controlador → chip de interrupciones → pin de la CPU → apila PC y PSW → vector → manejador", "u1-seq-interrupcion"],
+["u1k", "u1t3", "3.", "DMA", "La CPU configura el chip y recibe una sola interrupción al final: 0,005 %", "u1-dma"],
+["u1l", "u1t3", "trampa", "¿Cuál es más rápido?", "Ninguno: la duración la impone el dispositivo", "u1-es", "trampa"],
+
+["u1t4", "u1", "abarca", "Arranque", "Una cadena de cargadores, cada uno más grande que el anterior", "u1-arranque"],
+["u1m", "u1t4", "cómo se hace", "Cadena de arranque", "BIOS (ROM) → la CMOS elige el disco → MBR → partición activa → cargador secundario → SO", "u1-seq-arranque"],
+["u1n", "u1t4", "contiene", "MBR de 512 bytes", "446 de código + 64 de tabla (4 × 16) + 2 de firma 55 AA", "u1-arranque"],
+["u1o", "u1t4", "no confundir", "CMOS ≠ sector 0", "CMOS: la lista de dispositivos de arranque. Sector 0: el código de 446 bytes", "u1-arranque", "error"],
+
+["u1t5", "u1", "abarca", "Interrupciones del 8086", "Material de la cátedra (no está en el Tanenbaum)", "u1-int8086"],
+["u1p", "u1t5", "se usa con", "Regla de oro", "INT elige la familia, AH la función y los demás registros llevan los datos", "u1-int8086"],
+["u1q", "u1t5", "ejemplo", "INT 21h, función 09h", "MOV DX, MSG · MOV AH, 09h · INT 21h. La cadena termina en $", "u1-int21"],
+["u1r", "u1t5", "trampa", "Los 4 errores típicos", "DL en vez de DX · olvidar el $ · no cargar DS · AH = 02h para una cadena", "u1-int8086", "trampa"],
+
+["u1t6", "u1", "abarca", "Llamadas al sistema", "La única puerta del modo usuario al kernel", "u1-llamadas"],
+["u1s", "u1t6", "entra con", "TRAP", "Salta a una dirección FIJA y pasa a modo kernel; un CALL no hace ninguna de las dos", "u1-trap"],
+["u1t", "u1t6", "cómo se hace", "Los 11 pasos de read()", "Apila los parámetros → biblioteca → n.º de llamada en un registro → TRAP → tabla de manejadores → vuelve → limpia la pila", "u1-seq-read"],
+["u1u", "u1t6", "se observa con", "strace", "strace -o salida.txt ls -la", "u1-strace"],
+["u1v", "u1t6", "error", "Buffer más grande", "Ahorra llamadas al sistema, NO lectura de disco", "u1-llamadas", "error"],
+
+["u1t7", "u1", "abarca", "Historia", "Agujeros de tiempo muerto que se van tapando", "u1-historia"],
+["u1w", "u1t7", "agujero 2", "Lotes", "Uno en memoria por vez, en fila: tapa el tiempo entre trabajos", "u1-historia"],
+["u1x", "u1t7", "agujero 3", "Multiprogramación", "Varios en memoria: si uno espera el disco, la CPU pasa a otro. Exige protección", "u1-historia"],
+["u1y", "u1t7", "agujero 4", "Tiempo compartido", "Una terminal por usuario (CTSS): el origen de Round Robin", "u1-historia"],
+
+["u1t8", "u1", "abarca", "Tipos de SO", "Nueve, del mainframe a la tarjeta inteligente", "u1-tipos"],
+["u1z", "u1t8", "se toma", "Tiempo real duro / suave", "Duro: el plazo no se puede perder (robot soldador). Suave: se tolera alguna falla (audio)", "u1-tiempo-real"],
+["u1aa", "u1t8", "no confundir", "Integrado / de bolsillo", "El integrado nunca corre software no confiable → no necesita protección", "u1-tipos"],
+
+["u1t9", "u1", "abarca", "Estructuras", "¿Quién corre en modo kernel? Rendimiento contra confiabilidad", "u1-estructuras"],
+["u1ab", "u1t9", "1.", "Monolítica", "Todo en modo kernel: rápida y frágil (Linux, con módulos)", "u1-estructuras"],
+["u1ac", "u1t9", "2.", "Por capas", "Todo en kernel pero ordenado: da claridad, NO tolerancia a fallas", "u1-estructuras", "error"],
+["u1ad", "u1t9", "3.", "Microkernel", "Solo el microkernel en kernel; los drivers son procesos de usuario: robusta y lenta", "u1-mecanismo-politica"],
+["u1ae", "u1t9", "4.", "Cliente-servidor", "Servidores y clientes por mensajes; base de los sistemas distribuidos", "u1-estructuras"],
+["u1af", "u1t9", "5.", "Máquinas virtuales", "Copias del hardware. Hipervisor tipo 1: sobre el hardware; tipo 2: sobre un SO", "u1-estructuras"],
+
+// ---------------- U2
+["u2t1", "u2", "abarca", "Proceso", "Un programa en ejecución con su PC, registros y variables", "u2-proceso"],
+["u2a", "u2t1", "no confundir", "Programa ≠ proceso", "Programa: archivo pasivo en el disco. Proceso: la actividad, ocupa RAM", "u2-proceso"],
+["u2b", "u2t1", "se crea con", "fork + execve", "fork duplica (al padre le da el PID, al hijo 0); execve reemplaza la imagen", "u2-fork"],
+["u2c", "u2b", "error", "n fork = 2ⁿ procesos", "Tres fork seguidos dan 8, no 4: cada fork duplica todo lo que hay", "u2-fork", "error"],
+["u2d", "u2t1", "da la ilusión de", "Pseudoparalelismo", "Una CPU conmutando rápido. No es paralelismo real", "u2-pseudoparalelismo"],
+
+["u2t2", "u2", "abarca", "Estados y BCP", "Cómo se suspende y se reanuda un proceso", "u2-estados"],
+["u2e", "u2t2", "se modela con", "3 estados, 4 transiciones", "Ejecución, Listo, Bloqueado. No existe Bloqueado → Ejecución", "u2-transiciones"],
+["u2f", "u2e", "error", "Fin de quantum → LISTO", "Nunca a BLOQUEADO: lo decide el planificador, no el proceso", "u2-transiciones", "error"],
+["u2g", "u2t2", "se guarda en", "BCP", "Entrada de la tabla de procesos: registros, PC, PSW, estado, memoria, archivos", "u2-bcp"],
+["u2h", "u2t2", "cómo se hace", "Interrupción + cambio de contexto", "El HW apila PC y PSW → vector → ensamblador guarda registros → servicio en C → planificador → carga el nuevo", "u2-seq-interrupcion-so"],
+
+["u2t3", "u2", "abarca", "Hilos", "Varias ejecuciones dentro de un mismo proceso", "u2-hilos"],
+["u2i", "u2t3", "separa", "El proceso agrupa, el hilo ejecuta", "Propio del hilo: PC, registros, pila y estado. Todo lo demás es del proceso", "u2-tabla-hilos"],
+["u2j", "u2t3", "necesita", "Una pila por hilo", "Marcos con la dirección de retorno, los parámetros y las variables locales", "u2-pila"],
+["u2k", "u2t3", "contra", "Un proceso por pestaña", "Chrome paga memoria a cambio de aislar fallas y proteger la memoria", "u2-hilos"],
+
+["u2t4", "u2", "abarca", "Implementación de hilos", "¿El kernel sabe que existen?", "u2-impl-hilos"],
+["u2l", "u2t4", "en usuario", "Hilos de usuario", "Conmutan rapidísimo, pero una llamada bloqueante frena todo el proceso y no hay reloj", "u2-hilos-usuario"],
+["u2m", "u2t4", "en el kernel", "Hilos de kernel", "Se bloquea solo ese hilo; conmutar cuesta una llamada al sistema", "u2-hilos-kernel"],
+["u2n", "u2t4", "mezcla", "Híbrida M:N", "Muchos hilos de usuario sobre pocos de kernel: lo que se bloquea es un asiento", "u2-hibrida"],
+
+["u2t5", "u2", "abarca", "Condiciones de carrera", "El resultado depende del orden de ejecución", "u2-carreras"],
+["u2o", "u2t5", "ejemplo", "El spooler", "A y B leen in = 7 y los dos escriben en la ranura 7: un archivo se pierde y nadie se entera", "u2-spooler"],
+["u2p", "u2t5", "se protege la", "Región crítica", "El código que toca lo compartido. Exclusión mutua = uno por vez", "u2-carreras"],
+["u2q", "u2t5", "exige", "Las 4 condiciones", "1 nunca dos adentro · 2 sin suponer velocidades ni CPU · 3 el de afuera no bloquea · 4 nadie espera para siempre", "u2-cuatro-condiciones"],
+
+["u2t6", "u2", "abarca", "Espera ocupada", "Girar en un bucle hasta poder entrar: gasta CPU", "u2-espera-ocupada"],
+["u2r", "u2t6", "falla por", "Intentos que fallan", "Deshabilitar interrupciones → condición 2 · variable candado → 1 · alternancia estricta → 3", "u2-espera-ocupada"],
+["u2s", "u2t6", "funciona", "Peterson", "interesado[] + turno: el último que escribe turno cede", "u2-peterson"],
+["u2t", "u2t6", "funciona", "TSL", "Lee y escribe el candado en una sola operación: bloquea el bus de memoria", "u2-tsl"],
+["u2u", "u2t6", "provoca", "Inversión de prioridades", "H gira con la CPU; L tiene el candado pero no la CPU → nadie avanza", "u2-inversion", "error"],
+
+["u2t7", "u2", "abarca", "Sin espera ocupada", "Bloquearse en vez de girar: no gasta CPU", "u2-sleep-wakeup"],
+["u2v", "u2t7", "1.º intento", "sleep / wakeup", "Si el wakeup llega antes del sleep se pierde, y los dos se duermen", "u2-wakeup-perdido"],
+["u2w", "u2t7", "lo arregla", "Semáforos", "down pide una unidad (puede bloquear); up entrega una (nunca bloquea) y se guarda", "u2-semaforos"],
+["u2x", "u2w", "ejemplo", "Productor-consumidor", "mutex = 1, vacías = N, llenas = 0. Primero el down de sincronización", "u2-tres-semaforos"],
+["u2y", "u2t7", "simplifica", "Mutex", "TSL + thread_yield: en vez de girar, cede la CPU", "u2-mutex"],
+["u2z", "u2t7", "automatiza", "Monitores", "El compilador garantiza uno adentro; wait saca del monitor", "u2-monitores"],
+["u2aa", "u2z", "error", "up se guarda, signal se pierde", "Por eso el signal se condiciona (if cuenta = 1) y el up no", "u2-asimetria-signal", "error"],
+["u2ab", "u2t7", "sin memoria", "Mensajes y barreras", "send / receive con acuse y n.º de secuencia. Barrera: todos esperan al último", "u2-mensajes"],
+
+["u2t8", "u2", "abarca", "Planificación ★", "¿A cuál de los listos le doy la CPU?", "u2-planificacion"],
+["u2ac", "u2t8", "se mide con", "Métricas", "Retorno = fin − llegada · espera = retorno − ráfaga · respuesta = 1.er arranque − llegada", "u2-metricas"],
+["u2ad", "u2t8", "clasifica por", "Ráfaga de CPU", "Corta → limitado a E/S; larga → a cálculos. La duración de la E/S es el distractor", "u2-rafagas", "trampa"],
+["u2ae", "u2t8", "por lotes", "FCFS, SJF y SRTF", "SJF es óptimo solo con llegada simultánea; SRTF es su versión apropiativa", "u2-lotes"],
+["u2af", "u2t8", "interactivo", "Round Robin ★", "Quantum fijo; el que sale va al final. Entre uno que llega y uno que sale, entra primero el que llega", "u2-rr"],
+["u2ag", "u2af", "problema", "Elegir el quantum", "Corto: 4 ms + 1 ms de conmutación → 20 % perdido. Largo: degenera en FCFS", "u2-quantum"],
+["u2ah", "u2t8", "interactivo", "Prioridades y colas", "Riesgo de inanición; 1/f favorece a los de E/S. Declarar la convención", "u2-prioridades"],
+["u2ai", "u2t8", "interactivo", "SPN, garantizada, lotería", "Estimación a·T₀ + (1 − a)·T₁ · razón consumido / correspondido · boletos", "u2-otros-interactivos"],
+["u2aj", "u2ai", "error", "Boletos ≠ porcentajes", "% = boletos / total. A 5, B 15, C 30 → 10 %, 30 %, 60 %", "u2-loteria", "error"],
+["u2ak", "u2t8", "con plazos", "Tiempo real", "Planificable si Σ Cᵢ / Pᵢ ≤ 1 (necesaria, no suficiente)", "u2-planificabilidad"],
+["u2al", "u2t8", "separa", "Política / mecanismo", "El kernel da el mecanismo; el proceso padre fija la política de sus hijos", "u2-politica"],
+["u2am", "u2t8", "aplica a", "Planificación de hilos", "Hilos de usuario: el kernel elige el proceso. De kernel: elige el hilo (A1, B1, A2…)", "u2-planif-hilos"],
+
+["u2t9", "u2", "abarca", "Problemas clásicos", "Modelos para probar los mecanismos", "u2-clasicos"],
+["u2an", "u2t9", "1.", "Filósofos", "Todos el izquierdo → interbloqueo. Dijkstra: estado[] + un semáforo por filósofo, comen 2 como máximo", "u2-dijkstra-filosofos"],
+["u2ao", "u2an", "no confundir", "Interbloqueo / inanición", "Interbloqueo: bloqueados, sin CPU. Inanición: corren pero no progresan", "u2-interbloqueo-inanicion"],
+["u2ap", "u2t9", "2.", "Lectores y escritores", "El primer lector cierra bd y el último la abre; el escritor sufre inanición si I ≤ D", "u2-lectores"],
+["u2aq", "u2t9", "regla", "Dormirse con el candado", "Es interbloqueo SOLO si el que te despierta necesita ese mismo candado", "u2-regla-candado"],
+
+["u2t10", "u2", "abarca", "Multiprocesadores", "Lo mismo de siempre, con CPUs que corren de verdad a la vez", "u2-multiprocesadores"],
+["u2ar", "u2t10", "hardware", "UMA / NUMA", "NUMA: un solo espacio de direcciones, LOAD / STORE, lo remoto es más lento", "u2-uma-numa"],
+["u2as", "u2ar", "necesita", "Coherencia de caché", "Al escribir otra CPU: copia limpia → se descarta; sucia → se escribe de vuelta", "u2-coherencia", "error"],
+["u2at", "u2t10", "se organiza en", "Tres modelos de SO", "Cada CPU su SO · maestro-esclavo (n · f ≤ 1) · SMP con candados finos", "u2-tipos-so-mp"],
+["u2au", "u2t10", "exige", "Sincronización", "TSL con el bus bloqueado · lectura pura antes de TSL · girar si el candado dura menos que conmutar", "u2-sinc-mp"],
+["u2av", "u2t10", "decide", "Planificación en 2 dimensiones", "Qué hilo y en qué CPU: tiempo compartido, dos niveles, espacio compartido", "u2-planif-mp"],
+["u2aw", "u2av", "relacionados", "Pandillas ★", "Los hilos del grupo arrancan y terminan juntos cada quantum", "u2-pandillas"],
+];
+
+// [desde, hasta, rótulo] — cruces entre temas o unidades
+const CRUCES = [
+["u1h", "u2t6", "misma idea: sondear"],
+["u1j", "u2h", "se completa con"],
+["u1s", "u2b", "fork es una llamada"],
+["u1d", "u2g", "PC y PSW se guardan en"],
+["u1e", "u1x", "la hace segura"],
+["u1f", "u2as", "la caché vuelve en"],
+["u1ad", "u2al", "la misma regla"],
+["u1y", "u2af", "origen de"],
+["u1z", "u2ak", "se planifica con"],
+["u1ab", "u2k", "el mismo intercambio"],
+["u1ae", "u2ab", "se comunica con"],
+["u1c", "u2e", "elige entre los listos"],
+["u1t", "u2j", "CALL y RET usan la pila"],
+["u2u", "u2av", "vuelve con varias CPU"],
+["u2t", "u2au", "exige bus bloqueable"],
+["u2x", "u2aq", "primer caso de la regla"],
+["u2an", "u2at", "candados chicos"],
+["u2ai", "u2au", "el mismo promedio"],
+["u2p", "u2s", "se resuelve con"],
+["u2v", "u2w", "un up se guarda"],
+];
+
+// ------------------------------------------------------------------ armado
+const vista = document.getElementById("vista"), mundo = document.getElementById("mundo"), svg = document.getElementById("aristas");
+const NS = "http://www.w3.org/2000/svg";
+const porClave = {};
+NODOS.forEach(([k, p, rel, t, no, destino, tipo]) => porClave[k] = {k, p, rel, t, no, destino, tipo, hijos: []});
+Object.values(porClave).forEach(n => { if (n.p) porClave[n.p].hijos.push(n); });
+const ANCHO = {raiz: 290, unidad: 290, tema: 240, conc: 230};
+const IND = 128, VG = 12, VG_FILA = 58, HG = 34;
+
+function nivel(n){ return n.k === "so" ? "raiz" : (n.p === "so" ? "unidad" : (porClave[n.p].p === "so" ? "tema" : "conc")); }
+const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+
+Object.values(porClave).forEach(n => {
+  const d = document.createElement("div");
+  n.nv = nivel(n);
+  d.className = "n " + n.nv + (n.tipo ? " " + n.tipo : "");
+  d.style.width = ANCHO[n.nv] + "px";
+  const marca = n.tipo === "error" ? "⚠️ " : n.tipo === "trampa" ? "📌 " : "";
+  d.innerHTML = `<div class="t">${marca}${esc(n.t)}</div><div class="no">${esc(n.no)}</div>`;
+  d.title = "Abrir en el mapa completo";
+  d.dataset.k = n.k;
+  n.el = d; n.txt = norm(n.t + " " + n.no);
+  mundo.appendChild(d);
+});
+function norm(s){ return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
+
+// ------------------------------------------------------------------ disposición
+// fila: raíz → unidades → temas (horizontal). Debajo de cada tema, un árbol en escalera (vertical, con sangría).
+function medir(n){ n.w = ANCHO[n.nv]; n.h = n.el.offsetHeight; n.hijos.forEach(medir); }
+
+function escalera(n){                 // ancho y alto del bloque de un concepto con sus descendientes
+  let w = n.w, h = n.h;
+  n.hijos.forEach(c => { escalera(c); w = Math.max(w, IND + c.bw); h += VG + c.bh; });
+  n.bw = w; n.bh = h;
+}
+function ubicarEscalera(n, x, y){
+  n.x = x; n.y = y;
+  let cy = y + n.h + VG;
+  n.hijos.forEach(c => { ubicarEscalera(c, x + IND, cy); cy += c.bh + VG; });
+}
+const SANGRIA_U = 150, VG_U = 70;
+function bloque(n){                   // unidad: sus temas van en fila. Raíz: las unidades van apiladas
+  if (n.nv === "tema"){ escalera(n); return; }
+  n.hijos.forEach(bloque);
+  if (n.nv === "raiz"){
+    n.bw = Math.max(n.w, SANGRIA_U + Math.max(...n.hijos.map(c => c.bw)));
+    n.bh = n.h + n.hijos.reduce((s, c) => s + VG_U + c.bh, 0);
+    return;
+  }
+  const fila = n.hijos.reduce((s, c) => s + c.bw, 0) + HG * Math.max(0, n.hijos.length - 1);
+  n.bw = Math.max(n.w, fila);
+  n.bh = n.h + VG_FILA + Math.max(0, ...n.hijos.map(c => c.bh));
+}
+function ubicarBloque(n, x, y){
+  if (n.nv === "tema"){ ubicarEscalera(n, x, y); return; }
+  if (n.nv === "raiz"){
+    n.x = x; n.y = y;
+    let cy = y + n.h + VG_U;
+    n.hijos.forEach(c => { ubicarBloque(c, x + SANGRIA_U, cy); cy += c.bh + VG_U; });
+    return;
+  }
+  n.x = x + (n.bw - n.w) / 2; n.y = y;
+  const fila = n.hijos.reduce((s, c) => s + c.bw, 0) + HG * Math.max(0, n.hijos.length - 1);
+  let cx = x + (n.bw - fila) / 2;
+  n.hijos.forEach(c => { ubicarBloque(c, cx, y + n.h + VG_FILA); cx += c.bw + HG; });
+}
+
+let raizActual = porClave.so, visibles = new Set();
+function recorrer(n, f){ f(n); n.hijos.forEach(c => recorrer(c, f)); }
+
+function disponer(){
+  visibles = new Set();
+  recorrer(raizActual, n => visibles.add(n.k));
+  Object.values(porClave).forEach(n => n.el.classList.toggle("oculto", !visibles.has(n.k)));
+  medir(raizActual); bloque(raizActual); ubicarBloque(raizActual, 40, 40);
+  recorrer(raizActual, n => { n.el.style.left = n.x + "px"; n.el.style.top = n.y + "px"; });
+  dibujarAristas();
+}
+
+// ------------------------------------------------------------------ aristas
+let grupos = [];
+function rotulo(texto, x, y, ancla){
+  const g = document.createElementNS(NS, "g");
+  const t = document.createElementNS(NS, "text");
+  t.setAttribute("x", x); t.setAttribute("y", y); t.setAttribute("class", "rot");
+  t.setAttribute("text-anchor", ancla || "middle"); t.textContent = texto;
+  g.appendChild(t); svg.appendChild(g);
+  const b = t.getBBox(); const r = document.createElementNS(NS, "rect");
+  r.setAttribute("x", b.x - 3); r.setAttribute("y", b.y - 1); r.setAttribute("width", b.width + 6); r.setAttribute("height", b.height + 2);
+  r.setAttribute("class", "rotfondo"); g.insertBefore(r, t);
+}
+function camino(d, cls){ const p = document.createElementNS(NS, "path"); p.setAttribute("d", d); p.setAttribute("class", cls); svg.appendChild(p); return p; }
+
+function dibujarAristas(){
+  svg.innerHTML = ""; grupos = [];
+  let maxX = 0, maxY = 0;
+  recorrer(raizActual, n => { maxX = Math.max(maxX, n.x + n.w); maxY = Math.max(maxY, n.y + n.h); });
+  svg.setAttribute("width", maxX + 80); svg.setAttribute("height", maxY + 80);
+  mundo.style.width = (maxX + 80) + "px"; mundo.style.height = (maxY + 80) + "px";
+  recorrer(raizActual, n => {
+    if (!n.hijos.length) return;
+    if (n.nv === "raiz"){               // espina a la izquierda que baja hasta cada unidad
+      const sx = n.x + 40, ultimo = n.hijos[n.hijos.length - 1];
+      camino(`M${sx} ${n.y + n.h} V${ultimo.y + ultimo.h / 2}`, "a");
+      n.hijos.forEach(c => {
+        const cy = c.y + c.h / 2;
+        camino(`M${sx} ${cy} H${c.x}`, "a");
+        camino(`M${c.x - 8} ${cy - 5} L${c.x} ${cy} L${c.x - 8} ${cy + 5}`, "a");
+        if (c.rel) rotulo(c.rel, sx + 8, cy - 6, "start");
+      });
+    } else if (n.nv === "unidad"){
+      const px = n.x + n.w / 2, py = n.y + n.h, my = py + VG_FILA / 2;
+      n.hijos.forEach(c => {
+        const cx = c.x + c.w / 2;
+        camino(`M${px} ${py} V${my} H${cx} V${c.y}`, "a");
+        camino(`M${cx - 5} ${c.y - 7} L${cx} ${c.y} L${cx + 5} ${c.y - 7}`, "a");
+        if (c.rel) rotulo(c.rel, cx, my + 15, "middle");
+      });
+    } else {
+      const sx = n.x + 22, ultimo = n.hijos[n.hijos.length - 1];
+      camino(`M${sx} ${n.y + n.h} V${ultimo.y + 16}`, "a");
+      n.hijos.forEach(c => {
+        camino(`M${sx} ${c.y + 16} H${c.x}`, "a");
+        camino(`M${c.x - 7} ${c.y + 12} L${c.x} ${c.y + 16} L${c.x - 7} ${c.y + 20}`, "a");
+        if (c.rel) rotulo(c.rel, sx + 6, c.y + 11, "start");
+      });
+    }
+  });
+  CRUCES.forEach(([a, b, texto]) => {
+    if (!visibles.has(a) || !visibles.has(b)) return;
+    const A = porClave[a], B = porClave[b];
+    const derecha = B.x > A.x + A.w / 2;
+    const x1 = derecha ? A.x + A.w : A.x, y1 = A.y + A.h / 2;
+    const x2 = derecha ? B.x : B.x + B.w, y2 = B.y + B.h / 2;
+    const dx = Math.max(80, Math.abs(x2 - x1) * .35) * (derecha ? 1 : -1);
+    const p = camino(`M${x1} ${y1} C${x1 + dx} ${y1} ${x2 - dx} ${y2} ${x2} ${y2}`, "x");
+    const g = document.createElementNS(NS, "g"); g.setAttribute("class", "xg");
+    const t = document.createElementNS(NS, "text");
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+    t.setAttribute("x", mx); t.setAttribute("y", my); t.setAttribute("text-anchor", "middle"); t.textContent = "↔ " + texto;
+    g.appendChild(t); svg.appendChild(g);
+    const bb = t.getBBox(); const r = document.createElementNS(NS, "rect");
+    r.setAttribute("x", bb.x - 4); r.setAttribute("y", bb.y - 1); r.setAttribute("width", bb.width + 8); r.setAttribute("height", bb.height + 2); r.setAttribute("rx", 4);
+    g.insertBefore(r, t);
+    grupos.push({a, b, p, g});
+  });
+  mostrarCruces();
+}
+
+const verCruces = document.getElementById("vercruces");
+function mostrarCruces(){ grupos.forEach(x => { x.p.classList.toggle("oculto", !verCruces.checked); x.g.classList.toggle("oculto", !verCruces.checked); }); }
+verCruces.addEventListener("change", mostrarCruces);
+
+// ------------------------------------------------------------------ zoom y arrastre
+let esc_ = 1, tx = 0, ty = 0;
+function aplicarT(){ mundo.style.transform = `translate(${tx}px,${ty}px) scale(${esc_})`; }
+function zoomEn(f, cx, cy){
+  const nuevo = Math.min(2.5, Math.max(0.08, esc_ * f));
+  tx = cx - (cx - tx) * (nuevo / esc_); ty = cy - (cy - ty) * (nuevo / esc_); esc_ = nuevo; aplicarT();
+}
+function ajustar(){
+  const w = parseFloat(mundo.style.width), h = parseFloat(mundo.style.height);
+  const r = vista.getBoundingClientRect();
+  // arranca ajustado al ancho, para ver la forma completa; con la rueda o el + se acerca
+  esc_ = Math.min(1, (r.width - 20) / w);
+  tx = Math.max(10, (r.width - w * esc_) / 2); ty = 10; aplicarT();
+}
+vista.addEventListener("wheel", e => {
+  e.preventDefault(); const r = vista.getBoundingClientRect();
+  zoomEn(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX - r.left, e.clientY - r.top);
+}, {passive: false});
+document.getElementById("mas").onclick = () => { const r = vista.getBoundingClientRect(); zoomEn(1.25, r.width / 2, r.height / 2); };
+document.getElementById("menos").onclick = () => { const r = vista.getBoundingClientRect(); zoomEn(1 / 1.25, r.width / 2, r.height / 2); };
+document.getElementById("ajustar").onclick = () => {
+  const w = parseFloat(mundo.style.width), h = parseFloat(mundo.style.height), r = vista.getBoundingClientRect();
+  esc_ = Math.min(1, (r.width - 20) / w, (r.height - 20) / h); tx = (r.width - w * esc_) / 2; ty = 10; aplicarT();
+};
+
+const punteros = new Map(); let movido = 0, distInicial = 0, escInicial = 1;
+vista.addEventListener("pointerdown", e => {
+  if (e.target.closest(".zoom")) return;
+  punteros.set(e.pointerId, {x: e.clientX, y: e.clientY}); movido = 0;
+  vista.setPointerCapture(e.pointerId); vista.classList.add("arrastrando");
+  if (punteros.size === 2){ const [p, q] = [...punteros.values()]; distInicial = Math.hypot(p.x - q.x, p.y - q.y); escInicial = esc_; }
+});
+vista.addEventListener("pointermove", e => {
+  if (!punteros.has(e.pointerId)) return;
+  const ant = punteros.get(e.pointerId);
+  if (punteros.size === 1){
+    tx += e.clientX - ant.x; ty += e.clientY - ant.y; movido += Math.abs(e.clientX - ant.x) + Math.abs(e.clientY - ant.y); aplicarT();
+  }
+  punteros.set(e.pointerId, {x: e.clientX, y: e.clientY});
+  if (punteros.size === 2){
+    const [p, q] = [...punteros.values()]; const d = Math.hypot(p.x - q.x, p.y - q.y); const r = vista.getBoundingClientRect();
+    zoomEn((escInicial * d / distInicial) / esc_, (p.x + q.x) / 2 - r.left, (p.y + q.y) / 2 - r.top); movido = 99;
+  }
+});
+function soltar(e){
+  const habia = punteros.has(e.pointerId);
+  punteros.delete(e.pointerId); vista.classList.remove("arrastrando");
+  if (habia && e.type === "pointerup" && movido < 6 && punteros.size === 0){
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const caja = el && el.closest(".n");
+    if (caja) abrir(porClave[caja.dataset.k]);
+  }
+}
+vista.addEventListener("pointerup", soltar); vista.addEventListener("pointercancel", soltar);
+
+// ------------------------------------------------------------------ navegar al mapa completo
+const nueva = document.getElementById("nueva");
+function abrir(n){
+  const url = "mapa_conceptual.html#" + n.destino;
+  if (nueva.checked) window.open(url, "_blank"); else location.href = url;
+}
+
+// resaltar cruces al pasar el mouse
+mundo.addEventListener("mouseover", e => {
+  const caja = e.target.closest(".n"); if (!caja) return;
+  grupos.forEach(x => { const on = x.a === caja.dataset.k || x.b === caja.dataset.k; x.p.classList.toggle("on", on); x.g.classList.toggle("on", on); });
+});
+mundo.addEventListener("mouseout", e => { if (e.target.closest(".n")) grupos.forEach(x => { x.p.classList.remove("on"); x.g.classList.remove("on"); }); });
+
+// ------------------------------------------------------------------ búsqueda
+const buscar = document.getElementById("buscar"); let hits = [], iHit = -1;
+buscar.addEventListener("input", () => {
+  const q = norm(buscar.value.trim());
+  hits = [];
+  Object.values(porClave).forEach(n => {
+    const ok = q.length >= 2 && n.txt.includes(q) && visibles.has(n.k);
+    n.el.classList.toggle("hit", ok);
+    n.el.classList.toggle("dim", q.length >= 2 && !ok);
+    if (ok) hits.push(n);
+  });
+  iHit = -1;
+  if (hits.length) siguiente();
+});
+buscar.addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); siguiente(); } });
+function siguiente(){
+  if (!hits.length) return;
+  iHit = (iHit + 1) % hits.length; const n = hits[iHit]; const r = vista.getBoundingClientRect();
+  esc_ = Math.max(esc_, 0.9); tx = r.width / 2 - (n.x + n.w / 2) * esc_; ty = r.height / 3 - (n.y + n.h / 2) * esc_; aplicarT();
+}
+
+// ------------------------------------------------------------------ inicio
+document.getElementById("unidad").addEventListener("change", e => {
+  raizActual = porClave[e.target.value]; disponer(); ajustar();
+  buscar.dispatchEvent(new Event("input"));
+});
+disponer(); ajustar();
+window.__mapa = {porClave, CRUCES};   // para las pruebas automáticas
+</script>
+</body>
+</html>

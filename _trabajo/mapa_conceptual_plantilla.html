@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mapa conceptual — SO</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#ffffff; --borde:#dcdfe5; --texto:#1b1f24; --suave:#5b6572;
+    --acento:#5a3fd0; --acento-suave:#efebfd; --marca:#fff3b0;
+    --error:#c2410c; --error-bg:#fff1ea; --cruce:#0e7490; --cruce-bg:#e8f6f9;
+    --secuencia:#4338ca; --secuencia-bg:#eef0ff; --memoria:#15803d; --memoria-bg:#ecf8ef;
+    --trampa:#b45309; --trampa-bg:#fff7e6; --par:#7c3aed; --par-bg:#f5effe;
+    --duda:#475569; --duda-bg:#f1f5f9; --code:#f0f1f4;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#121418; --panel:#1b1e24; --borde:#2e333c; --texto:#e6e9ee; --suave:#9aa4b2;
+      --acento:#9b86f5; --acento-suave:#25213a; --marca:#5a4b00;
+      --error:#fb923c; --error-bg:#2c1b12; --cruce:#22d3ee; --cruce-bg:#102a30;
+      --secuencia:#a5b4fc; --secuencia-bg:#1c1f3a; --memoria:#4ade80; --memoria-bg:#12261a;
+      --trampa:#fbbf24; --trampa-bg:#2b2210; --par:#c4b5fd; --par-bg:#241b38;
+      --duda:#cbd5e1; --duda-bg:#1e242c; --code:#262a32;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#121418; --panel:#1b1e24; --borde:#2e333c; --texto:#e6e9ee; --suave:#9aa4b2;
+    --acento:#9b86f5; --acento-suave:#25213a; --marca:#5a4b00;
+    --error:#fb923c; --error-bg:#2c1b12; --cruce:#22d3ee; --cruce-bg:#102a30;
+    --secuencia:#a5b4fc; --secuencia-bg:#1c1f3a; --memoria:#4ade80; --memoria-bg:#12261a;
+    --trampa:#fbbf24; --trampa-bg:#2b2210; --par:#c4b5fd; --par-bg:#241b38;
+    --duda:#cbd5e1; --duda-bg:#1e242c; --code:#262a32;
+  }
+  *{box-sizing:border-box}
+  html{scroll-padding-top:150px}
+  body{margin:0; background:var(--bg); color:var(--texto);
+       font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{position:sticky; top:0; z-index:5; background:var(--bg); border-bottom:1px solid var(--borde);
+         padding:12px 16px 10px}
+  .fila{max-width:980px; margin:0 auto}
+  h1{font-size:1.25rem; margin:0 0 2px}
+  .sub{color:var(--suave); font-size:.85rem; margin:0 0 10px}
+  .controles{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+  input[type=search]{flex:1 1 240px; min-width:0; padding:8px 11px; border-radius:8px; border:1px solid var(--borde);
+       background:var(--panel); color:var(--texto); font:inherit}
+  button{font:inherit; font-size:.82rem; padding:6px 10px; border-radius:7px; border:1px solid var(--borde);
+         background:var(--panel); color:var(--texto); cursor:pointer}
+  button:hover{border-color:var(--acento)}
+  button[aria-pressed=true]{background:var(--acento); border-color:var(--acento); color:#fff}
+  .filtros{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px}
+  .estado{color:var(--suave); font-size:.8rem; margin-top:6px; min-height:1.2em}
+  main{max-width:980px; margin:0 auto; padding:16px 16px 80px}
+  nav.indice{background:var(--panel); border:1px solid var(--borde); border-radius:10px; padding:10px 14px; margin-bottom:16px}
+  nav.indice summary{cursor:pointer; font-weight:600}
+  nav.indice ol{margin:6px 0 0; padding-left:20px; columns:2 260px; column-gap:24px}
+  nav.indice li{break-inside:avoid; font-size:.88rem}
+  nav.indice ol ol{columns:auto; padding-left:16px}
+  nav a{color:var(--acento); text-decoration:none}
+  nav a:hover{text-decoration:underline}
+
+  section.u{background:var(--panel); border:1px solid var(--borde); border-radius:12px; margin:0 0 18px; overflow:hidden}
+  section.u > details > summary{font-size:1.15rem; font-weight:700; padding:12px 16px; background:var(--acento-suave)}
+  details > summary{cursor:pointer; list-style:none}
+  details > summary::-webkit-details-marker{display:none}
+  details > summary::before{content:"▸"; display:inline-block; width:1em; color:var(--suave); transition:transform .12s}
+  details[open] > summary::before{transform:rotate(90deg)}
+  .cuerpo{padding:4px 16px 12px}
+  .tema{border-top:1px solid var(--borde)}
+  .tema > summary{font-weight:650; font-size:1.02rem; padding:10px 0}
+  .conc > summary{font-weight:600; padding:6px 0}
+  .refs{margin:0 0 6px 1em; font-size:.82rem; color:var(--suave)}
+  .refs div{margin:1px 0}
+  .desc{margin:0 0 8px 1em; color:var(--texto)}
+  ul.arbol, ol.arbol{margin:2px 0 6px; padding-left:1.35em}
+  ul.arbol{list-style:none; padding-left:1em}
+  ul.arbol > li{position:relative; padding-left:.9em}
+  ul.arbol > li::before{content:""; position:absolute; left:0; top:.7em; width:.4em; height:.4em; border-radius:50%; background:var(--borde)}
+  ol.arbol > li{padding-left:.2em}
+  li{margin:3px 0}
+  li > details > summary{display:block}
+  li > details > summary::before{margin-left:-1em}
+  .nodo{padding:2px 6px; border-radius:6px; display:inline}
+  .m-error > .linea,.m-error > details > summary .linea{background:var(--error-bg); box-shadow:inset 3px 0 var(--error)}
+  .m-cruce > .linea,.m-cruce > details > summary .linea{background:var(--cruce-bg); box-shadow:inset 3px 0 var(--cruce)}
+  .m-secuencia > .linea,.m-secuencia > details > summary .linea{background:var(--secuencia-bg); box-shadow:inset 3px 0 var(--secuencia)}
+  .m-memoria > .linea,.m-memoria > details > summary .linea{background:var(--memoria-bg); box-shadow:inset 3px 0 var(--memoria)}
+  .m-trampa > .linea,.m-trampa > details > summary .linea{background:var(--trampa-bg); box-shadow:inset 3px 0 var(--trampa)}
+  .m-par > .linea,.m-par > details > summary .linea{background:var(--par-bg); box-shadow:inset 3px 0 var(--par)}
+  .m-duda > .linea,.m-duda > details > summary .linea{background:var(--duda-bg); box-shadow:inset 3px 0 var(--duda)}
+  .linea{padding:2px 8px; border-radius:5px; display:inline-block}
+  code{font-family:ui-monospace,Consolas,monospace; font-size:.86em; background:var(--code); padding:0 4px; border-radius:4px}
+  a.x{color:var(--cruce); font-weight:600; text-decoration:none; white-space:normal; font-size:.88em;
+      border:1px solid var(--cruce); border-radius:999px; padding:0 7px; margin-left:2px}
+  a.x:hover{background:var(--cruce-bg)}
+  mark{background:var(--marca); color:inherit; border-radius:3px}
+  .destello{animation:destello 1.6s ease-out}
+  @keyframes destello{0%{outline:3px solid var(--acento); outline-offset:2px}100%{outline:3px solid transparent}}
+  .oculto{display:none !important}
+  .ayuda{font-size:.86rem; color:var(--suave); margin:0 0 14px}
+  @media (max-width:600px){
+    html{scroll-padding-top:150px}
+    header{padding:10px 16px 8px}
+    h1{font-size:1.05rem}
+    .sub{display:none}
+    .controles{flex-wrap:nowrap}
+    .controles button{padding:6px 8px; white-space:nowrap}
+    .filtros{flex-wrap:nowrap; overflow-x:auto; padding-bottom:2px; scrollbar-width:thin}
+    .filtros button{white-space:nowrap; flex:0 0 auto}
+    body{font-size:14.5px}
+    section.u > details > summary{font-size:1.05rem}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="fila">
+    <h1>Mapa conceptual — Sistemas Operativos</h1>
+    <p class="sub">Acumulativo · Unidades 1 y 2 · __RESUMEN__</p>
+    <div class="controles">
+      <input type="search" id="buscar" placeholder="Buscar un término (ej.: TSL, quantum, BCP, 446)…" aria-label="Buscar">
+      <button id="abrir">Abrir todo</button>
+      <button id="cerrar">Cerrar todo</button>
+    </div>
+    <div class="filtros" id="filtros">
+      <button data-m="secuencia" aria-pressed="false">🔢 Secuencias</button>
+      <button data-m="error" aria-pressed="false">⚠️ Mis errores</button>
+      <button data-m="trampa" aria-pressed="false">📌 Trampas</button>
+      <button data-m="par" aria-pressed="false">⚖️ Pares</button>
+      <button data-m="cruce" aria-pressed="false">🔗 Cruces</button>
+      <button data-m="memoria" aria-pressed="false">🧠 Memoria</button>
+      <button data-m="duda" aria-pressed="false">❓ Dudas</button>
+    </div>
+    <div class="estado" id="estado"></div>
+  </div>
+</header>
+<main>
+  <p class="ayuda">Hacé clic en una rama para abrirla o cerrarla. Los botones de colores muestran solo un tipo de marca
+  (por ejemplo, todos tus errores juntos). Las pastillas <span style="color:var(--cruce);font-weight:600">→ U2: …</span> son
+  conexiones entre unidades: hacé clic y salta a la otra rama. 📖 = página impresa del Tanenbaum · 📄 = página del PDF de repaso.</p>
+  <nav class="indice"><details><summary>Índice de unidades y temas</summary><ol id="indice"></ol></details></nav>
+  <div id="mapa"></div>
+</main>
+<script>
+const DATOS = /*__DATOS__*/null;
+
+const norm = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const mapa = document.getElementById("mapa");
+const indice = document.getElementById("indice");
+const todos = [];   // {el, txt, marcas, det}
+
+function crear(tag, cls, html){ const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+
+function refs(n, cont){
+  if (n.r){ const r = crear("div", "refs"); n.r.forEach(x => r.appendChild(crear("div", null, x))); cont.appendChild(r); }
+  if (n.d){ n.d.forEach(x => cont.appendChild(crear("p", "desc", x))); }
+}
+
+function hijos(lista, cont){
+  const items = lista.filter(h => h.k !== "titulo");
+  const tits = lista.filter(h => h.k === "titulo");
+  if (items.length){
+    const pasos = items.every(h => h.k === "paso");
+    const ul = crear(pasos ? "ol" : "ul", "arbol");
+    items.forEach(h => ul.appendChild(item(h)));
+    cont.appendChild(ul);
+  }
+  tits.forEach(t => cont.appendChild(titulo(t)));
+}
+
+function registrar(el, n, det){
+  const tmp = document.createElement("div"); tmp.innerHTML = n.t + (n.r ? " " + n.r.join(" ") : "") + (n.d ? " " + n.d.join(" ") : "");
+  todos.push({el, txt: norm(tmp.textContent), marcas: n.m || [], det});
+  (n.m || []).forEach(m => el.classList.add("m-" + m));
+  if (n.id) el.id = n.id;
+}
+
+function item(n){
+  const li = crear("li");
+  if (n.h){
+    const det = crear("details");
+    const sum = crear("summary"); sum.appendChild(crear("span", "linea", n.t));
+    det.appendChild(sum);
+    const c = crear("div"); refs(n, c); hijos(n.h, c); det.appendChild(c);
+    li.appendChild(det);
+    registrar(li, n, det);
+  } else {
+    li.appendChild(crear("span", "linea", n.t));
+    registrar(li, n, null);
+  }
+  return li;
+}
+
+function titulo(n){
+  if (n.n === 1){
+    const sec = crear("section", "u");
+    const det = crear("details"); det.open = true;
+    const sum = crear("summary", null, n.t); det.appendChild(sum);
+    const c = crear("div", "cuerpo"); refs(n, c); hijos(n.h || [], c); det.appendChild(c);
+    sec.appendChild(det); registrar(sec, n, det);
+    return sec;
+  }
+  const det = crear("details", n.n === 2 ? "tema" : "conc");
+  det.appendChild(crear("summary", null, n.t));
+  const c = crear("div"); refs(n, c); hijos(n.h || [], c); det.appendChild(c);
+  registrar(det, n, det);
+  return det;
+}
+
+DATOS.forEach(u => {
+  mapa.appendChild(titulo(u));
+  const li = crear("li"); const a = crear("a", null, u.t); a.href = "#" + (u.id || ""); a.dataset.ir = u.id || "";
+  li.appendChild(a);
+  const temas = (u.h || []).filter(h => h.k === "titulo");
+  if (temas.length){
+    const ol = crear("ol");
+    temas.forEach(t => { const l2 = crear("li"); const a2 = crear("a", null, t.t); a2.href = "#" + t.id; a2.dataset.ir = t.id; l2.appendChild(a2); ol.appendChild(l2); });
+    li.appendChild(ol);
+  }
+  indice.appendChild(li);
+});
+
+function abrirAncestros(el){
+  for (let p = el; p; p = p.parentElement){ if (p.tagName === "DETAILS") p.open = true; }
+}
+
+function ir(id){
+  const el = document.getElementById(id);
+  if (!el) return;
+  limpiarFiltros();
+  abrirAncestros(el);
+  if (el.tagName === "DETAILS") el.open = true;
+  el.scrollIntoView({behavior: "smooth", block: "start"});
+  el.classList.remove("destello"); void el.offsetWidth; el.classList.add("destello");
+  history.replaceState(null, "", "#" + id);
+}
+
+document.addEventListener("click", e => {
+  const a = e.target.closest("a[data-ir]");
+  if (a && a.dataset.ir){ e.preventDefault(); ir(a.dataset.ir); }
+});
+
+// ----- filtros: búsqueda y marcas
+const buscar = document.getElementById("buscar");
+const estado = document.getElementById("estado");
+let marcaActiva = null;
+
+function aplicar(){
+  const q = norm(buscar.value.trim());
+  const activo = q.length >= 2 || marcaActiva;
+  document.querySelectorAll("mark").forEach(m => m.replaceWith(document.createTextNode(m.textContent)));
+  if (!activo){
+    todos.forEach(t => t.el.classList.remove("oculto"));
+    estado.textContent = "";
+    return;
+  }
+  const coincide = new Set();
+  todos.forEach(t => {
+    const okQ = q.length < 2 || t.txt.includes(q);
+    const okM = !marcaActiva || t.marcas.includes(marcaActiva);
+    if (okQ && okM) coincide.add(t.el);
+  });
+  // un nodo se ve si coincide, si tiene un descendiente que coincide o si un ancestro coincide
+  const visibles = new Set();
+  coincide.forEach(el => {
+    for (let p = el; p && p !== mapa; p = p.parentElement){ visibles.add(p); if (p.tagName === "DETAILS") p.open = true; }
+    el.querySelectorAll("*").forEach(d => visibles.add(d));
+  });
+  todos.forEach(t => t.el.classList.toggle("oculto", !visibles.has(t.el)));
+  coincide.forEach(el => { if (el.tagName === "DETAILS" && !marcaActiva) el.open = true; });
+  if (q.length >= 2) resaltar(q);
+  estado.textContent = coincide.size ? `${coincide.size} coincidencias` : "Sin coincidencias";
+}
+
+function resaltar(q){
+  const walker = document.createTreeWalker(mapa, NodeFilter.SHOW_TEXT);
+  const nodos = [];
+  while (walker.nextNode()) nodos.push(walker.currentNode);
+  nodos.forEach(n => {
+    const s = n.nodeValue; const ns = norm(s); const i = ns.indexOf(q);
+    if (i < 0 || n.parentElement.closest(".oculto")) return;
+    const frag = document.createDocumentFragment();
+    frag.append(s.slice(0, i)); const m = document.createElement("mark"); m.textContent = s.slice(i, i + q.length);
+    frag.append(m, s.slice(i + q.length)); n.replaceWith(frag);
+  });
+}
+
+function limpiarFiltros(){
+  if (!buscar.value && !marcaActiva) return;
+  buscar.value = ""; marcaActiva = null;
+  document.querySelectorAll("#filtros button").forEach(b => b.setAttribute("aria-pressed", "false"));
+  aplicar();
+}
+
+let t0;
+buscar.addEventListener("input", () => { clearTimeout(t0); t0 = setTimeout(aplicar, 180); });
+document.getElementById("filtros").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  marcaActiva = marcaActiva === b.dataset.m ? null : b.dataset.m;
+  document.querySelectorAll("#filtros button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.m === marcaActiva)));
+  aplicar();
+});
+document.getElementById("abrir").addEventListener("click", () => document.querySelectorAll("#mapa details").forEach(d => d.open = true));
+document.getElementById("cerrar").addEventListener("click", () => document.querySelectorAll("#mapa details").forEach(d => d.open = false));
+
+if (location.hash.length > 1) setTimeout(() => ir(decodeURIComponent(location.hash.slice(1))), 50);
+</script>
+</body>
+</html>
