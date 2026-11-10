@@ -1,0 +1,21 @@
+// Verifica las formulas de calculadoras.html contra los ejemplos del apunte.
+const fs = require("fs"), vm = require("vm");
+const html = fs.readFileSync("visuales/calculadoras.html", "utf8");
+const src = html.split('<script id="motor">')[1].split("</script>")[0];
+const ctx = {module: {exports: {}}}; vm.createContext(ctx); vm.runInContext(src, ctx);
+const {F, estado} = ctx.module.exports;
+let fallos = 0; const cerca = (a, b, m, tol = 1e-3) => { const ok = Math.abs(a - b) < tol; console.log((ok ? "OK   " : "FALLA") + ` ${m}: ${a} (esperado ${b})`); if (!ok) fallos++; };
+cerca(F.multiprog(0.8, 5), 0.67232, "1 - 0,8^5");
+cerca(F.multiprog(0.8, 10), 0.892626, "1 - 0,8^10");
+cerca(F.tm(1, 10, 0.95), 1.5, "Tm con 95 %"); cerca(10 / F.tm(1, 10, 0.95), 6.6667, "aceleracion 95 %");
+cerca(F.tm(1, 10, 0.5), 6.0, "Tm con 50 %"); cerca(10 / F.tm(1, 10, 0.5), 1.6667, "aceleracion 50 %");
+cerca(F.desperdicio(4, 1), 0.2, "quantum 4 / s 1 -> 20 %"); cerca(F.desperdicio(100, 1), 0.0099, "quantum 100 -> ~1 %", 1e-4);
+cerca(F.esperaUltimo(100, 1, 50), 4949, "50 pedidos -> ~5 s");
+const u1 = F.planif([[100, 50], [200, 30], [500, 100]]); cerca(u1, 0.85, "libro: 0,85"); cerca(F.maxC(u1, 1000), 150, "libro: cuarto evento 150 ms");
+const u2 = F.planif([[50, 15], [100, 20], [200, 40]]); cerca(u2, 0.7, "clase: 0,7"); cerca(F.maxC(u2, 500), 150, "clase: D admite 150 ms");
+cerca(F.maestro(8, 0.15), 1.2, "8 CPU al 15 %"); cerca(F.nMax(0.15), 6, "maximo 6 CPU"); cerca(F.nMax(0.10), 10, "10 % -> 10 CPU");
+const l = F.loteria([5, 15, 30]); cerca(l[0], 0.1, "loteria A"); cerca(l[1], 0.3, "loteria B"); cerca(l[2], 0.6, "loteria C");
+const l2 = F.loteria([25, 15, 10]); cerca(l2[0], 0.5, "regalo A"); cerca(l2[2], 0.2, "regalo C");
+const ok = (c, m) => { console.log((c ? "OK   " : "FALLA") + " " + m); if (!c) fallos++; };
+ok(estado(1.2, 1, 0.9) === "sat" && estado(0.95, 1, 0.9) === "lim" && estado(0.85, 1, 0.9) === "ok" && estado(1.0, 1, 0.9) === "lim", "estados ok / al limite / saturado");
+console.log(fallos ? `\n${fallos} FALLOS` : "\n0 fallos");

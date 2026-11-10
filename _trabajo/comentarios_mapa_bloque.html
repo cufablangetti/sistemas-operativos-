@@ -1,0 +1,421 @@
+
+<!-- ================================================================
+     COMENTARIOS (agregado 2026-11-09) — las dudas de preguntasrepaso.md
+     pegadas al lado de cada caja, como los comentarios de un documento.
+     Este bloque NO toca nada de lo de arriba: solo agrega burbujas 💬,
+     un panel lateral y la pestaña de gráficos interactivos.
+     ================================================================ -->
+<style>
+  :root{ --cm:#b7791f; --cm-bg:#fffbea; --cm-borde:#f0d78a; --cm-activo:#f59e0b; --ojo:#c2410c; --ojo-bg:#fff1ea; }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){ --cm:#fbbf24; --cm-bg:#262013; --cm-borde:#5c4a1c; --cm-activo:#fbbf24; --ojo:#fb923c; --ojo-bg:#2c1b12; }
+  }
+  :root[data-theme="dark"]{ --cm:#fbbf24; --cm-bg:#262013; --cm-borde:#5c4a1c; --cm-activo:#fbbf24; --ojo:#fb923c; --ojo-bg:#2c1b12; }
+  .cm-badge{position:absolute; top:-11px; right:-11px; min-width:26px; height:22px; padding:0 6px; border-radius:11px;
+    background:var(--cm-bg); border:1.5px solid var(--cm); color:var(--cm); font:700 11px/19px system-ui,sans-serif;
+    text-align:center; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.18); z-index:2; white-space:nowrap}
+  .cm-badge:hover{background:var(--cm); color:var(--cm-bg)}
+  .cm-badge.ojo{border-color:var(--ojo); color:var(--ojo)}
+  .cm-oculto .cm-badge{display:none}
+  .n.cm-foco{box-shadow:0 0 0 4px var(--cm-activo) !important}
+  #btn-cm{border-color:var(--cm); color:var(--cm); font-weight:650}
+  #btn-graf{font-weight:650}
+  #cm-panel{position:absolute; top:0; right:0; bottom:0; width:390px; max-width:100%; z-index:5; display:none;
+    flex-direction:column; background:var(--panel); border-left:1px solid var(--borde); box-shadow:-4px 0 14px rgba(0,0,0,.12); cursor:auto}
+  #cm-panel.abierto{display:flex}
+  .cm-cab{padding:10px 12px 8px; border-bottom:1px solid var(--borde)}
+  .cm-cab .fila{display:flex; align-items:center; gap:6px}
+  .cm-tabs{display:flex; gap:4px; flex:1}
+  .cm-tabs button{flex:1; font-weight:650}
+  .cm-tabs button.on{background:var(--unidad); color:#fff; border-color:var(--unidad)}
+  #cm-cerrar{width:32px; padding:4px 0}
+  .cm-filtros{display:flex; flex-wrap:wrap; gap:4px; margin-top:8px}
+  .cm-filtros button{font-size:.76rem; padding:3px 8px}
+  .cm-filtros button.on{border-color:var(--cm); background:var(--cm-bg); color:var(--cm); font-weight:650}
+  #cm-q{width:100%; margin-top:7px}
+  .cm-aviso{font-size:.78rem; color:var(--suave); margin-top:6px}
+  .cm-aviso a{color:var(--cm); cursor:pointer; text-decoration:underline}
+  #cm-lista,#graf-lista{flex:1; overflow-y:auto; padding:10px 12px 40px}
+  .cm-grupo{margin:4px 0 14px}
+  .cm-nodo{display:flex; align-items:center; gap:6px; font-size:.78rem; font-weight:650; color:var(--suave);
+    margin:0 0 6px; cursor:pointer; background:none; border:0; padding:0; text-align:left}
+  .cm-nodo:hover{color:var(--unidad)}
+  .cm-card{background:var(--cm-bg); border:1px solid var(--cm-borde); border-left:4px solid var(--cm); border-radius:8px;
+    padding:9px 11px; margin-bottom:8px; font-size:.84rem; line-height:1.45; cursor:pointer}
+  .cm-card.activo{box-shadow:0 0 0 2px var(--cm-activo)}
+  .cm-card.resuelto{opacity:.55}
+  .cm-card .q{font-style:italic; color:var(--suave); margin-bottom:5px}
+  .cm-card .q::before{content:"💬 Preguntaste: "; font-style:normal; font-weight:650; color:var(--cm)}
+  .cm-card .r b{color:var(--texto)}
+  .cm-card code{font-size:.8rem; background:rgba(127,127,127,.15); padding:0 3px; border-radius:3px}
+  .cm-card .ojo{margin-top:7px; background:var(--ojo-bg); border:1px solid var(--ojo); border-radius:6px; padding:6px 8px; font-size:.8rem}
+  .cm-card .ojo::before{content:"⚠️ Ojo: "; font-weight:700; color:var(--ojo)}
+  .cm-card .pie{display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:7px; font-size:.75rem}
+  .cm-card .pie a{color:var(--unidad); font-weight:650; text-decoration:none}
+  .cm-card .pie label{display:flex; gap:4px; align-items:center; color:var(--suave); cursor:pointer}
+  .graf{display:block; text-decoration:none; color:var(--texto); background:var(--bg); border:1px solid var(--borde);
+    border-radius:9px; padding:10px 12px; margin-bottom:9px}
+  .graf:hover{border-color:var(--unidad)}
+  .graf .tt{font-weight:650}
+  .graf .tipo{font-size:.72rem; color:var(--unidad); font-weight:650; text-transform:uppercase; letter-spacing:.03em}
+  .graf .de{font-size:.8rem; color:var(--suave); margin-top:2px}
+  .graf-sec{font-size:.75rem; color:var(--suave); font-weight:650; margin:12px 0 6px}
+  @media (max-width:600px){ #cm-panel{width:100%} }
+</style>
+
+<div id="cm-panel" aria-label="Comentarios y gráficos">
+  <div class="cm-cab">
+    <div class="fila">
+      <div class="cm-tabs">
+        <button id="tab-cm" class="on">💬 Comentarios</button>
+        <button id="tab-graf">🎛 Gráficos</button>
+      </div>
+      <button id="cm-cerrar" title="Cerrar panel">✕</button>
+    </div>
+    <div id="cm-cab-cm">
+      <div class="cm-filtros" id="cm-filtros">
+        <button data-f="todos" class="on">Todos</button>
+        <button data-f="u1">U1</button>
+        <button data-f="u2">U2</button>
+        <button data-f="ojo">⚠️ Con corrección</button>
+        <button data-f="pend">Sin resolver</button>
+      </div>
+      <input type="search" id="cm-q" placeholder="Buscar en tus preguntas…" aria-label="Buscar en los comentarios">
+      <div class="cm-aviso" id="cm-aviso"></div>
+    </div>
+  </div>
+  <div id="cm-lista"></div>
+  <div id="graf-lista" style="display:none"></div>
+</div>
+
+<script>
+// ---------------------------------------------------------------- datos
+// [caja del mapa, tu pregunta (resumida), respuesta corta, ojo (corrección, opcional), gráfico (opcional)]
+// Fuente: preguntasrepaso.md (chat de repaso con otra IA, noviembre 2026). Las respuestas están
+// reescritas según el Tanenbaum y la clase; "Ojo" marca dónde la otra IA o tu frase se pasaron de rosca.
+const G = {
+  em:   "../unidades/u02-procesos/visuales/exclusion_mutua.html",
+  cc:   "../unidades/u02-procesos/visuales/cambio_de_contexto.html",
+  pc:   "../unidades/u02-procesos/visuales/productor_consumidor.html",
+  car:  "../unidades/u02-procesos/visuales/condicion_de_carrera.html",
+  est:  "../unidades/u02-procesos/visuales/estados_de_proceso.html",
+  es:   "../unidades/u01-introduccion/visuales/es_programada_interrupciones_dma.html",
+  arr:  "../unidades/u01-introduccion/visuales/arranque_y_sector_de_booteo.html",
+  i86:  "../unidades/u01-introduccion/visuales/interrupciones_8086.html",
+  estr: "../unidades/u01-introduccion/visuales/estructuras_de_so.html",
+  comp: "comparaciones.html",
+  calc: "calculadoras.html"
+};
+const COMENTARIOS = [
+// ---------------- U1
+["u1a", "¿Qué significa que el hardware es «primitivo»?",
+ "No es «viejo»: es <b>de bajo nivel</b>. La CPU solo sabe mover bits, sumar, comparar y saltar; el disco solo entiende «mové el brazo, leé el sector 237». El SO arma encima abstracciones limpias (archivo, proceso) y te ofrece <code>read(fd, buf, n)</code> en vez de esos pasos. Eso es la <b>máquina extendida</b>."],
+["u1a", "¿Qué es un hard link y un soft link?",
+ "Es tema de la <b>U4</b> (sistemas de archivos), te adelantaste. Corto: el <b>hard link</b> es otro nombre que apunta al mismo i-nodo (mismos datos; si borrás un nombre, el archivo sigue mientras quede otro). El <b>soft link</b> (simbólico) es un archivito que guarda la <i>ruta</i> del otro; si borrás el original, queda roto. Lo vemos bien en la U4."],
+["u1c", "¿La multiprogramación es la cantidad de procesos en RAM y cómo se planifican para usar la CPU?",
+ "Casi. <b>Multiprogramación = tener varios procesos en memoria a la vez para que, cuando uno espera E/S, la CPU pase a otro.</b> El objetivo es no dejar la CPU ociosa. La cantidad de procesos en memoria se llama <b>grado de multiprogramación</b> (la <i>n</i> de 1 − pⁿ). Cómo se reparte la CPU entre ellos ya es la <b>planificación</b> (U2).",
+ null, "calc"],
+["u1x", "Si uno espera el disco, ¿se bloquea para que pase el otro?",
+ "Sí. Hace un <code>read</code> (TRAP), el SO lo pasa a <b>BLOQUEADO</b> y el planificador elige otro de los <b>LISTOS</b>. Cuando el disco termina, una interrupción lo pasa a LISTO. Esa es justamente la idea de la multiprogramación: tapar el «agujero» de la CPU esperando E/S.",
+ null, "est"],
+["u1t7", "La historia: lotes (uno por vez, como FCFS) → multiprogramación (varios en memoria, exige protección) → tiempo compartido (todos reciben un tiempo).",
+ "Bien armado. Dos ajustes: (1) en <b>lotes</b> la mejora fue juntar trabajos en cinta para no perder tiempo entre uno y otro; sí, se parece a FCFS. (2) <b>Tiempo compartido</b> no es «un tiempo en común»: es multiprogramación con <b>una terminal por usuario</b> y turnos cortos, para que cada uno sienta respuesta inmediata (CTSS). Es el origen de Round Robin."],
+["u1d", "Para los cambios del BCP se usa la pila, ¿y para las llamadas al sistema también?",
+ "Son dos cosas distintas. La <b>pila</b> es memoria del proceso con los marcos de las llamadas a procedimiento (dirección de retorno, parámetros, variables locales). El <b>BCP</b> es una entrada de la <b>tabla de procesos</b> del kernel. En una llamada al sistema, los <b>parámetros se apilan</b> antes de llamar a la biblioteca (pasos 1–3 de <code>read</code>). En una interrupción, el hardware apila PC y PSW y después el SO copia todo al BCP.",
+ null, "cc"],
+["u1d", "Cada proceso/hilo tiene su pila; el kernel ve todos en la tabla (BCP) con PC, SP y PSW; carga el elegido y lo primero que mira es el PC.",
+ "Correcto. Al cargar el nuevo proceso, el SO restaura sus registros desde el BCP (incluidos SP y PSW) y por último el <b>PC</b>, así la próxima instrucción que se obtiene es exactamente donde ese proceso había quedado."],
+["u1d", "¿Para qué se guarda el SP? ¿Por si el proceso quedó a mitad de una función?",
+ "Exacto. En la pila están los marcos de las funciones que no retornaron: variables locales y <b>direcciones de retorno</b>. Si no restaurás el SP, al reanudar el proceso no encontraría sus datos ni sabría a dónde volver con el <code>RET</code>."],
+["u1d", "PSW contra «estado» del BCP: ¿los bits de condición serían ese estado?",
+ "No. Los <b>bits de condición</b> están <b>dentro del PSW</b> (registro de hardware) y dicen cómo salió la última operación (cero, negativo, acarreo…); de ahí leen <code>JNE</code>/<code>JZE</code>. El PSW también tiene el <b>bit de modo</b>. El <b>estado del BCP</b> (Ejecución/Listo/Bloqueado) es un dato del <b>SO</b>, otra cosa.",
+ "Este par ya lo confundiste una vez en clase: PSW = hardware; estado del BCP = software."],
+["u1d", "¿Qué son los registros?",
+ "Las memorias más rápidas y chicas: están <b>dentro de la CPU</b>. Los de propósito general guardan los datos con los que se está operando; los especiales son el <b>PC</b>, el <b>SP</b> y el <b>PSW</b>. Están en la punta de la jerarquía de memoria (menos de 1 ns)."],
+["u1d", "¿Qué es el IR?",
+ "El <b>registro de instrucción</b>: donde la CPU deja la instrucción que acaba de traer (paso «obtener») para decodificarla y ejecutarla. Es interno, el SO no lo guarda en el BCP. El Tanenbaum casi no lo nombra: es dato de arquitectura (complemento)."],
+["u1d", "Cuando se busca el PC de un proceso y se usa DMA, ¿la información sale de la caché y no de la RAM?",
+ "Mezclaste dos caminos. La CPU busca la <b>instrucción</b> en la dirección del PC: primero en la <b>caché</b> y, si no está, en la <b>RAM</b>. El <b>DMA</b> es otra cosa: mueve datos de E/S entre el dispositivo y la <b>RAM</b> sin pasar por la CPU."],
+["u1e", "No entiendo cómo es la protección de las instrucciones privilegiadas.",
+ "Es una barrera del <b>hardware</b>, previa: antes de ejecutar una instrucción privilegiada (deshabilitar interrupciones, hablar con un dispositivo), la CPU mira el <b>bit de modo del PSW</b>. Si está en usuario, <b>no la ejecuta</b> y genera un trap; recién ahí entra el SO, que normalmente mata al proceso. El SO la <i>configura</i> (pone el bit en usuario antes de darle la CPU a un proceso); el hardware la <i>hace cumplir</i>."],
+["u1e", "Entonces lo que hace el TRAP es no meterse de primera al kernel.",
+ "Mejor dicho: el TRAP es la <b>única puerta</b> para entrar al kernel. Un programa no puede saltar a cualquier dirección del kernel; TRAP cambia el modo a kernel <b>y salta a una dirección fija</b> elegida por el SO. Por eso es seguro: entrás por la ventanilla, no por la ventana."],
+["u1e", "Claro, porque también hay procesos en el kernel.",
+ "La razón de la protección es más simple: en el kernel están las <b>tablas del SO</b> (tabla de procesos, memoria, archivos) y el código que maneja el hardware; nadie de usuario debe tocarlos.",
+ "La otra IA te dijo que el planificador y los drivers son «procesos del kernel». En el Tanenbaum el <b>planificador es código del kernel</b> que se ejecuta cuando lo llama, por ejemplo, la interrupción de reloj (fig. 2-5, paso 6), no un proceso. Y en un kernel monolítico los drivers son código dentro del kernel; solo en un <b>microkernel</b> los drivers son procesos (de usuario)."],
+["u1f", "Volátil: se apaga y se pierde; no volátil: se retiene, ¿no?",
+ "Sí. Volátiles: registros, caché y RAM. No volátiles: ROM/flash (donde vive el BIOS), CMOS (con su pila), disco y cinta."],
+["u1f", "Jerarquía: registros, caché, RAM, disco, cinta; más arriba, más rápido, más caro y menos capacidad.",
+ "Perfecto, así se responde. Agregá la razón de ser: cada nivel funciona como <b>caché del de abajo</b>, y funciona gracias a la <b>localidad</b> de los programas."],
+["u1f", "¿Qué es la caché? ¿Y lo de las líneas?",
+ "La <b>caché</b> es una memoria chica y rapidísima entre la CPU y la RAM que guarda copias de lo usado recientemente. Una <b>línea</b> es el bloque fijo (típico: 64 bytes) que se trae de una vez: si pedís 1 byte, viene la línea entera, porque probablemente uses los vecinos (<b>localidad espacial</b>). Acierto = está en caché; fallo = hay que ir a la RAM."],
+["u1f", "Explicame rápido el cálculo del tiempo medio con caché.",
+ "Promedio ponderado: el 95 % de las veces tarda 1 ns (acierto); el 5 % mira la caché y además va a la RAM: 1 + 10 = 11 ns. Tm = 0,95 × 1 + 0,05 × 11 = <b>1,50 ns</b>. Sin caché, 10 ns → 6,67 veces más rápida. Con 50 % de aciertos: 6,00 ns. <b>La caché vale lo que vale la localidad.</b> Probalo en la calculadora.",
+ null, "calc"],
+["u1j", "No entiendo bien la E/S por interrupciones y el tratamiento de una interrupción.",
+ "Película corta: el <b>driver</b> le da la orden al <b>controlador</b> y el proceso se bloquea; la CPU hace otra cosa. Al terminar, el controlador avisa al <b>chip de interrupciones</b>, que activa un pin de la CPU y pone el número del dispositivo. La CPU <b>apila PC y PSW</b>, pasa a <b>modo kernel</b> y usa ese número como índice en el <b>vector de interrupciones</b> para saltar al <b>manejador</b>. Al terminar, vuelve a la instrucción que había quedado.",
+ null, "es"],
+["u1g", "¿Los manejadores de interrupciones son distintos del driver y del controlador?",
+ "El <b>controlador</b> es <b>hardware</b> (el chip del dispositivo). El <b>driver</b> es <b>software</b> del SO, en modo kernel. El <b>manejador de interrupciones</b> es <b>parte del driver</b>: el pedacito que corre cuando llega la interrupción del dispositivo. Hay un manejador por tipo de dispositivo (por eso el vector es una tabla)."],
+["u1k", "¿En qué se diferencia la E/S por interrupciones del DMA?",
+ "Con interrupciones, la CPU recibe <b>una interrupción por cada unidad de datos</b> y la copia ella. Con <b>DMA</b>, la CPU programa el chip DMA (dirección, cantidad, sentido), el DMA copia todo solo y hay <b>una sola interrupción al final</b>. Las tres formas tardan lo mismo; cambia cuánta CPU gastan.",
+ null, "es"],
+["u1k", "El DMA es un intermediario para no usar la CPU: lleva los datos al búfer y cuando está completo avisa.",
+ "Correcto: el DMA transfiere entre el controlador y la <b>RAM</b> (el búfer) y genera la interrupción cuando terminó <b>toda</b> la transferencia. Detalle de examen: mientras el DMA usa el bus, la CPU puede tener que esperar el bus (robo de ciclos), pero no participa de la copia."],
+["u1m", "El arranque es el huevo y la gallina: el SO está en el disco y para leer el disco hace falta el SO… no entiendo los dos cargadores ni la lista de la CMOS.",
+ "Tu inicio está bien. Sigue así: el <b>BIOS</b> (en ROM, no depende del disco) mira la <b>lista de dispositivos de arranque guardada en la CMOS</b> («primero el pendrive, después el disco»). Del elegido lee el <b>sector 0 (MBR)</b> y lo ejecuta. El código del MBR tiene <b>446 bytes</b>: solo le alcanza para buscar la partición activa y leer su primer sector. Eso trae al <b>cargador secundario</b> (GRUB, cientos de KB), que sí entiende el sistema de archivos y carga el SO. Hacen falta dos porque el primero <b>no entra</b> en 446 bytes.",
+ null, "arr"],
+["u1s", "¿El CALL era una llamada a procedimiento?",
+ "Sí. <code>CALL</code> apila la dirección de retorno y salta a la función; <code>RET</code> la desapila y vuelve. <b>TRAP</b> se parece, pero además <b>cambia a modo kernel</b> y salta a una <b>dirección fija</b>; CALL no hace ninguna de las dos cosas."],
+["u1t", "¿Qué hace <code>read(fd, buffer, nbytes)</code> y qué es cada variable?",
+ "Pide al SO leer datos. <b>fd</b> (descriptor de archivo): el número que te dio <code>open</code> para identificar el archivo abierto. <b>buffer</b>: la dirección de memoria del proceso donde dejar los datos. <b>nbytes</b>: cuántos bytes leer como máximo. Devuelve cuántos leyó de verdad (o −1 si falla, con el motivo en <code>errno</code>)."],
+["u1v", "¿El búfer es una memoria temporal de la RAM? ¿Y qué diferencia tiene con la caché?",
+ "Sí: un búfer es una zona de RAM donde se juntan datos de paso. La diferencia es el <b>propósito</b>: el <b>búfer</b> acumula para <b>mover de a bloques</b> (amortigua diferencias de velocidad y tamaño); la <b>caché</b> guarda copias para <b>no volver a buscar</b> lo que se va a reutilizar. Están lado a lado en la página de comparaciones.",
+ null, "comp"],
+["u1v", "¿Por qué se dice que el búfer ahorra llamadas al sistema y no lecturas de disco?",
+ "Porque el disco igual se lee <b>de a bloques</b> (el SO trae el bloque entero aunque pidas 1 byte). Lo que cambia con un búfer grande es cuántas veces cruzás al kernel: leer 10.000 bytes de a 1 son <b>10.000 TRAP</b>; de a 4096 son 3. Cada TRAP cuesta (cambio de modo, guardar registros).",
+ "Esta trampa ya la fallaste en el cuestionario de la U1: búfer más grande → menos llamadas, NO menos disco."],
+["u1af", "Explicame las máquinas virtuales y los hipervisores; el tipo 2 lo entiendo (VirtualBox sobre Windows), el tipo 1 no.",
+ "<b>Tipo 2</b>: prendés la PC, arranca Windows, y el hipervisor (VirtualBox) es un <b>programa más</b> encima. <b>Tipo 1</b>: no hay Windows abajo. Lo primero que arranca sobre el hardware es el <b>hipervisor</b> (VM/370, hoy VMware ESXi o Xen), y encima corren las máquinas virtuales, cada una con su SO. Cada VM cree tener el hardware entero: modo kernel, modo usuario e interrupciones. Míralo apilado en la página de comparaciones.",
+ null, "comp"],
+// ---------------- U2
+["u2d", "Proceso = programa en ejecución (el programa en disco, el proceso en RAM con su PC y variables); con una CPU hay pseudoparalelismo; con varias, paralelismo real; fork copia al padre.",
+ "Todo correcto. Para el examen: «<b>fork crea un proceso hijo que es una copia exacta del padre</b> (misma imagen de memoria, mismos archivos abiertos) pero con <b>espacio de direcciones propio</b>; los cambios de uno no los ve el otro»."],
+["u2b", "No entendí para qué sirve el execve.",
+ "<code>fork</code> clona: el hijo ejecuta el <b>mismo programa</b> que el padre. <code>execve</code> <b>reemplaza la imagen de memoria</b> del proceso por otro programa del disco (mismo PID, código nuevo). Así arranca la shell un comando: <code>fork</code> → el hijo hace <code>execve(\"ls\")</code> → el padre hace <code>waitpid</code>. Si <code>execve</code> funciona, <b>no retorna</b>: el código viejo ya no existe."],
+["u2h", "Contame el cambio de contexto (fig. 2-5) como una película, con la palabra técnica entre paréntesis.",
+ "Te armé el simulador paso a paso: ves la CPU, la pila, el vector y la tabla de procesos, y quién actúa en cada paso (hardware, ensamblador, C o planificador). Regla para recitar: <b>1–2 hardware</b> (apila PC y PSW; carga el PC del vector), <b>3–4 ensamblador</b> (registros al BCP; pila nueva), <b>5 C</b> (atiende), <b>6 planificador</b> (elige), <b>7–8</b> (vuelve y carga el nuevo).",
+ null, "cc"],
+["u2h", "«El hardware apila el PC y el PSW»: ¿eso quiere decir que lo guarda en el BCP?",
+ "No todavía. El hardware es «bruto»: solo sabe <b>apilarlos en la pila</b> y saltar. El que después copia todo al <b>BCP</b> es la <b>rutina en ensamblador</b> (paso 3), que ya es software del SO. Primero pila, después BCP.",
+ null, "cc"],
+["u2h", "¿Lo veo como algo externo que interrumpe, o como el proceso que pide algo? Me confundo.",
+ "La secuencia sirve para <b>los dos casos</b>. Lo que cambia es el disparador: una <b>interrupción</b> la provoca un dispositivo (disco, reloj) sin que el proceso haga nada; una <b>llamada al sistema</b> la provoca el propio proceso con <b>TRAP</b>. Después la mecánica es la misma: apilar, modo kernel, salto a una dirección fija, guardar en el BCP y planificar. En el simulador elegís el escenario y lo comparás.",
+ null, "cc"],
+["u2h", "Entonces: interrupción o llamada, el proceso se frena, se guarda PC y PSW, el cambio de contexto los pasa al BCP y el planificador elige otro; el vector sirve para saber a qué dirección saltar.",
+ "Correcto. Un matiz: no siempre hay cambio de proceso. Si el planificador vuelve a elegir al mismo (por ejemplo, una interrupción de teclado mientras P1 sigue listo), se restaura P1. Y el vector es de <b>interrupciones</b>; para las llamadas al sistema, TRAP salta a una dirección fija y el despachador usa el <b>número de llamada</b> para buscar en su tabla de manejadores."],
+["u2g", "¿El BCP es del kernel o está en modo usuario?",
+ "Del <b>kernel</b>. La tabla de procesos vive en la memoria del SO; un proceso de usuario no puede leer ni modificar su BCP. Si pudiera, podría cambiarse el PSW a modo kernel o tocar la memoria de otros. Para «asomarte» desde Linux, el SO te muestra una copia en <code>/proc/PID/status</code>."],
+["u2j", "Explicame lo de la pila por hilo, la falta de protección entre hilos y el <code>close(fd)</code>.",
+ "<b>Pila por hilo</b>: cada hilo llama a funciones distintas; con una pila compartida, el <code>RET</code> de uno desapilaría el marco del otro. <b>Sin protección</b>: todos los hilos ven toda la memoria del proceso; si uno la corrompe, cae el proceso entero. <b>close(fd)</b>: los archivos abiertos son <b>del proceso</b>; si un hilo cierra un descriptor, los demás lo pierden y su <code>read</code> falla."],
+["u2i", "No me acuerdo las 4 razones para usar hilos ni los ejemplos.",
+ "Regla corta: <b>los hilos dan paralelismo con llamadas bloqueantes simples</b>. Razones: (1) varias actividades, algunas bloqueantes, con código secuencial simple; (2) comparten memoria y datos; (3) son livianos (10–100 veces más rápidos de crear); (4) solapan cálculo y E/S, y con varias CPU hay paralelismo real. Ejemplos: procesador de texto (usuario / reformateo / respaldo) y servidor web (despachador + trabajadores con caché compartida)."],
+["u2i", "¿Qué pasa con <code>fork</code> en un proceso con hilos? ¿Se copia un solo hilo?",
+ "El Tanenbaum lo deja como <b>pregunta abierta</b> («complicaciones»): si el hijo hereda todos los hilos, ¿qué pasa con uno que estaba bloqueado en el teclado? En la práctica, POSIX copia <b>solo el hilo que llamó a fork</b> (eso es complemento, no está en el libro). Para el examen alcanza con plantear el problema."],
+["u2l", "Pero eso era con hilos de kernel; con hilos de usuario, si se traba uno, se cae todo el proceso.",
+ "Bien la idea, pero cuidá el verbo: con hilos de usuario, una llamada bloqueante <b>bloquea</b> (frena) a todo el proceso; no lo «tira». Que el proceso <b>se caiga</b> (crash por corromper memoria) pasa igual con hilos de usuario o de kernel, porque comparten la memoria.",
+ "En el examen, «se cae» y «se bloquea» son cosas distintas: bloqueo = espera sin CPU; caída = el proceso muere."],
+["u2l", "Explicame fácil hilos de usuario, de kernel, híbridos, activaciones y emergentes.",
+ "La pregunta que define todo: <b>¿el kernel sabe que existen los hilos?</b> Si no lo sabe (usuario): conmutación rapidísima, pero un bloqueo frena todo y no hay reloj interno (de ahí <code>thread_yield</code>). Si lo sabe (kernel): se bloquea solo ese hilo, pero conmutar cuesta una llamada al sistema. Te dejé los tres modelos lado a lado, con un botón que simula un <code>read</code> bloqueante.",
+ null, "comp"],
+["u2n", "Resumí: los de usuario no pierden tiempo al conmutar…; en la híbrida el kernel encapsula los hilos de usuario (procesadores virtuales) con upcall; los emergentes no cargan historia.",
+ "Muy bien lo de usuario, kernel y emergentes. Ajuste en la híbrida: el kernel <b>no ve</b> los hilos de usuario; ve solo los hilos de kernel, y la biblioteca reparte sus hilos de usuario encima («asientos»). En las <b>activaciones del planificador</b> el kernel le da procesadores virtuales al proceso y, cuando un hilo se bloquea, le avisa a la biblioteca con un <b>upcall</b> para que ponga otro hilo a correr.",
+ "La objeción de examen a las activaciones: el upcall viola el modelo de capas (una capa de abajo llama a una de arriba)."],
+["u2m", "¿Los hilos de kernel de un proceso se pueden combinar con los de otro proceso?",
+ "No: cada hilo pertenece a un solo proceso y comparte su memoria. Lo que hace el kernel es <b>planificar todos los hilos de todos los procesos</b> desde su tabla global: puede ejecutar A1, después B1, después A2 (eso con hilos de usuario es imposible, porque el kernel elige procesos)."],
+["u2k", "¿Por qué Chrome usa un proceso por pestaña? No entiendo la parte técnica.",
+ "Dos razones: <b>(1) aislamiento de fallas</b>: si una pestaña corrompe su memoria y muere, muere su proceso y no el navegador; <b>(2) protección de memoria</b>: cada proceso tiene su propio espacio de direcciones, y el hardware (la MMU) no deja que la pestaña de un sitio malicioso lea la memoria de la de tu banco. Con hilos, todas compartirían un solo espacio y esa pared no existiría. El precio: más memoria.",
+ null, "comp"],
+["u2k", "¿Qué es la MMU?",
+ "La <b>unidad de administración de memoria</b>: hardware que traduce cada dirección que usa el programa (virtual) a una dirección de la RAM (física) y verifica que esté permitida. Es la «pared» entre procesos. Es <b>el tema central de la U3</b>, ahí la vemos a fondo."],
+["u2p", "¿Qué es la región crítica?",
+ "La parte del código que <b>accede a datos compartidos</b> (una variable, un archivo, una tabla). Para evitar carreras, nunca puede haber dos procesos en su región crítica a la vez: eso es la <b>exclusión mutua</b>."],
+["u2o", "¿Qué es un spooler de impresora? ¿Y el ejemplo es una carrera porque uno pisó al otro?",
+ "El <b>spooler</b> es un directorio con ranuras donde los procesos dejan los nombres de los archivos a imprimir, y un <b>demonio</b> que los va mandando a la impresora. La carrera: A lee <code>in = 7</code>, el planificador lo saca; B lee <code>in = 7</code>, anota su archivo en la 7 y deja <code>in = 8</code>; A vuelve, escribe en la 7 (<b>pisa a B</b>) y deja <code>in = 8</code>. El archivo de B nunca se imprime y nadie se entera.",
+ null, "car"],
+["u2t5", "La condición de carrera es la que depende del orden de lo que pase, ¿no?",
+ "Sí: <b>dos o más procesos leen y escriben datos compartidos y el resultado depende del orden exacto en que se ejecutan</b>. El patrón de fondo es <b>leer → modificar → escribir</b> sin protección.",
+ null, "car"],
+["u2q", "¿La exclusión mutua es para poder cumplir las 4 condiciones?",
+ "Al revés: la <b>exclusión mutua</b> es la meta (uno por vez en la región crítica) y es la <b>condición 1</b>. Las 4 condiciones definen qué es una <b>buena solución</b>: (1) nunca dos adentro; (2) sin suponer velocidades ni cantidad de CPU; (3) uno que está afuera no puede bloquear a otro; (4) nadie espera para siempre."],
+["u2r", "Explicame la espera ocupada y los tres intentos que fallan.",
+ "<b>Espera ocupada</b> = girar en un <code>while</code> preguntando si ya podés entrar (gasta CPU). Fallas: <b>deshabilitar interrupciones</b> viola la 2 (en un multiprocesador solo frena una CPU) y es peligroso darle ese poder a un usuario; <b>variable candado</b> viola la 1 (leer y escribir son dos pasos, el mismo hueco del spooler); <b>alternancia estricta</b> viola la 3 (el rápido espera al lento aunque esté afuera). Las dos últimas las podés correr en el simulador.",
+ "La alternancia viola la 3, no la 2: ese fue tu error en la clase.", "em"],
+["u2s", "Explicame Peterson, sobre todo el código.",
+ "Cada uno levanta su cartel (<code>interesado[yo] = TRUE</code>) y después escribe <code>turno = yo</code>. Espera solo si <b>el turno es suyo Y el otro está interesado</b>. <b>El último que escribe turno cede</b>: como turno es una sola variable, no pueden esperar los dos. Al salir, bajar el cartel (<code>interesado[yo] = FALSE</code>) es lo que libera al otro. En el simulador ves cada línea y las variables en memoria.",
+ null, "em"],
+["u2s", "Es como que cada proceso cede el paso liberando el interés, para romper el while del otro.",
+ "Exacto: lo que destraba al que gira <b>no es un cambio de turno</b>, es que el otro ponga <code>interesado[otro] = FALSE</code> al salir. Y si el otro ni siquiera está interesado, entrás directo."],
+["u2t", "Explicame TSL, qué hace cada instrucción en assembler.",
+ "<code>TSL REGISTRO,CANDADO</code>: copia el candado al registro <b>y</b> pone el candado en 1, en una sola operación indivisible (bloquea el bus). <code>CMP REGISTRO,#0</code>: ¿el valor <b>viejo</b> era 0? <code>JNE entrar_region</code>: si no era 0, estaba ocupado → volvé a probar. <code>RET</code>: era 0 → ganaste, entrás. Al salir, <code>MOVE CANDADO,#0</code>. Es la variable candado sin el hueco entre leer y escribir.",
+ null, "em"],
+["u2u", "No entendí la inversión de prioridades.",
+ "Dos columnas: <b>quién tiene la CPU</b> y <b>quién tiene el candado</b>. L (baja) tiene el candado; H (alta) queda listo y el planificador le da la CPU a H, siempre. H gira esperando el candado. Para liberarlo, L tiene que <b>ejecutar</b> <code>candado = 0</code>, y para ejecutar necesita la CPU, que nunca recibe. La prioridad no falla: se respeta de más. Míralo en el simulador (escenario «Inversión»).",
+ null, "em"],
+["u2u", "Entonces es inanición de L y a su vez un interbloqueo.",
+ "La primera mitad está bien: <b>L sufre inanición</b> (está LISTO y nunca recibe la CPU). La segunda no.",
+ "<b>No es un interbloqueo</b>, aunque la otra IA te lo dio por bueno. En un interbloqueo todos están <b>bloqueados</b> esperando un evento que solo otro bloqueado puede causar. Acá <b>H no está bloqueado: está ejecutando</b> (girando con la CPU al 100 %) y L está LISTO. El libro lo llama simplemente «problema de inversión de prioridades». Se resuelve bloqueando en vez de girar y, con un tercero de prioridad media, con herencia de prioridades.",
+ "em"],
+["u2t7", "La carrera hace que se pisen, la exclusión mutua tiene 4 condiciones y hay dos tipos: con espera ocupada (gastan CPU) y sin espera ocupada (se bloquean).",
+ "Perfecto, ese es el mapa de la primera mitad de la U2. Giran: candado, alternancia, Peterson, TSL/XCHG. Se bloquean: sleep/wakeup, semáforos, monitores, mensajes. El mutex es un caso intermedio: prueba con TSL y, si no puede, cede la CPU con <code>thread_yield</code>."],
+["u2v", "Explicame el código de sleep/wakeup del productor-consumidor.",
+ "El productor: si <code>cuenta == N</code> (lleno) duerme; inserta; <code>cuenta++</code>; si quedó en 1, antes había 0 y el consumidor podría estar dormido → <code>wakeup(consumidor)</code>. El consumidor es el espejo. El agujero: el consumidor lee <code>cuenta == 0</code> y, <b>antes de dormirse</b>, pierde la CPU; el productor inserta y manda un wakeup a alguien que todavía no duerme: <b>la señal se pierde</b>. Después los dos se duermen para siempre. En el simulador elegí el modo «sleep/wakeup».",
+ null, "pc"],
+];
+
+// gráficos interactivos (pestaña 🎛)
+const GRAFICOS = [
+  ["Nuevos (formato de explicación)", [
+    ["em", "Simulador", "Exclusión mutua con espera ocupada", "Candado y alternancia (problema) contra Peterson y TSL (solución), e inversión de prioridades. Variables en memoria, código con la línea que se ejecuta, y vos podés hacer de planificador."],
+    ["cc", "Simulador", "Interrupción y cambio de contexto", "Los 8 pasos de la fig. 2-5 con tres disparadores: interrupción de disco, llamada al sistema y fin de quantum."],
+    ["comp", "Comparación", "Arquitecturas lado a lado", "Hilos de usuario / kernel / híbridos, hipervisor tipo 1 / tipo 2, búfer contra caché, procesos contra hilos (Chrome) y los tres modelos de SO multiprocesador."],
+    ["calc", "Calculadoras", "Fórmulas de la U1 y la U2", "1 − pⁿ, tiempo medio con caché, costo del quantum, Σ Cᵢ/Pᵢ ≤ 1, maestro-esclavo n · f ≤ 1 y lotería."]
+  ]],
+  ["Unidad 1", [
+    ["es", "Simulador", "E/S programada, por interrupciones y DMA", ""],
+    ["arr", "Simulador", "Arranque y sector de booteo", ""],
+    ["i86", "Simulador", "Interrupciones del 8086", ""],
+    ["estr", "Comparación", "Estructuras de los SO", ""]
+  ]],
+  ["Unidad 2", [
+    ["est", "Simulador", "Estados de un proceso", ""],
+    ["car", "Simulador", "Condición de carrera (spooler)", ""],
+    ["pc", "Simulador", "Productor-consumidor con semáforos", ""],
+    ["../unidades/u02-procesos/visuales/planificacion_cpu.html", "Simulador", "Planificación de CPU (Gantt)", ""],
+    ["../unidades/u02-procesos/visuales/filosofos_comelones.html", "Simulador", "Filósofos comelones", ""]
+  ]]
+];
+
+// ---------------------------------------------------------------- lógica (solo agrega)
+(function(){
+  const panel = document.getElementById("cm-panel");
+  vista.appendChild(panel);
+  ["pointerdown", "pointermove", "pointerup", "wheel"].forEach(ev => panel.addEventListener(ev, e => e.stopPropagation()));
+
+  const unidadDe = k => k.startsWith("u1") ? "u1" : "u2";
+  const urlDe = g => !g ? null : (G[g] || g);
+  const lista = COMENTARIOS.map(([k, q, r, ojo, graf], i) => ({i, k, q, r, ojo, graf: urlDe(graf), u: unidadDe(k)}));
+  const porNodo = {};
+  lista.forEach(c => (porNodo[c.k] = porNodo[c.k] || []).push(c));
+
+  // memoria local del «resuelto» (solo comodidad; si el navegador no deja, sigue funcionando)
+  let resueltos = {};
+  try { resueltos = JSON.parse(localStorage.getItem("mapa_cm_resueltos") || "{}"); } catch (e) {}
+  const guardar = () => { try { localStorage.setItem("mapa_cm_resueltos", JSON.stringify(resueltos)); } catch (e) {} };
+  const idDe = c => c.k + "|" + c.q.slice(0, 40);
+
+  // botones en la barra de controles
+  const controles = document.querySelector(".controles");
+  const bCm = document.createElement("button"); bCm.id = "btn-cm"; bCm.textContent = "💬 Comentarios (" + lista.length + ")";
+  const bGr = document.createElement("button"); bGr.id = "btn-graf"; bGr.textContent = "🎛 Gráficos";
+  const lbl = document.createElement("label"); lbl.className = "chk";
+  lbl.innerHTML = '<input type="checkbox" id="verburbujas" checked> Burbujas 💬';
+  controles.appendChild(bCm); controles.appendChild(bGr); controles.appendChild(lbl);
+  document.getElementById("verburbujas").addEventListener("change", e => mundo.classList.toggle("cm-oculto", !e.target.checked));
+
+  // burbujas sobre las cajas
+  Object.entries(porNodo).forEach(([k, cs]) => {
+    const n = porClave[k]; if (!n) return;
+    const b = document.createElement("span");
+    b.className = "cm-badge" + (cs.some(c => c.ojo) ? " ojo" : "");
+    b.textContent = "💬 " + cs.length;
+    b.title = cs.length + (cs.length === 1 ? " comentario" : " comentarios") + " — clic para leer";
+    ["pointerdown", "pointerup"].forEach(ev => b.addEventListener(ev, e => e.stopPropagation()));
+    b.addEventListener("click", e => { e.stopPropagation(); abrirPanel("cm"); filtroNodo = k; pintar(); });
+    n.el.appendChild(b);
+  });
+
+  // panel
+  let filtro = "todos", filtroNodo = null, activo = null;
+  const lst = document.getElementById("cm-lista"), aviso = document.getElementById("cm-aviso"), q = document.getElementById("cm-q");
+  function abrirPanel(tab){
+    panel.classList.add("abierto");
+    const esCm = tab === "cm";
+    document.getElementById("tab-cm").classList.toggle("on", esCm);
+    document.getElementById("tab-graf").classList.toggle("on", !esCm);
+    document.getElementById("cm-cab-cm").style.display = esCm ? "" : "none";
+    lst.style.display = esCm ? "" : "none";
+    document.getElementById("graf-lista").style.display = esCm ? "none" : "";
+  }
+  bCm.addEventListener("click", () => { if (panel.classList.contains("abierto") && document.getElementById("tab-cm").classList.contains("on")) cerrar(); else { abrirPanel("cm"); pintar(); } });
+  bGr.addEventListener("click", () => { if (panel.classList.contains("abierto") && document.getElementById("tab-graf").classList.contains("on")) cerrar(); else abrirPanel("graf"); });
+  document.getElementById("tab-cm").addEventListener("click", () => { abrirPanel("cm"); pintar(); });
+  document.getElementById("tab-graf").addEventListener("click", () => abrirPanel("graf"));
+  document.getElementById("cm-cerrar").addEventListener("click", cerrar);
+  function cerrar(){ panel.classList.remove("abierto"); quitarFoco(); }
+
+  document.getElementById("cm-filtros").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    filtro = b.dataset.f; filtroNodo = null;
+    document.querySelectorAll("#cm-filtros button").forEach(x => x.classList.toggle("on", x === b));
+    pintar();
+  });
+  q.addEventListener("input", () => { filtroNodo = null; pintar(); });
+
+  const sinTags = s => s.replace(/<[^>]+>/g, "");
+  function visiblesCm(){
+    const t = norm(q.value.trim());
+    return lista.filter(c => {
+      if (filtroNodo) return c.k === filtroNodo;
+      if (filtro === "u1" && c.u !== "u1") return false;
+      if (filtro === "u2" && c.u !== "u2") return false;
+      if (filtro === "ojo" && !c.ojo) return false;
+      if (filtro === "pend" && resueltos[idDe(c)]) return false;
+      if (t.length >= 2 && !norm(c.q + " " + sinTags(c.r) + " " + sinTags(c.ojo || "") + " " + porClave[c.k].t).includes(t)) return false;
+      return true;
+    });
+  }
+  function pintar(){
+    const cs = visiblesCm();
+    aviso.innerHTML = filtroNodo
+      ? "Comentarios de <b>" + esc(porClave[filtroNodo].t) + "</b> · <a id='cm-todos'>ver todos</a>"
+      : cs.length + " de " + lista.length + " comentarios · clic en uno para ir a su caja";
+    const a = document.getElementById("cm-todos"); if (a) a.onclick = () => { filtroNodo = null; pintar(); };
+    lst.innerHTML = "";
+    let ultimo = null, grupo = null;
+    cs.forEach(c => {
+      if (c.k !== ultimo){
+        ultimo = c.k; grupo = document.createElement("div"); grupo.className = "cm-grupo";
+        const h = document.createElement("button"); h.className = "cm-nodo"; h.textContent = "📍 " + (c.u === "u1" ? "U1 · " : "U2 · ") + porClave[c.k].t;
+        h.title = "Ir a la caja en el mapa"; h.onclick = () => irA(c.k);
+        grupo.appendChild(h); lst.appendChild(grupo);
+      }
+      const d = document.createElement("div");
+      d.className = "cm-card" + (resueltos[idDe(c)] ? " resuelto" : "") + (activo === c.i ? " activo" : "");
+      d.innerHTML = `<div class="q">${esc(c.q).replace(/&lt;(\/?)code>/g, "<$1code>")}</div><div class="r">${c.r}</div>` +
+        (c.ojo ? `<div class="ojo">${c.ojo}</div>` : "") +
+        `<div class="pie">${c.graf ? `<a href="${c.graf}" target="_blank" rel="noopener">▶ Abrir el gráfico</a>` : "<span></span>"}` +
+        `<label><input type="checkbox" ${resueltos[idDe(c)] ? "checked" : ""}> Resuelto</label></div>`;
+      d.addEventListener("click", e => {
+        if (e.target.closest("a")) return;
+        if (e.target.closest("label")){
+          const chk = d.querySelector("input"); if (e.target !== chk) return;
+          if (chk.checked) resueltos[idDe(c)] = 1; else delete resueltos[idDe(c)];
+          guardar(); d.classList.toggle("resuelto", chk.checked); return;
+        }
+        activo = c.i; lst.querySelectorAll(".cm-card").forEach(x => x.classList.remove("activo")); d.classList.add("activo");
+        irA(c.k);
+      });
+      grupo.appendChild(d);
+    });
+    if (!cs.length) lst.innerHTML = "<p class='cm-aviso'>No hay comentarios con ese filtro.</p>";
+  }
+
+  // centrar el mapa en una caja (teniendo en cuenta el panel abierto)
+  let focoActual = null;
+  function quitarFoco(){ if (focoActual) focoActual.el.classList.remove("cm-foco"); focoActual = null; }
+  function irA(k){
+    const n = porClave[k];
+    if (!visibles.has(k)){ const sel = document.getElementById("unidad"); sel.value = "so"; sel.dispatchEvent(new Event("change")); }
+    const r = vista.getBoundingClientRect();
+    const libre = r.width - (panel.classList.contains("abierto") && r.width > 600 ? panel.offsetWidth : 0);
+    esc_ = Math.max(esc_, 0.9);
+    tx = libre / 2 - (n.x + n.w / 2) * esc_; ty = r.height / 3 - (n.y + n.h / 2) * esc_; aplicarT();
+    quitarFoco(); focoActual = n; n.el.classList.add("cm-foco");
+  }
+
+  // pestaña de gráficos
+  const gl = document.getElementById("graf-lista");
+  gl.innerHTML = "<p class='cm-aviso'>Se abren en otra pestaña. Los nuevos siguen el formato: simulador paso a paso, comparación lado a lado o calculadora, con las ideas clave abajo.</p>";
+  GRAFICOS.forEach(([sec, items]) => {
+    const h = document.createElement("div"); h.className = "graf-sec"; h.textContent = sec; gl.appendChild(h);
+    items.forEach(([g, tipo, tt, de]) => {
+      const a = document.createElement("a"); a.className = "graf"; a.href = urlDe(g); a.target = "_blank"; a.rel = "noopener";
+      a.innerHTML = `<div class="tipo">${tipo}</div><div class="tt">${tt}</div>` + (de ? `<div class="de">${de}</div>` : "");
+      gl.appendChild(a);
+    });
+  });
+
+  window.__comentarios = {lista, porNodo, irA, abrirPanel};   // para las pruebas automáticas
+})();
+</script>

@@ -44,7 +44,22 @@
 
   <a class="item" href="mapa_grafico.html">
     <strong>Mapa gráfico: todo conectado en cajas y flechas</strong>
-    <span>Las Unidades 1 y 2 como un grafo de cajas, como un mapa conceptual de papel. Cada caja tiene una nota técnica de cómo se hace, las flechas están rotuladas ("se conforma por", "cómo se hace", "falla por") y los cruces entre unidades son líneas punteadas. Con un clic en una caja, abre esa rama en el mapa conceptual completo. Se puede ver solo una unidad, buscar una caja y hacer zoom.</span>
+    <span>Las Unidades 1 y 2 como un grafo de cajas, como un mapa conceptual de papel. Cada caja tiene una nota técnica de cómo se hace, las flechas están rotuladas ("se conforma por", "cómo se hace", "falla por") y los cruces entre unidades son líneas punteadas. Con un clic en una caja, abre esa rama en el mapa conceptual completo. Se puede ver solo una unidad, buscar una caja y hacer zoom. <strong>Nuevo:</strong> burbujas 💬 con las respuestas a las dudas de tu chat de repaso (<code>preguntasrepaso.md</code>), como comentarios de un documento, y una pestaña con todos los gráficos.</span>
+  </a>
+
+  <a class="item" href="comparaciones.html">
+    <strong>Arquitecturas lado a lado</strong>
+    <span>Paneles con cajas y flechas, con sus + y −: hilos de usuario, de kernel e híbridos (botón que simula un <code>read</code> bloqueante), procesos contra hilos (Chrome), hipervisor tipo 1 y tipo 2, búfer contra caché, y los tres modelos de SO de multiprocesadores.</span>
+  </a>
+
+  <a class="item" href="calculadoras.html">
+    <strong>Calculadoras de la U1 y la U2</strong>
+    <span>Deslizadores, barra de resultado y estado (ok, al límite, saturado) para 1 − pⁿ, el tiempo medio con caché, el costo del quantum, Σ Cᵢ/Pᵢ ≤ 1, maestro-esclavo n · f ≤ 1 y la lotería. Cada una tiene un botón para cargar el ejemplo del apunte.</span>
+  </a>
+
+  <a class="item" href="explorador_so.html">
+    <strong>Explorador del SO: cómo viaja cada operación ★</strong>
+    <span>Una maqueta de la computadora con tres franjas (modo usuario, kernel y hardware) donde un paquete viaja entre los componentes, paso a paso. Son 23 recorridos con lo visto en las Unidades 1 y 2: el arranque, las interrupciones, INT 21h, la llamada <code>read</code>, E/S programada, por interrupciones y con DMA, los estados, <code>fork</code> y <code>execve</code>, el cambio de contexto, los hilos, la condición de carrera, TSL, la inversión de prioridades, sleep/wakeup, los semáforos, el interbloqueo, los monitores, el paso de mensajes, lectores y escritores, y los multiprocesadores. Muestra la línea de código resaltada, el estado de cada proceso, el modo de la CPU y una bitácora. Tiene cámara libre con zoom y modo progresivo.</span>
   </a>
 
   <h2>Unidad 1 &mdash; Introducción, hardware y estructura</h2>
@@ -73,9 +88,17 @@
     <strong>Estados de un proceso</strong>
     <span>Diagrama interactivo con las cuatro transiciones. Se hace clic en cada flecha y explica por qué se puede o no aplicar. Incluye la transición que no existe, de bloqueado a en ejecución.</span>
   </a>
+  <a class="item" href="../unidades/u02-procesos/visuales/cambio_de_contexto.html">
+    <strong>Interrupción y cambio de contexto ★</strong>
+    <span>Los 8 pasos de la fig. 2-5 con tres disparadores: interrupción de disco, llamada al sistema y fin de quantum. Se ve la CPU, la pila, el vector y la tabla de procesos, y el color dice quién actúa (hardware, ensamblador, C o planificador).</span>
+  </a>
   <a class="item" href="../unidades/u02-procesos/visuales/condicion_de_carrera.html">
     <strong>Condición de carrera: el spooler de impresión</strong>
     <span>El ejemplo clásico del Tanenbaum, paso a paso. Se puede elegir dónde conmuta el planificador y comparar: con la misma intercalación buena no pasa nada, con la mala se pierde un archivo y nadie se entera.</span>
+  </a>
+  <a class="item" href="../unidades/u02-procesos/visuales/exclusion_mutua.html">
+    <strong>Exclusión mutua con espera ocupada ★</strong>
+    <span>Variable de candado y alternancia estricta (problema) contra Peterson y TSL (solución), más la inversión de prioridades. Memoria compartida en casillas, el código con la línea que se ejecuta, y un modo en el que vos sos el planificador e intentás romper la solución.</span>
   </a>
   <a class="item" href="../unidades/u02-procesos/visuales/productor_consumidor.html">
     <strong>Productor-consumidor con semáforos</strong>

@@ -1,0 +1,1528 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Explorador del SO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b1020;--panel:#0f1629;--panel-2:#151d35;--line:#1e2942;--line-strong:#2d3b5e;
+  --text:#e4e9f4;--text-muted:#9aa5bf;--text-faint:#7b87a3;--text-kw:#8fb3ff;
+  --fill-top:#24335d;--fill-left:#18223f;--fill-right:#111a32;--line-face:#3d4e7c;--line-idle:#36456e;
+  --band-user:rgba(31,95,224,.06);--band-kernel:rgba(118,86,224,.07);--band-hw:rgba(14,149,163,.06);
+  --ease-out:cubic-bezier(.16,1,.3,1);--ease-in:cubic-bezier(.5,0,.75,0);
+  --f-title:"Barlow Condensed","Arial Narrow",sans-serif;--f-text:"IBM Plex Sans",system-ui,sans-serif;--f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  color-scheme:dark;
+}
+:root[data-theme="light"]{
+  --bg:#eef1f7;--panel:#ffffff;--panel-2:#f4f6fb;--line:#dde3ef;--line-strong:#c3cde0;
+  --text:#18203a;--text-muted:#4d5878;--text-faint:#6b7591;--text-kw:#2a55c4;
+  --fill-top:#ffffff;--fill-left:#d9e0ee;--fill-right:#bcc8de;--line-face:#9aa8c6;--line-idle:#b3bfd8;
+  --band-user:rgba(31,95,224,.05);--band-kernel:rgba(118,86,224,.06);--band-hw:rgba(14,149,163,.06);
+  color-scheme:light;
+}
+.k-user{--k:#1f5fe0;--on-k:#fff}.k-kernel{--k:#7656e0;--on-k:#fff}.k-hw{--k:#0e95a3;--on-k:#fff}
+.k-irq{--k:#f2ac0a;--on-k:#1a1300}.k-sync{--k:#12a56b;--on-k:#fff}.k-warn{--k:#d6404c;--on-k:#fff}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:14px/1.5 var(--f-text);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--text-kw);outline-offset:2px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+code,.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.ttl{font-family:var(--f-title);text-transform:uppercase;letter-spacing:.04em}
+
+/* ---------- barra superior ---------- */
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:14px;padding:8px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+.brand{font-family:var(--f-title);font-weight:800;font-size:20px;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
+.brand small{display:block;font:500 11px var(--f-text);letter-spacing:0;text-transform:none;color:var(--text-faint)}
+.status{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted);white-space:nowrap;min-width:0}
+.status .dot{width:8px;height:8px;border-radius:50%;background:var(--k,#1f5fe0);flex:none}
+.prog{flex:1;display:flex;gap:4px;min-width:120px;height:10px}
+.prog .grp{display:flex;gap:1px;min-width:0;cursor:pointer}
+.prog .seg{flex:1;min-width:2px;background:var(--line-strong);border-radius:2px;position:relative;overflow:hidden}
+.prog .seg::after{content:"";position:absolute;inset:0;background:var(--k,#1f5fe0);transform:scaleX(0);transform-origin:left;transition:transform .5s var(--ease-out)}
+.prog .seg.is-done::after{transform:scaleX(1)}
+.prog .seg.is-running::after{transform:scaleX(1);background:linear-gradient(90deg,transparent,var(--k),transparent);background-size:200% 100%;animation:sheen 1.1s linear infinite}
+.prog .seg.is-current{outline:1.5px solid var(--text);outline-offset:1px}
+@keyframes sheen{from{background-position:200% 0}to{background-position:-200% 0}}
+.ctrls{display:flex;gap:6px;align-items:center}
+.btn{min-width:44px;height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--line-strong);background:var(--panel-2);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:600;font-size:13px}
+.btn:hover{border-color:var(--text-faint)}
+.btn[aria-pressed="true"]{background:#1f5fe0;border-color:#1f5fe0;color:#fff}
+.btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+select.btn{appearance:none;padding:0 10px}
+
+/* ---------- barra de código ---------- */
+.codebar{display:flex;gap:14px;align-items:flex-start;padding:10px 16px;background:var(--panel-2);border-bottom:1px solid var(--line)}
+.codebar .lbl{font-family:var(--f-title);font-weight:700;letter-spacing:.08em;color:var(--text-faint);padding-top:3px;white-space:nowrap}
+.codebar pre{margin:0;font:13px/1.55 var(--f-mono);white-space:pre-wrap;word-break:break-word;flex:1;min-height:21px;max-height:190px;overflow:auto}
+.tk-kw{color:var(--text-kw);font-weight:600}.tk-num{color:#e0a43a}.tk-str{color:#3fbf8a}.tk-com{color:var(--text-faint);font-style:italic}
+.hl-now{background:color-mix(in srgb,var(--k) 30%,transparent);box-shadow:inset 0 -2px var(--k);border-radius:3px;animation:hlp 1s ease-in-out infinite alternate}
+.hl-all{background:color-mix(in srgb,var(--text-kw) 9%,transparent)}
+.hl-done{background:color-mix(in srgb,var(--text-kw) 13%,transparent);box-shadow:inset 0 -1px color-mix(in srgb,var(--text-kw) 45%,transparent);border-radius:3px}
+@keyframes hlp{from{background:color-mix(in srgb,var(--k) 18%,transparent)}to{background:color-mix(in srgb,var(--k) 38%,transparent)}}
+.cursor{display:inline-block;width:7px;height:15px;background:var(--text);vertical-align:-2px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* ---------- grilla principal ---------- */
+.grid{display:grid;grid-template-columns:minmax(250px,290px) 1fr minmax(290px,360px);gap:0;align-items:stretch}
+.temas{border-right:1px solid var(--line);background:var(--panel);padding:12px;max-height:calc(100vh - 150px);overflow:auto;position:sticky;top:61px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.chip{height:32px;padding:0 12px;border-radius:16px;border:1px solid var(--line-strong);background:transparent;cursor:pointer;font-size:12.5px;font-weight:600}
+.chip[aria-pressed="true"]{background:var(--text);color:var(--bg);border-color:var(--text)}
+.grp-h{font-family:var(--f-title);font-weight:700;font-size:12px;letter-spacing:.1em;color:var(--text-faint);text-transform:uppercase;margin:14px 4px 6px}
+.topic{border:1px solid var(--line);border-radius:10px;margin-bottom:6px;background:var(--panel-2)}
+.topic>button{width:100%;display:flex;align-items:center;gap:8px;padding:9px 10px;background:none;border:0;cursor:pointer;text-align:left}
+.topic .num{font:600 11px var(--f-mono);color:var(--text-faint);min-width:20px}
+.topic .tt{flex:1;font-weight:600;font-size:13px;line-height:1.3}
+.topic .u{font:600 10px var(--f-mono);color:var(--text-faint);border:1px solid var(--line-strong);border-radius:4px;padding:0 4px}
+.topic .chev{width:14px;height:14px;transition:transform .3s var(--ease-out);stroke:var(--text-faint);fill:none;stroke-width:2}
+.topic.is-open .chev{transform:rotate(90deg)}
+.topic.is-cur{border-color:var(--line-strong);box-shadow:0 0 0 1px var(--line-strong)}
+.steps{display:grid;grid-template-rows:0fr;transition:grid-template-rows .44s var(--ease-out)}
+.topic.is-open .steps{grid-template-rows:1fr}
+.steps>ol{overflow:hidden;margin:0;padding:0 8px;list-style:none}
+.topic.is-open .steps>ol{padding-bottom:8px}
+.steps li button{width:100%;display:flex;gap:9px;align-items:center;padding:5px 6px;border:0;background:none;border-radius:7px;cursor:pointer;text-align:left;font-size:12.5px;color:var(--text-muted)}
+.steps li button:hover{background:var(--line)}
+.steps li.is-cur button{color:var(--text);background:var(--line)}
+.sc{flex:none;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--line-strong);display:grid;place-items:center;font:600 10px var(--f-mono);position:relative}
+.steps li.is-done .sc{background:var(--k,#12a56b);border-color:var(--k,#12a56b);color:var(--on-k,#fff);animation:pop .35s var(--ease-out)}
+.steps li.is-playing .sc::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid transparent;border-top-color:var(--text-kw);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}@keyframes pop{0%{transform:scale(.6)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+
+/* ---------- escenario ---------- */
+.stage{position:relative;min-width:0;display:flex;flex-direction:column;border-right:1px solid var(--line)}
+.stagebar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line)}
+.seg2{display:inline-flex;border:1px solid var(--line-strong);border-radius:9px;overflow:hidden}
+.seg2 button{height:36px;padding:0 12px;border:0;background:transparent;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--text-muted)}
+.seg2 button[aria-pressed="true"]{background:var(--text);color:var(--bg)}
+.zoom{display:inline-flex;gap:4px}
+.zoom button{width:36px;height:36px;border-radius:9px;border:1px solid var(--line-strong);background:var(--panel-2);cursor:pointer;font-weight:700}
+.zoom button:disabled{opacity:.35;cursor:default}
+.spacer{flex:1}
+.svgwrap{position:relative;flex:1;min-height:420px}
+#scene{display:block;width:100%;height:calc(100vh - 290px);min-height:460px;user-select:none}
+.free #scene{cursor:grab;touch-action:none}.free.dragging #scene{cursor:grabbing}
+#cam{transform-origin:0 0;transition:transform .9s var(--ease-out)}
+.free #cam{transition:none}
+.stagefoot{padding:8px 14px;border-top:1px solid var(--line);font-size:12.5px;min-height:52px}
+.stagefoot b{font-weight:600}
+.stagefoot .ruta{color:var(--text-faint);font-family:var(--f-mono);font-size:11.5px}
+
+/* SVG */
+.band-l{font:700 12px var(--f-title);letter-spacing:.14em;fill:var(--text-faint)}
+.band-sep{stroke:var(--line-strong);stroke-dasharray:4 6;stroke-width:1.2}
+.band-note{font:500 10.5px var(--f-mono);fill:var(--text-faint)}
+.cable{stroke:var(--line-idle);stroke-width:2;stroke-dasharray:6 5;fill:none;transition:stroke .3s,opacity .45s}
+.cable.is-used{stroke:color-mix(in srgb,var(--k) 55%,transparent)}
+.cable.is-active{stroke:var(--k);stroke-width:2.4;animation:lane .55s linear infinite}
+.cable.is-active.rev{animation-direction:reverse}
+@keyframes lane{to{stroke-dashoffset:-11}}
+.node{cursor:pointer;transition:opacity .25s,transform .45s var(--ease-out)}
+.node .f-top{fill:var(--fill-top);stroke:var(--line-face);stroke-width:1}
+.node .f-left{fill:var(--fill-left);stroke:var(--line-face);stroke-width:1}
+.node .f-right{fill:var(--fill-right);stroke:var(--line-face);stroke-width:1}
+.g-top{fill:var(--fill-top);stroke:var(--line-face);stroke-width:1}
+.g-side{fill:var(--fill-left);stroke:var(--line-face);stroke-width:1}
+.g-side2{fill:var(--fill-right);stroke:var(--line-face);stroke-width:1}
+.g-line{stroke:var(--line-face);stroke-width:1.6;fill:none;stroke-linecap:round}
+.g-k{fill:var(--line-idle);stroke:var(--line-face);stroke-width:1;transition:fill .3s}
+.g-kl{stroke:var(--line-idle);stroke-width:2;fill:none;stroke-linecap:round}
+.plate{fill:var(--panel);stroke:var(--line-strong);stroke-width:1;transition:stroke .3s}
+.plate-tick{stroke:var(--line-strong);stroke-width:1}
+.p-name{font:700 13px var(--f-title);letter-spacing:.05em;fill:var(--text);text-anchor:middle}
+.p-role{font:400 10.5px var(--f-text);fill:var(--text-faint);text-anchor:middle}
+.node.is-visited .g-k{fill:var(--text-faint)}
+.node.is-visited .g-kl{stroke:var(--text-faint)}
+.node.is-active .f-top,.node.is-warn .f-top{fill:color-mix(in srgb,var(--k) 30%,var(--fill-top));stroke:var(--k)}
+.node.is-active .g-k,.node.is-warn .g-k{fill:var(--k)}
+.node.is-active .g-kl,.node.is-warn .g-kl{stroke:var(--k)}
+.node.is-active .plate,.node.is-warn .plate{stroke:var(--k);stroke-width:1.6}
+.node.is-active .tilegrp,.node.is-warn .tilegrp{filter:drop-shadow(0 0 7px color-mix(in srgb,var(--k) 70%,transparent))}
+.node.is-hover .plate{stroke:var(--text)}
+.node.is-off,.cable.is-off{opacity:0;pointer-events:none}
+.node.is-off{transform:translateY(12px)}
+.pre .node,.pre .cable,.pre .bandg{opacity:0}
+.node.d0,.cable.d0{transition-delay:0s}
+#pkt .cap{fill:var(--k)}#pkt .lbl{font:500 9.5px var(--f-mono);fill:var(--on-k)}
+#pkt .dotc{fill:var(--k);stroke:var(--bg);stroke-width:1.5}#pkt .arr{fill:var(--k)}
+.trail{fill:var(--k)}
+.ping{fill:none;stroke:var(--k);stroke-width:2}
+
+/* tarjeta flotante */
+.hovercard{position:absolute;z-index:5;width:250px;background:var(--panel);border:1px solid var(--line-strong);border-radius:12px;padding:12px 14px;box-shadow:0 12px 30px rgba(0,0,0,.35);pointer-events:none;opacity:0;transform:translateY(5px);transition:opacity .18s,transform .18s}
+.hovercard.on{opacity:1;transform:none}
+.hovercard h4{margin:0;font:700 16px var(--f-title);letter-spacing:.05em;text-transform:uppercase}
+.hovercard .r{font-size:11.5px;color:var(--text-faint);margin-bottom:6px}
+.hovercard p{margin:0 0 6px;font-size:12.5px}
+.hovercard ul{margin:0;padding-left:16px;font-size:12px;color:var(--text-muted)}
+
+/* ---------- detalle ---------- */
+.detalle{background:var(--panel);padding:16px;max-height:calc(100vh - 150px);overflow:auto;position:sticky;top:61px}
+.eyebrow{font:600 11px var(--f-mono);color:var(--text-faint);letter-spacing:.04em;text-transform:uppercase}
+.detalle h2{margin:4px 0 10px;font:700 26px/1.05 var(--f-title);letter-spacing:.03em;text-transform:uppercase}
+.detalle .txt{font-size:13.5px}
+.detalle .txt p{margin:0 0 8px}
+.kv{width:100%;border-collapse:collapse;margin:10px 0;font-size:12.5px}
+.kv td{border-top:1px solid var(--line);padding:5px 0;vertical-align:top}
+.kv td:last-child{text-align:right;font-family:var(--f-mono);font-size:12px;padding-left:10px}
+.trampa{border:1px solid color-mix(in srgb,#d6404c 55%,transparent);background:color-mix(in srgb,#d6404c 9%,transparent);border-radius:9px;padding:8px 10px;font-size:12.5px;margin:10px 0}
+.trampa b:first-child{color:#e8616b;font-family:var(--f-title);letter-spacing:.06em;text-transform:uppercase}
+.ref{font-size:12px;color:var(--text-faint);margin:10px 0}
+.nav{display:flex;gap:8px;margin:12px 0}
+.nav .btn{flex:1}
+.legend{display:grid;grid-template-columns:1fr 1fr;gap:5px 10px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:11.5px;color:var(--text-muted)}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:3px;background:var(--k);flex:none}
+.step-in{animation:stepin .9s var(--ease-out)}
+@keyframes stepin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ---------- tablas inferiores ---------- */
+.tablas{display:grid;grid-template-columns:minmax(300px,420px) 1fr;gap:14px;padding:14px 16px 28px;border-top:1px solid var(--line)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0}
+.card h3{margin:0 0 8px;font:700 15px var(--f-title);letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)}
+.cpu{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12.5px;margin-bottom:10px}
+.cpu dt{color:var(--text-faint)}.cpu dd{margin:0;font-family:var(--f-mono)}
+.badge{display:inline-block;padding:1px 8px;border-radius:10px;font:600 11.5px var(--f-mono);background:var(--line);color:var(--text)}
+.b-ejec{background:#1f5fe0;color:#fff}.b-listo{background:#12a56b;color:#fff}.b-bloq{background:#d6404c;color:#fff}
+.b-term{background:var(--line-strong);color:var(--text-muted)}.b-gir{background:#f2ac0a;color:#1a1300}
+.b-kernel{background:#7656e0;color:#fff}.b-usuario{background:#1f5fe0;color:#fff}
+.vars{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.var{font:500 12px var(--f-mono);border:1px solid var(--line-strong);border-radius:6px;padding:2px 7px}
+.var.chg{border-color:#f2ac0a;animation:pop .4s var(--ease-out)}
+table.t{width:100%;border-collapse:collapse;font-size:12.5px}
+table.t th{text-align:left;font:600 10.5px var(--f-mono);color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em;padding:4px 8px;border-bottom:1px solid var(--line-strong)}
+table.t td{padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+table.t td.m{font-family:var(--f-mono);font-size:11.5px}
+table.t tr.warn td{background:color-mix(in srgb,#d6404c 9%,transparent)}
+table.t tr.warn td.ef{color:#e8616b}
+table.t tr.pend td.ef{color:transparent;background:linear-gradient(90deg,var(--line),var(--line-strong),var(--line));background-size:200% 100%;animation:sheen 1.2s linear infinite;border-radius:4px}
+.logwrap{overflow:auto;max-height:340px}
+.logwrap table{min-width:640px}
+.d0{--delay:0s}.d1{--delay:.08s}.d2{--delay:.16s}.d3{--delay:.24s}.d4{--delay:.32s}.d5{--delay:.4s}.d6{--delay:.48s}.d7{--delay:.56s}.d8{--delay:.64s}.d9{--delay:.72s}
+.rowin{animation:stepin .6s var(--ease-out) both;animation-delay:var(--delay,0s)}
+.help{font-size:12.5px;color:var(--text-muted);padding:0 16px 30px}
+.help b{color:var(--text)}
+
+@media (max-width:1100px){
+  .grid{grid-template-columns:minmax(230px,270px) 1fr}
+  .detalle{grid-column:1/-1;position:static;max-height:none;border-top:1px solid var(--line)}
+  .tablas{grid-template-columns:1fr}
+}
+@media (max-width:760px){
+  .top{flex-wrap:wrap;gap:8px;padding:8px 12px}
+  .prog{order:5;flex-basis:100%}
+  .status{display:none}
+  .brand{font-size:17px}
+  .codebar{flex-direction:column;gap:4px;padding:8px 16px}
+  .grid{grid-template-columns:1fr}
+  .temas{position:static;max-height:300px;border-right:0;border-top:1px solid var(--line);order:3}
+  .stage{order:1}.detalle{order:2}
+  .stage{border-right:0}
+  #scene{height:auto;min-height:0;aspect-ratio:910/990}
+  .tablas{padding:12px 16px 24px}
+  .ctrls .btn{min-width:40px;padding:0 9px}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">Explorador del SO<small>Unidades 1 y 2 · paso a paso</small></div>
+  <div class="status" aria-live="polite"><span class="dot" id="stDot"></span><span id="stTxt">—</span></div>
+  <div class="prog" id="prog" aria-label="Progreso por tema y paso"></div>
+  <div class="ctrls">
+    <button class="btn" id="bPrev" aria-label="Paso anterior" title="Paso anterior (←)"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <button class="btn" id="bReplay" aria-label="Repetir el paso" title="Repetir el paso (R)"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+    <button class="btn" id="bNext" aria-label="Paso siguiente" title="Paso siguiente (→)"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+    <button class="btn" id="bAuto" aria-pressed="false" title="Avanzar solo">Auto</button>
+    <select class="btn" id="speed" aria-label="Velocidad">
+      <option value="0.5">0,5×</option><option value="0.75">0,75×</option><option value="1" selected>1×</option><option value="1.5">1,5×</option><option value="2">2×</option>
+    </select>
+    <button class="btn" id="bTheme" aria-label="Cambiar tema claro u oscuro" title="Tema claro / oscuro"><svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+  </div>
+</header>
+
+<section class="codebar">
+  <div class="lbl">CÓDIGO</div>
+  <pre id="code" aria-hidden="true"></pre>
+  <span class="sr-only" id="codeSr"></span>
+</section>
+
+<main class="grid">
+  <aside class="temas" aria-label="Temas">
+    <div class="chips" id="chips"></div>
+    <div id="topics"></div>
+  </aside>
+
+  <section class="stage" id="stage">
+    <div class="stagebar">
+      <div class="seg2" role="group" aria-label="Cámara">
+        <button id="camG" aria-pressed="true">Guiado</button><button id="camL" aria-pressed="false">Libre</button>
+      </div>
+      <div class="zoom">
+        <button id="zIn" aria-label="Acercar" disabled>+</button><button id="zOut" aria-label="Alejar" disabled>−</button><button id="zReset" aria-label="Volver al encuadre guiado" disabled>⟲</button>
+      </div>
+      <span class="spacer"></span>
+      <div class="seg2" role="group" aria-label="Componentes">
+        <button id="visC" aria-pressed="true">Completo</button><button id="visP" aria-pressed="false">Progresivo</button>
+      </div>
+    </div>
+    <div class="svgwrap" id="svgwrap">
+      <svg id="scene" viewBox="0 0 910 990" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Maqueta de la computadora: procesos, kernel y hardware"></svg>
+      <div class="hovercard" id="hover"></div>
+    </div>
+    <div class="stagefoot" aria-live="polite"><div id="footNow">—</div><div class="ruta" id="footRuta"></div></div>
+  </section>
+
+  <aside class="detalle" id="detalle" aria-live="polite"></aside>
+</main>
+
+<section class="tablas">
+  <div class="card">
+    <h3>Estado del sistema</h3>
+    <dl class="cpu" id="cpuBox"></dl>
+    <table class="t"><thead><tr><th>Proceso</th><th>Estado</th></tr></thead><tbody id="procBody"></tbody></table>
+    <div class="vars" id="vars"></div>
+  </div>
+  <div class="card">
+    <h3>Bitácora del recorrido</h3>
+    <div class="logwrap"><table class="t"><thead><tr><th>#</th><th>Paso</th><th>Recorrido</th><th>Modo</th><th>Efecto</th></tr></thead><tbody id="logBody"></tbody></table></div>
+  </div>
+</section>
+<p class="help"><b>Cómo se usa.</b> Elegí un tema a la izquierda y avanzá con ▶ (o la flecha →). En cada paso, un paquete viaja entre los componentes: el rótulo dice qué se lleva o qué se trae, y el color, qué tipo de operación es (ver la leyenda). Arriba se resalta la línea de código que se está ejecutando; abajo, el estado de cada proceso, el modo de la CPU y la bitácora. Pasá el mouse por un componente para ver qué hace. <b>Libre</b> te deja mover y hacer zoom; <b>Progresivo</b> muestra solo los componentes a medida que aparecen. Los datos marcados como <i>complemento</i> no están en el Tanenbaum.</p>
+
+<script>
+"use strict";
+/* =====================================================================
+   1. GEOMETRÍA Y COMPONENTES
+   ===================================================================== */
+const VB = {w:910, h:990};
+const W = 54, H = 27, D = 16;
+const COLX = [130, 454, 778], ROW0 = 90, RG = 162;     // múltiplos del rombo: la cuadrícula cae sobre las baldosas
+
+const NODES = {
+  P1:{c:0,r:0,name:"PROCESO P1",role:"programa en modo usuario",g:"proc",
+      def:"Un programa en ejecución: tiene su propio espacio de direcciones, su pila y sus registros guardados en el BCP.",
+      facts:["Corre en modo usuario","Para pedir algo al SO hace una llamada al sistema","Estados: ejecución, listo o bloqueado"]},
+  lib:{c:1,r:0,name:"BIBLIOTECA",role:"libc: read(), write(), fork()",g:"lib",
+      def:"Los procedimientos que llama el programa. Preparan los parámetros y hacen el TRAP: son la puerta de entrada al kernel.",
+      facts:["Pone el número de llamada en un registro","Ejecuta la instrucción TRAP","Sigue en modo usuario"]},
+  P2:{c:2,r:0,name:"PROCESO P2",role:"otro programa",g:"proc",
+      def:"Otro proceso que compite por la CPU. Mientras P1 espera, el planificador puede dársela a él.",
+      facts:["Tiene su propio BCP","Comparte la CPU por turnos","Puede compartir memoria con P1"]},
+  bcp:{c:0,r:1,name:"TABLA DE PROCESOS",role:"un BCP por proceso",g:"bcp",
+      def:"La libreta del kernel: una entrada (BCP) por proceso con todo lo necesario para pararlo y volver a arrancarlo como si nada.",
+      facts:["PC, PSW, registros y puntero de pila","Estado, prioridad, PID","Archivos abiertos y memoria asignada"]},
+  syscall:{c:1,r:1,name:"TRAP · DESPACHO",role:"tabla de llamadas al sistema",g:"gate",
+      def:"La única puerta del modo usuario al kernel. Mira el número de llamada y salta al manejador que corresponde.",
+      facts:["Cambia el bit de modo a kernel","Salta a una dirección fija","Usa una tabla de punteros a manejadores"]},
+  sync:{c:2,r:1,name:"SEMÁFOROS",role:"contadores + colas de bloqueados",g:"sem",
+      def:"El guardia de turnos: lleva la cuenta de cada recurso y la cola de los procesos que esperan. Bloquear no gasta CPU.",
+      facts:["down: pide una unidad (o bloquea)","up: entrega una unidad (o despierta)","Operaciones atómicas"]},
+  sched:{c:0,r:2,name:"PLANIFICADOR",role:"cola de listos → CPU",g:"queue",
+      def:"Decide qué proceso listo usa la CPU y por cuánto tiempo. El despachador hace el cambio de contexto.",
+      facts:["Mantiene la cola de listos","FCFS, SJF, RR, prioridades…","Se ejecuta en modo kernel"]},
+  driver:{c:1,r:2,name:"DRIVER",role:"habla con el controlador",g:"plug",
+      def:"El código del kernel que sabe manejar un dispositivo concreto: escribe en los registros del controlador.",
+      facts:["Corre en modo kernel","Uno por tipo de dispositivo","Programa al controlador y espera"]},
+  isr:{c:2,r:2,name:"MANEJADOR (ISR)",role:"atiende la interrupción",g:"bolt",
+      def:"La rutina que se ejecuta cuando llega una interrupción: atiende al dispositivo y despierta a quien esperaba.",
+      facts:["Se llega por el vector de interrupciones","Corre en modo kernel","Termina con el retorno de interrupción"]},
+  cpu1:{c:0,r:3,name:"CPU 1",role:"segundo procesador",g:"chip",
+      def:"Otro procesador que comparte la misma memoria (multiprocesador). Tiene sus registros y su caché.",
+      facts:["Solo se usa en los temas de multiprocesador","Comparte el bus y la RAM","Tiene caché propia"]},
+  cpu:{c:1,r:3,name:"CPU",role:"PC · PSW · registros",g:"chip",
+      def:"El que hace el trabajo: busca, decodifica y ejecuta instrucciones. El PSW guarda el bit de modo (usuario o kernel).",
+      facts:["PC: próxima instrucción","PSW: bit de modo y prioridad","Registros y puntero de pila"]},
+  intc:{c:2,r:3,name:"CTRL. INTERRUPCIONES",role:"IRQ → CPU",g:"bell",
+      def:"Junta los avisos de los dispositivos y le avisa a la CPU, con el número del dispositivo que interrumpe.",
+      facts:["Una línea por dispositivo","Prioridades entre interrupciones","Espera el reconocimiento (ACK)"]},
+  mem:{c:0,r:4,name:"MEMORIA RAM",role:"programas, datos y pila",g:"ram",
+      def:"La memoria de trabajo: ahí están los programas, sus datos, la pila y las variables compartidas.",
+      facts:["La CPU la accede por el bus","Variables compartidas entre procesos","Volátil: se borra al apagar"]},
+  ctrl:{c:1,r:4,name:"CONTROLADOR E/S",role:"registros del dispositivo",g:"board",
+      def:"Un chip que maneja el dispositivo físico. El driver le escribe en sus registros y él hace el trabajo.",
+      facts:["Registros de estado, datos y control","Avisa con una interrupción","Puede tener DMA"]},
+  clock:{c:2,r:4,name:"RELOJ",role:"un tic cada pocos ms",g:"clock",
+      def:"Interrumpe a la CPU a intervalos fijos. Gracias a él, el SO recupera el control aunque un proceso no lo suelte.",
+      facts:["Base de la planificación apropiativa","Cada tic decrementa el quantum","Es una interrupción más"]},
+  bios:{c:0,r:5,name:"BIOS (ROM)",role:"arranque en la placa",g:"rom",
+      def:"El programa de arranque, grabado en una memoria flash de la placa madre. No depende del disco.",
+      facts:["Se ejecuta al encender","Autoexamen y detección de dispositivos","Lee el sector 0 del disco"]},
+  disk:{c:1,r:5,name:"DISPOSITIVO",role:"disco, impresora, teclado",g:"disk",
+      def:"El aparato físico: disco, impresora o teclado. Es lento comparado con la CPU.",
+      facts:["Lo maneja su controlador","El disco se lee de a sectores de 512 bytes","Termina y avisa"]},
+  dma:{c:2,r:5,name:"DMA",role:"transfiere sin la CPU",g:"dma",
+      def:"Un chip que copia datos entre la memoria y el dispositivo por su cuenta. La CPU solo lo programa y recibe un aviso al final.",
+      facts:["Se programa con dirección y cantidad","Usa el bus, no la CPU","Una sola interrupción al final"]},
+};
+const pos = id => ({x:COLX[NODES[id].c], y:ROW0 + NODES[id].r*RG});
+
+// cables: el orden importa para que el recorrido más corto pase por donde corresponde
+const EDGES = [
+  ["P1","lib"],["lib","P2"],["P1","bcp"],["lib","syscall"],["P2","sync"],
+  ["bcp","syscall"],["syscall","sync"],["bcp","sched"],["syscall","driver"],["sync","isr"],
+  ["sched","driver"],["driver","isr"],["sched","cpu1"],["sched","cpu"],["driver","cpu"],
+  ["isr","intc"],["cpu1","cpu"],["cpu","intc"],["cpu1","mem"],["cpu","mem"],
+  ["cpu","ctrl"],["intc","clock"],["intc","ctrl"],["mem","ctrl"],["ctrl","disk"],
+  ["ctrl","dma"],["disk","dma"],["bios","mem"],["bios","disk"]
+];
+const ADJ = {};
+EDGES.forEach(([a,b]) => { (ADJ[a] = ADJ[a] || []).push(b); (ADJ[b] = ADJ[b] || []).push(a); });
+const ekey = (a,b) => EDGES.some(e => e[0]===a && e[1]===b) ? a+"|"+b : b+"|"+a;
+
+function route(a, b){
+  if (!NODES[a] || !NODES[b] || a === b) return null;
+  const prev = {[a]:null}, q = [a];
+  while (q.length){ const n = q.shift(); if (n === b) break;
+    for (const m of ADJ[n] || []) if (!(m in prev)){ prev[m] = n; q.push(m); } }
+  if (!(b in prev)) return null;
+  const nodes = []; for (let n = b; n !== null; n = prev[n]) nodes.unshift(n);
+  const pts = nodes.map(pos), cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i-1] + Math.hypot(pts[i].x-pts[i-1].x, pts[i].y-pts[i-1].y));
+  return {nodes, pts, cum, len:cum[cum.length-1]};
+}
+function pointAt(r, d){
+  d = Math.max(0, Math.min(r.len, d));
+  let i = 1; while (i < r.cum.length-1 && r.cum[i] < d) i++;
+  const a = r.pts[i-1], b = r.pts[i], seg = r.cum[i]-r.cum[i-1], t = seg ? (d-r.cum[i-1])/seg : 0;
+  return {x:a.x+(b.x-a.x)*t, y:a.y+(b.y-a.y)*t, ang:Math.atan2(b.y-a.y, b.x-a.x)};
+}
+
+/* =====================================================================
+   2. LOS RECORRIDOS
+   Paso: t título · x texto · k pares clave/valor · h saltos [desde, hasta, carga, tipo, foco]
+         f nodos a encuadrar · cf foco de código · w nodos en alerta · s estado nuevo
+         tr trampa · ef efecto en la bitácora · code reemplaza el código del tema
+   Tipos: u usuario · k kernel · h hardware · i interrupción · s planificación/sincronización · w problema
+   ===================================================================== */
+const KIND = {u:"user", k:"kernel", h:"hw", i:"irq", s:"sync", w:"warn"};
+const GROUPS = ["Hardware y arranque","Llamadas al sistema y E/S","Procesos e hilos","Concurrencia","Multiprocesadores"];
+
+const TOPICS = [
+/* ---------------- U1 · Hardware y arranque ---------------- */
+{ title:"El arranque de la computadora", u:"U1", g:0, ref:"Tanenbaum, cap. 1.3.7, pág. 33 (el reparto de los 512 bytes del MBR es complemento visto en clase)",
+  names:{P1:"INIT", disk:"DISCO"}, procs:["P1"],
+  init:{m:"—", c:"nadie (no hay SO)", p:{P1:"—"}, q:[], v:{}},
+  code:`; MBR = sector 0 del disco (512 bytes)
+; bytes   0-445  código de arranque (446 bytes)
+; bytes 446-509  tabla de particiones (4 × 16 bytes)
+; bytes 510-511  firma 55AA`,
+  steps:[
+  {t:"Se enciende la máquina", h:[["cpu","bios","PC = dirección fija de la ROM","h"]],
+   x:"<p>Problema del huevo y la gallina: el SO está en el disco, pero para leer el disco hace falta el SO. La salida es una <b>cadena de cargadores</b>, cada uno más grande que el anterior.</p><p>La CPU arranca ejecutando el <b>BIOS</b>, que está en una memoria flash de la placa madre. Por eso el primer paso <b>no depende del disco</b>.</p>",
+   k:[["Dónde está el BIOS","flash / ROM de la placa"],["¿Depende del disco?","no"]], s:{c:"BIOS"}, ef:"la CPU ejecuta el BIOS"},
+  {t:"El BIOS se autoexamina", h:[["bios","mem","¿cuánta RAM hay?","h"],["bios","ctrl","explora buses ISA y PCI","h"]],
+   x:"<p>El BIOS revisa cuánta RAM hay y si el teclado y los dispositivos básicos responden. Explora los buses <b>ISA y PCI</b> y registra los dispositivos heredados y los <i>plug and play</i>.</p>",
+   k:[["Revisa","RAM, teclado, dispositivos"],["Explora","buses ISA y PCI"]], ef:"dispositivos detectados"},
+  {t:"Elige el dispositivo de arranque", f:["bios"],
+   x:"<p>Consulta la <b>lista de dispositivos de arranque</b> guardada en la memoria <b>CMOS</b>: la que editás cuando entrás al <i>setup</i> del BIOS.</p>",
+   k:[["CMOS","volátil, con batería"],["Guarda","fecha, hora, config. del BIOS"]],
+   tr:"<b>Trampa</b> La CMOS guarda la configuración (por ejemplo, el orden de arranque). El código de arranque está en el sector 0 del disco, no en la CMOS.", ef:"elige el disco"},
+  {t:"Lee el sector 0: el MBR", h:[["cpu","ctrl","leer pista 0, sector 0","h"],["ctrl","disk","busca el sector 0","h"],["disk","ctrl","512 bytes","h"],["ctrl","mem","MBR → RAM","h","*"]],
+   x:"<p>El BIOS lee el <b>primer sector</b> del disco, el sector de booteo (MBR), lo copia a memoria y lo ejecuta.</p><p>Si al final no está la firma <b>55AA</b>, el disco no es arrancable: con 2 bytes rotos la máquina no bootea aunque los archivos estén intactos.</p>",
+   k:[["Tamaño","512 bytes"],["Firma","55AA (bytes 510-511)"],["Tabla","4 particiones × 16 bytes"]], ef:"MBR en memoria"},
+  {t:"El MBR busca la partición activa", h:[["mem","cpu","ejecuta los 446 bytes","h",["código de arranque (446 bytes)"]],["cpu","ctrl","1.er sector de la partición activa","h",["tabla de particiones (4 × 16 bytes)"]],["ctrl","mem","cargador secundario (GRUB)","h"]],
+   x:"<p>El código del MBR mira la <b>tabla de particiones</b>, busca la que está <b>activa</b> y lee de ahí el <b>cargador secundario</b> (GRUB en Linux).</p><p>¿Por qué dos cargadores? En 446 bytes no entra un programa que entienda ext4, dibuje un menú o descomprima el kernel. GRUB ocupa cientos de KB.</p>",
+   k:[["Cargador primario","446 bytes, en ensamblador"],["GRUB","cientos de KB"],["¿El MBR lee ext4?","no"]], ef:"GRUB en memoria"},
+  {t:"GRUB carga el sistema operativo", h:[["mem","cpu","GRUB busca el kernel en ext4","h"],["cpu","disk","leer la imagen del kernel","h"],["disk","mem","kernel → RAM","h"],["mem","cpu","salta al kernel: modo kernel","k"]],
+   x:"<p>GRUB sí entiende el sistema de archivos: encuentra el kernel, lo carga en memoria y le pasa el control. Desde acá la CPU ejecuta código del SO, en <b>modo kernel</b>.</p>",
+   s:{m:"kernel", c:"kernel"}, ef:"el kernel toma el control"},
+  {t:"El SO se inicializa y crea init", h:[["cpu","bios","consulta la configuración","k"],["cpu","driver","carga los drivers","k"],["driver","bcp","inicializa sus tablas","k"],["bcp","P1","crea init y los procesos de fondo","s"]],
+   x:"<p>El SO le pide al BIOS la configuración, carga los <b>drivers</b> de cada dispositivo, inicializa sus tablas, crea los procesos de segundo plano y arranca el <i>login</i> o la interfaz gráfica.</p><p>En UNIX el primer proceso es <b>init</b>: todos los demás descienden de él.</p>",
+   k:[["Primer proceso","init (raíz del árbol)"],["Al final","login o GUI"]], s:{m:"usuario", c:"init", p:{P1:"Ejecución"}}, ef:"init en ejecución"}
+  ]},
+
+{ title:"Una interrupción de hardware", u:"U1", g:0, ref:"Tanenbaum, cap. 1.3.5, págs. 27–30 (fig. 1-11) y cap. 5.1.5, págs. 339–343",
+  names:{disk:"DISCO"}, procs:["P1"],
+  init:{m:"usuario", c:"P1", p:{P1:"Ejecución"}, q:[], v:{}},
+  code:`interrupción:  apilar PC y PSW
+               PSW.modo = kernel
+               PC = vector[número de dispositivo]
+manejador:     atender al dispositivo
+               avisar al controlador (ACK)
+               retorno de interrupción   ; desapila PC y PSW`,
+  steps:[
+  {t:"El driver programa al controlador", h:[["driver","ctrl","escribe en los registros del controlador","k"]],
+   x:"<p>Antes, el driver le pidió al controlador que lea un bloque, escribiendo en sus <b>registros</b>. Ahora el controlador trabaja solo y la CPU sigue con otra cosa.</p>",
+   k:[["Registros","estado, datos, control"]], ef:"el disco empieza a trabajar"},
+  {t:"El dispositivo termina", h:[["disk","ctrl","datos listos","h"],["ctrl","intc","señal por su línea del bus","i"]],
+   x:"<p>Cuando termina, el controlador lo avisa al <b>controlador de interrupciones</b> por una línea del bus.</p>",
+   ef:"se pide la interrupción"},
+  {t:"El controlador de interrupciones avisa a la CPU", h:[["intc","cpu","activa un terminal + n.º de dispositivo","i"]],
+   x:"<p>Si la CPU puede recibirla (no está atendiendo otra de mayor prioridad), el controlador activa un terminal de la CPU y pone en el bus el <b>número del dispositivo</b>. Si no, la deja pendiente y sigue señalando.</p>",
+   k:[["Lleva","el número del dispositivo"]], ef:"la CPU se entera"},
+  {t:"La CPU salta al manejador", h:[["cpu","mem","apila PC y PSW de P1","h",["apilar PC y PSW"]],["cpu","isr","vector[n] → manejador","i",["PSW.modo = kernel","PC = vector[número de dispositivo]"]]],
+   x:"<p>La CPU termina la instrucción en curso, <b>apila el PC y el PSW</b>, pasa a <b>modo kernel</b> y usa el número del dispositivo como índice en el <b>vector de interrupciones</b>, que tiene la dirección de cada manejador.</p>",
+   k:[["Vector de interrupciones","tabla de direcciones"]], s:{m:"kernel", c:"manejador"}, ef:"modo kernel"},
+  {t:"El manejador atiende y vuelve", h:[["isr","intc","ACK: listo para la próxima","i",["avisar al controlador (ACK)"]],["isr","cpu","retorno: desapila PC y PSW","k",["retorno de interrupción"]]],
+   x:"<p>El manejador atiende al dispositivo, le avisa al controlador de interrupciones que ya puede mandar otra (ACK) y ejecuta el <b>retorno de interrupción</b>: se restauran el PC y el PSW y P1 sigue exactamente donde estaba, en modo usuario. P1 ni se enteró.</p>",
+   s:{m:"usuario", c:"P1"}, ef:"P1 sigue donde estaba"}
+  ]},
+
+{ title:"INT 21h en el 8086", u:"U1", g:0, ref:"Apunte de la cátedra: Interrupciones (1).pdf y Tp5 - Tabla Interrupciones.pdf",
+  names:{P1:"PROGRAMA DOS", disk:"PANTALLA", driver:"RUTINA DEL DOS"}, procs:["P1"],
+  init:{m:"real (8086)", c:"P1", p:{P1:"Ejecución"}, q:[], v:{AH:"?", DX:"?"}},
+  code:`mov ah, 09h          ; servicio 09h: mostrar cadena
+mov dx, offset msg   ; DS:DX apunta al texto terminado en '$'
+int 21h              ; llama al DOS
+mov ah, 4Ch          ; servicio 4Ch: terminar el programa
+int 21h`,
+  steps:[
+  {t:"Cargar el número de servicio", f:["cpu"], cf:["mov ah, 09h","mov dx, offset msg"],
+   x:"<p>INT 21h es la puerta al DOS. <b>AH</b> elige qué servicio querés (09h = mostrar una cadena) y <b>DX</b> apunta al texto, que tiene que terminar en <b>$</b>.</p>",
+   k:[["AH","número de servicio"],["DS:DX","dirección del texto"]], s:{v:{AH:"09h", DX:"offset msg"}}, ef:"parámetros en registros"},
+  {t:"INT 21h: apilar y saltar", h:[["cpu","mem","apila FLAGS, CS e IP","h",["int 21h"]],["mem","cpu","vector 21h → CS:IP de la rutina","i"]],
+   x:"<p><b>INT</b> funciona como un CALL con control: apila la dirección de retorno y el registro de estado (en el 8086, <b>FLAGS</b>, el PSW) y salta a la rutina que indica la tabla de vectores.</p><p><i>Complemento:</i> cada entrada mide 4 bytes, así que la del 21h está en la dirección 21h × 4 = 0084h.</p>",
+   k:[["Apila","FLAGS, CS, IP"],["Entrada del vector","21h × 4 = 0084h"]], ef:"salta a la rutina del DOS"},
+  {t:"La rutina del DOS muestra la cadena", h:[["cpu","driver","servicio 09h","k"],["driver","ctrl","escribe carácter por carácter hasta $","h"],["ctrl","disk","Hola","h"]],
+   x:"<p>La rutina lee AH, ve que es 09h y escribe los caracteres hasta encontrar el <b>$</b>.</p>",
+   s:{v:{pantalla:"Hola"}}, ef:"texto en pantalla"},
+  {t:"IRET: volver al programa", h:[["mem","cpu","IRET desapila IP, CS y FLAGS","h"]],
+   x:"<p>La rutina termina con <b>IRET</b> (retorno de interrupción), que desapila todo y vuelve a la instrucción siguiente al INT.</p>", ef:"vuelve al programa"},
+  {t:"Terminar con 4Ch", h:[["cpu","driver","servicio 4Ch: terminar","k",["mov ah, 4Ch"]],["driver","bcp","libera el programa","k"]],
+   x:"<p>Con <b>AH = 4Ch</b> y otro INT 21h, el DOS termina el programa y libera su memoria.</p>",
+   k:[["INT 10h","video (BIOS)"],["INT 16h","teclado (BIOS)"],["INT 14h","puerto serie (BIOS)"],["INT 21h","servicios del DOS"]],
+   s:{v:{AH:"4Ch"}, p:{P1:"Terminado"}, c:"DOS"}, ef:"programa terminado"}
+  ]},
+
+/* ---------------- U1 · Llamadas al sistema y E/S ---------------- */
+{ title:"Una llamada al sistema: read", u:"U1", g:1, ref:"Tanenbaum, cap. 1.6, págs. 49–62 (fig. 1-17) y apunte Comandos_Linux-SO (1).pdf",
+  procs:["P1"], init:{m:"usuario", c:"P1", p:{P1:"Ejecución"}, q:[], v:{}},
+  code:`cuenta = read(fd, bufer, nbytes);`,
+  steps:[
+  {t:"Pasos 1 a 3: apilar los parámetros", f:["P1"], cf:["fd, bufer, nbytes"],
+   x:"<p>El programa apila los tres parámetros. En C se apilan <b>al revés</b>: primero nbytes, después la dirección del búfer y por último fd.</p>",
+   k:[["Orden","nbytes, &bufer, fd"]], s:{v:{pila:"nbytes, &bufer, fd"}}, ef:"parámetros en la pila"},
+  {t:"Paso 4: llamar a read de la biblioteca", h:[["P1","lib","call read","u",["read"]]],
+   x:"<p>Es una llamada a procedimiento común: el programa todavía está en modo usuario y read es una función de la biblioteca.</p>", ef:"entra a la biblioteca"},
+  {t:"Paso 5: número de llamada en un registro", f:["lib"],
+   x:"<p>La biblioteca pone el <b>número de la llamada</b> (el de read) en un registro, donde el kernel lo va a buscar.</p>",
+   s:{v:{registro:"n.º de read"}}, ef:"número de llamada listo"},
+  {t:"Paso 6: TRAP", h:[["lib","syscall","TRAP: usuario → kernel","k"]],
+   x:"<p>El <b>TRAP</b> cambia el bit de modo a <b>kernel</b> y salta a una dirección fija del kernel.</p>",
+   tr:"<b>Trampa</b> TRAP no es un CALL. Hace dos cosas que el CALL no hace: cambia a modo kernel y solo puede saltar a una dirección fija, no a cualquier lado.",
+   s:{m:"kernel", c:"kernel"}, ef:"modo kernel"},
+  {t:"Paso 7: despachar por la tabla", h:[["syscall","driver","tabla[n.º de read] → manejador","k"]],
+   x:"<p>El kernel examina el número de llamada y salta al manejador correcto usando una <b>tabla de punteros</b> indexada por ese número.</p>", ef:"despacho al manejador"},
+  {t:"Paso 8: se ejecuta el manejador", h:[["driver","mem","copia los datos al búfer","k",["bufer"]]],
+   x:"<p>El manejador de read hace el trabajo. Si los datos ya están en memoria, los copia al búfer del programa. Si hay que ir al disco, el proceso se bloquea: es el recorrido <i>La E/S de disco completa</i>.</p>", ef:"datos en el búfer"},
+  {t:"Pasos 9 y 10: volver", h:[["syscall","lib","retorno: kernel → usuario","u"],["lib","P1","devuelve cuenta","u",["cuenta ="]]],
+   x:"<p>El kernel le devuelve el control a la biblioteca, en <b>modo usuario</b>, y ella vuelve al programa con el resultado: la cantidad de bytes leídos.</p>",
+   s:{m:"usuario", c:"P1", v:{cuenta:"512", registro:"—"}}, ef:"cuenta = 512"},
+  {t:"Paso 11: limpiar la pila (y verlo con strace)", f:["P1"],
+   x:"<p>El programa saca los parámetros de la pila y sigue. Con <code>strace</code> ves cada cruce de la frontera: <code>read(3, \"...\", 512) = 512</code>.</p><p>Un búfer más grande ahorra cruces: para leer 8 KB, con 512 bytes son 16 llamadas, y con 4096 bytes son 2. No se ahorra disco: se ahorran <b>llamadas al sistema</b>.</p>",
+   k:[["Comando de examen","strace -o salida.txt ls -la"],["8 KB / 512","16 llamadas"],["8 KB / 4096","2 llamadas"]],
+   s:{v:{pila:"vacía"}}, ef:"fin de la llamada"}
+  ]},
+
+{ title:"E/S programada", u:"U1", g:1, ref:"Tanenbaum, cap. 5.2.2, págs. 344–345 (fig. 5-8); cap. 1.3.5",
+  names:{disk:"IMPRESORA"}, procs:["P1"], init:{m:"usuario", c:"P1", p:{P1:"Ejecución"}, q:[], v:{impreso:"—"}},
+  code:`copy_from_user(bufer, p, cuenta);            // p es el búfer del kernel
+for (i = 0; i < cuenta; i++) {               // un ciclo por carácter
+    while (*reg_estado_impresora != READY) ; // espera ocupada
+    *reg_datos_impresora = p[i];             // envía un carácter
+}
+return_to_user();`,
+  steps:[
+  {t:"El proceso pide imprimir", h:[["P1","lib","write(\"ABCDEFGH\")","u"],["lib","syscall","TRAP","k"]],
+   x:"<p>P1 quiere imprimir la cadena ABCDEFGH (8 caracteres) y hace la llamada al sistema.</p>", s:{m:"kernel"}, ef:"modo kernel"},
+  {t:"Copia la cadena al kernel", h:[["syscall","mem","copy_from_user: 8 bytes","k",["copy_from_user(bufer, p, cuenta);"]]],
+   x:"<p>El SO copia la cadena a un búfer del kernel, para que el proceso no la cambie mientras se imprime.</p>", ef:"cadena en el kernel"},
+  {t:"Espera ocupada sobre el registro de estado", h:[["driver","ctrl","¿READY? no… ¿READY? no…","w",["while (*reg_estado_impresora != READY) ;"]]], w:["cpu"],
+   x:"<p>La CPU pregunta una y otra vez si la impresora está lista. Mientras tanto <b>no hace nada útil</b>: eso es la <b>espera ocupada</b> (sondeo).</p>",
+   s:{p:{P1:"Ejecución (girando en el kernel)"}}, ef:"CPU desperdiciada"},
+  {t:"Envía un carácter", h:[["driver","ctrl","reg_datos = 'A'","k",["*reg_datos_impresora = p[i];"]],["ctrl","disk","imprime A","h"]],
+   x:"<p>Cuando está lista, escribe un carácter en el registro de datos y vuelve a esperar al siguiente.</p>", s:{v:{impreso:"A"}}, ef:"A impresa"},
+  {t:"Repite hasta el final y vuelve", h:[["ctrl","disk","B, C, D … H","h",["for (i = 0; i < cuenta; i++) {"]],["syscall","lib","return_to_user","u",["return_to_user();"]]],
+   x:"<p>Repite el ciclo para cada carácter y recién al final vuelve al proceso. Es lo más simple, pero <b>la CPU queda atada</b> durante toda la impresión.</p><p>Solo conviene si cada carácter tarda muy poco, o si la CPU no tiene otra cosa que hacer (sistemas integrados).</p>",
+   s:{m:"usuario", v:{impreso:"ABCDEFGH"}, p:{P1:"Ejecución"}}, ef:"impresión completa"}
+  ]},
+
+{ title:"E/S por interrupciones", u:"U1", g:1, ref:"Tanenbaum, cap. 5.2.3, págs. 345–346 (fig. 5-9)",
+  names:{disk:"IMPRESORA"}, procs:["P1","P2"], init:{m:"usuario", c:"P1", p:{P1:"Ejecución", P2:"Listo"}, q:["P2"], v:{impreso:"—"}},
+  code:`// la llamada al sistema
+copy_from_user(bufer, p, cuenta);
+habilitar_interrupciones();
+while (*reg_estado_impresora != READY) ;
+*reg_datos_impresora = p[0];
+planificador();
+
+// el manejador de interrupciones de la impresora
+if (cuenta == 0) { desbloquear_usuario(); }
+else { *reg_datos_impresora = p[i]; cuenta = cuenta - 1; i = i + 1; }
+reconocer_interrupcion();
+regreso_de_interrupcion();`,
+  steps:[
+  {t:"write, TRAP y el primer carácter", h:[["P1","syscall","write(\"ABCDEFGH\")","k"],["driver","ctrl","p[0] = 'A'","k",["*reg_datos_impresora = p[0];"]]],
+   x:"<p>Igual que antes: copia la cadena y envía el primer carácter. Pero ahora <b>no espera</b> al segundo.</p>", s:{m:"kernel", c:"kernel", v:{impreso:"A"}}, ef:"A enviada"},
+  {t:"P1 se bloquea y entra P2", h:[["syscall","bcp","P1: Bloqueado (espera impresora)","k"],["sched","cpu","despacha a P2","s",["planificador();"]]],
+   x:"<p>Llama al <b>planificador</b>: P1 queda <b>bloqueado</b> y la CPU se le da a P2, que hace trabajo útil mientras la impresora imprime.</p>",
+   s:{m:"usuario", c:"P2", p:{P1:"Bloqueado", P2:"Ejecución"}, q:[]}, ef:"P2 usa la CPU"},
+  {t:"La impresora termina un carácter", h:[["disk","ctrl","lista para otro","h"],["ctrl","intc","IRQ","i"],["intc","cpu","interrumpe a P2","i"]],
+   x:"<p>Cuando la impresora termina, el controlador genera una <b>interrupción</b>, que detiene a P2.</p>", s:{m:"kernel", c:"manejador"}, ef:"interrupción"},
+  {t:"El manejador envía el siguiente", h:[["cpu","isr","vector → manejador","i"],["isr","ctrl","reg_datos = 'B'; cuenta--","k",["else { *reg_datos_impresora = p[i]; cuenta = cuenta - 1; i = i + 1; }"]],["isr","cpu","reconoce y regresa: sigue P2","i",["reconocer_interrupcion();","regreso_de_interrupcion();"]]],
+   x:"<p>El manejador envía el siguiente carácter, reconoce la interrupción y vuelve: P2 sigue. Esto se repite <b>una vez por carácter</b>.</p>",
+   s:{m:"usuario", c:"P2", v:{impreso:"AB…"}}, ef:"B enviada; P2 sigue"},
+  {t:"Último carácter: desbloquear a P1", h:[["isr","bcp","cuenta == 0 → P1: Listo","s",["if (cuenta == 0) { desbloquear_usuario(); }"]],["bcp","sched","cola de listos: [P1]","s"]],
+   x:"<p>Con el último carácter, el manejador desbloquea a P1, que pasa a <b>listo</b>.</p><p>Desventaja: hay <b>una interrupción por carácter</b>, y cada una cuesta tiempo de CPU. Para eso está el DMA.</p>",
+   s:{p:{P1:"Listo"}, q:["P1"], v:{impreso:"ABCDEFGH"}}, ef:"P1 listo"}
+  ]},
+
+{ title:"E/S con DMA", u:"U1", g:1, ref:"Tanenbaum, cap. 5.1.4 y 5.2.4, págs. 336–339 y 346–347 (fig. 5-10)",
+  names:{disk:"IMPRESORA"}, procs:["P1","P2"], init:{m:"usuario", c:"P1", p:{P1:"Ejecución", P2:"Listo"}, q:["P2"], v:{impreso:"—"}},
+  code:`// la llamada al sistema
+copy_from_user(bufer, p, cuenta);
+configurar_controlador_DMA();
+planificador();
+
+// el manejador de interrupciones
+reconocer_interrupcion();
+desbloquear_usuario();
+regreso_de_interrupcion();`,
+  steps:[
+  {t:"write y TRAP", h:[["P1","syscall","write(\"ABCDEFGH\")","k",["copy_from_user(bufer, p, cuenta);"]]],
+   x:"<p>El mismo pedido de antes: imprimir 8 caracteres.</p>", s:{m:"kernel", c:"kernel"}, ef:"modo kernel"},
+  {t:"Programar el DMA", h:[["driver","dma","dirección del búfer + cuenta = 8","k",["configurar_controlador_DMA();"]]],
+   x:"<p>El driver le dice al controlador DMA <b>dónde</b> están los datos en memoria y <b>cuántos</b> son. Nada más.</p>", k:[["Se le pasa","dirección y cantidad"]], ef:"DMA programado"},
+  {t:"P1 se bloquea y entra P2", h:[["syscall","bcp","P1: Bloqueado","k"],["sched","cpu","despacha a P2","s",["planificador();"]]],
+   x:"<p>Igual que con interrupciones, P1 espera bloqueado y P2 usa la CPU.</p>", s:{m:"usuario", c:"P2", p:{P1:"Bloqueado", P2:"Ejecución"}, q:[]}, ef:"P2 usa la CPU"},
+  {t:"El DMA transfiere sin la CPU", h:[["mem","dma","lee A…H de la RAM por el bus","h"],["dma","disk","carácter por carácter","h"]],
+   x:"<p>El DMA hace la E/S programada él solo: va pasando los caracteres de la memoria a la impresora. La CPU sigue con P2 y <b>no se entera</b>.</p>", s:{v:{impreso:"ABCDEFGH"}}, ef:"8 caracteres sin usar la CPU"},
+  {t:"Una sola interrupción, al final", h:[["dma","intc","terminé los 8","i"],["intc","cpu","IRQ","i"],["cpu","isr","manejador","i",["reconocer_interrupcion();"]],["isr","bcp","P1: Listo","s",["desbloquear_usuario();"]]],
+   x:"<p>Una interrupción para toda la cadena, no una por carácter.</p><p>Ojo: si el DMA es mucho más lento que la CPU y la CPU no tiene otra cosa que hacer, puede convenir la E/S por interrupciones.</p>",
+   tr:"<b>Trampa</b> El DMA no hace la transferencia más rápida, porque el tiempo lo pone el dispositivo. Lo que hace es dejar la CPU libre para otros procesos.",
+   s:{p:{P1:"Listo"}, q:["P1"]}, ef:"P1 listo; 1 sola interrupción"}
+  ]},
+
+/* ---------------- U2 · Procesos e hilos ---------------- */
+{ title:"Los estados de un proceso", u:"U2", g:2, ref:"Tanenbaum, cap. 2.1.5, págs. 90–91 (fig. 2-2)",
+  names:{disk:"TECLADO"}, procs:["P1","P2"], init:{m:"usuario", c:"P1", p:{P1:"Ejecución", P2:"Listo"}, q:["P2"], v:{}},
+  code:`1. Ejecución → Bloqueado   el proceso espera una entrada
+2. Ejecución → Listo       el planificador elige otro proceso
+3. Listo → Ejecución       el planificador elige este proceso
+4. Bloqueado → Listo       la entrada que esperaba ya está`,
+  steps:[
+  {t:"Transición 1: Ejecución → Bloqueado", h:[["P1","syscall","read(teclado): no hay datos","k"],["syscall","bcp","P1: Bloqueado","k",["1. Ejecución → Bloqueado"]]],
+   x:"<p>P1 pide leer del teclado, pero nadie tocó una tecla. <b>No puede seguir</b> aunque le den la CPU: queda bloqueado.</p>",
+   s:{m:"kernel", c:"kernel", p:{P1:"Bloqueado"}}, ef:"P1 bloqueado"},
+  {t:"Transición 3: Listo → Ejecución", h:[["sched","cpu","despacha a P2","s",["3. Listo → Ejecución"]]],
+   x:"<p>El planificador elige a P2 entre los listos y le da la CPU.</p>", s:{m:"usuario", c:"P2", p:{P2:"Ejecución"}, q:[]}, ef:"P2 en ejecución"},
+  {t:"Transición 4: Bloqueado → Listo", h:[["disk","ctrl","tecla 'a'","h"],["ctrl","intc","IRQ","i"],["intc","cpu","interrumpe a P2","i"],["cpu","isr","manejador del teclado","i"],["isr","bcp","P1: Listo","s",["4. Bloqueado → Listo"]]],
+   x:"<p>Llega la tecla: la interrupción despierta a P1, que pasa a <b>listo</b>. No pasa a ejecución directamente: tiene que esperar su turno.</p>",
+   s:{p:{P1:"Listo"}, q:["P1"]}, ef:"P1 listo"},
+  {t:"Transición 2: Ejecución → Listo", h:[["clock","intc","tic: fin del quantum de P2","i"],["intc","cpu","IRQ de reloj","i"],["cpu","sched","P2 → Listo, al final de la cola","s",["2. Ejecución → Listo"]],["sched","cpu","despacha a P1","s",["3. Listo → Ejecución"]]],
+   x:"<p>Se le terminó el quantum a P2. Podría seguir, pero el planificador decide darle la CPU a otro: P2 vuelve a <b>listo</b> y P1 entra.</p>",
+   tr:"<b>Trampa</b> Cuando se termina el quantum, el proceso pasa a LISTO, no a BLOQUEADO. No espera ningún evento: lo único que le falta es la CPU.",
+   s:{c:"P1", p:{P1:"Ejecución", P2:"Listo"}, q:["P2"]}, ef:"P1 en ejecución, P2 listo"},
+  {t:"Las transiciones que no existen", f:["bcp","sched"],
+   x:"<p><b>Bloqueado → Ejecución</b> no existe: el proceso que se despierta pasa primero por listo.</p><p><b>Listo → Bloqueado</b> tampoco: solo se bloquea el que está ejecutando, porque bloquearse es consecuencia de algo que el proceso hizo.</p>",
+   k:[["Transiciones","4"],["Las provoca el planificador","2 y 3"],["Las provoca un evento","1 y 4"]], ef:"repaso"}
+  ]},
+
+{ title:"El shell: fork, execve y waitpid", u:"U2", g:2, ref:"Tanenbaum, cap. 1.6.1 (fig. 1-19) y cap. 2.1.2–2.1.4, págs. 86–90; apunte Comandos_Linux-SO (1).pdf",
+  names:{P1:"SHELL (padre)", P2:"HIJO"}, procs:["P1","P2"], init:{m:"usuario", c:"shell", p:{P1:"Ejecución", P2:"—"}, q:[], v:{}},
+  code:`while (TRUE) {
+    leer_comando(comando, parametros);
+    if (fork() != 0) {                  /* código del padre */
+        waitpid(-1, &estado, 0);
+    } else {                            /* código del hijo */
+        execve(comando, parametros, 0);
+    }
+}`,
+  steps:[
+  {t:"El shell lee el comando", f:["P1"], cf:["leer_comando(comando, parametros);"],
+   x:"<p>El usuario escribe <code>ls</code>. El shell lo lee y ahora tiene que ejecutarlo en otro proceso.</p>", s:{v:{comando:"ls"}}, ef:"comando leído"},
+  {t:"fork(): TRAP", h:[["P1","syscall","fork()","k",["fork()"]]],
+   x:"<p><b>fork</b> es la única forma de crear un proceso en UNIX.</p>", s:{m:"kernel", c:"kernel"}, ef:"modo kernel"},
+  {t:"El kernel duplica al padre", h:[["syscall","bcp","nueva entrada: PID 1235","k"],["bcp","P2","copia exacta del padre","s"]],
+   x:"<p>El hijo es una <b>copia exacta</b>: la misma imagen de memoria, las mismas variables de entorno y los mismos archivos abiertos. Pero cada uno tiene su espacio de direcciones: si uno cambia una variable, el otro no lo ve.</p><p>Lo único distinto es el valor que devuelve fork: <b>el padre recibe el PID del hijo y el hijo recibe 0</b> (−1 si falla). Por eso el <code>if</code> separa los dos caminos.</p>",
+   k:[["fork en el padre","1235 (PID del hijo)"],["fork en el hijo","0"],["si falla","−1"],["n fork seguidos","2ⁿ procesos"]],
+   s:{p:{P2:"Listo"}, q:["P2"], v:{"PID hijo":"1235"}}, ef:"hijo creado"},
+  {t:"El padre espera: waitpid", h:[["P1","syscall","waitpid(-1, &estado, 0)","k",["waitpid(-1, &estado, 0);"]],["syscall","bcp","shell: Bloqueado","k"],["sched","cpu","despacha al hijo","s"]],
+   x:"<p>El padre recibió un valor distinto de cero, entra en su rama y espera a que el hijo termine. Queda <b>bloqueado</b>.</p>",
+   s:{m:"usuario", c:"hijo", p:{P1:"Bloqueado", P2:"Ejecución"}, q:[]}, ef:"shell bloqueado"},
+  {t:"El hijo hace execve", h:[["P2","syscall","execve(\"ls\")","k",["execve(comando, parametros, 0);"]],["driver","disk","lee el ejecutable de ls","h"],["disk","mem","nueva imagen de memoria","h"]],
+   x:"<p>El hijo recibió 0 y ejecuta <b>execve</b>: se <b>reemplaza</b> toda su imagen de memoria por el programa ls. Es el mismo proceso, con el mismo PID, pero con otro programa.</p>",
+   k:[["fork","duplica"],["execve","reemplaza"]], s:{m:"usuario", c:"hijo (ls)", v:{"programa del hijo":"ls"}}, ef:"el hijo ahora es ls"},
+  {t:"El hijo termina y el shell despierta", h:[["P2","syscall","exit(0)","k"],["syscall","bcp","hijo: Terminado; shell: Listo","s"],["sched","cpu","despacha al shell","s"]],
+   x:"<p>ls termina con <b>exit</b>. El waitpid del padre se completa y el shell vuelve a pedir otro comando.</p><p>En UNIX los procesos forman un <b>árbol</b> con init en la raíz. En Windows, <b>CreateProcess</b> crea y carga el programa en una sola llamada y no hay jerarquía: el padre recibe un <i>handle</i> que puede pasarle a otro.</p>",
+   k:[["Windows","CreateProcess = fork + execve"],["Terminación voluntaria","salida normal o por error"],["Terminación involuntaria","error fatal o kill"]],
+   s:{c:"shell", p:{P1:"Ejecución", P2:"Terminado"}}, ef:"el shell espera otro comando"}
+  ]},
+
+{ title:"El cambio de contexto (fig. 2-5)", u:"U2", g:2, ref:"Tanenbaum, cap. 2.1.6, págs. 91–93 (fig. 2-5)",
+  names:{disk:"DISCO"}, procs:["P1","P2"], init:{m:"usuario", c:"P1", p:{P1:"Ejecución", P2:"Bloqueado (espera el disco)"}, q:[], v:{}},
+  code:`1. El hardware mete el PC, el PSW, etc. en la pila.
+2. El hardware carga el nuevo PC del vector de interrupciones.
+3. Un procedimiento en ensamblador guarda los registros.
+4. Un procedimiento en ensamblador establece la nueva pila.
+5. Se ejecuta el servicio de interrupciones en C.
+6. El planificador decide qué proceso se va a ejecutar a continuación.
+7. El procedimiento en C regresa al código de ensamblador.
+8. Un procedimiento en ensamblador inicia el nuevo proceso actual.`,
+  steps:[
+  {t:"Llega la interrupción del disco", h:[["disk","ctrl","terminó la lectura de P2","h"],["ctrl","intc","IRQ","i"],["intc","cpu","interrumpe a P1","i"]],
+   x:"<p>P1 está ejecutando. El disco termina la lectura que esperaba P2 e interrumpe.</p>", ef:"interrupción"},
+  {t:"Pasos 1 y 2: lo hace el hardware", h:[["cpu","mem","apila PC y PSW de P1","h",["1. El hardware mete el PC, el PSW, etc. en la pila."]],["cpu","isr","nuevo PC del vector","i",["2. El hardware carga el nuevo PC del vector de interrupciones."]]],
+   x:"<p>El hardware guarda lo mínimo (PC y PSW) y salta a la dirección del vector. El PSW nuevo tiene el bit de modo en kernel.</p>", s:{m:"kernel", c:"kernel"}, ef:"modo kernel"},
+  {t:"Pasos 3 y 4: guardar el contexto de P1", h:[["isr","bcp","registros de P1 → su BCP","k",["3. Un procedimiento en ensamblador guarda los registros.","4. Un procedimiento en ensamblador establece la nueva pila."]]],
+   x:"<p>Una rutina en ensamblador (en C no se puede tocar los registros) guarda <b>todos los registros</b> de P1 en su entrada de la tabla de procesos y arma una pila temporal para el kernel.</p>",
+   k:[["El BCP guarda","PC, PSW, registros, pila"],["Además","estado, prioridad, PID, archivos"]], ef:"contexto de P1 guardado"},
+  {t:"Paso 5: el servicio de interrupciones", h:[["isr","bcp","P2: Bloqueado → Listo","s",["5. Se ejecuta el servicio de interrupciones en C."]]],
+   x:"<p>La rutina en C atiende al disco: marca a P2 como <b>listo</b>, porque ya tiene sus datos.</p>", s:{p:{P2:"Listo"}, q:["P2"]}, ef:"P2 listo"},
+  {t:"Paso 6: el planificador decide", h:[["bcp","sched","listos: P1 y P2","s",["6. El planificador decide qué proceso se va a ejecutar a continuación."]]],
+   x:"<p>El planificador elige quién sigue. Puede volver P1 o, como acá (por ejemplo, porque P2 tiene más prioridad), elegir a P2. P1 pasa a <b>listo</b>.</p>",
+   s:{p:{P1:"Listo"}, q:["P1"]}, ef:"elige a P2"},
+  {t:"Pasos 7 y 8: arranca el nuevo proceso", h:[["sched","cpu","carga registros, PC y PSW de P2","s",["7. El procedimiento en C regresa al código de ensamblador.","8. Un procedimiento en ensamblador inicia el nuevo proceso actual."]]],
+   x:"<p>Se cargan los registros de P2 desde su BCP, el PSW vuelve a modo usuario y P2 sigue como si nada.</p>",
+   tr:"<b>Trampa</b> El PSW es un registro de la CPU que tiene el bit de modo. El campo de estado del BCP es otra cosa: dice si el proceso está listo, bloqueado o en ejecución.",
+   s:{m:"usuario", c:"P2", p:{P2:"Ejecución"}, q:["P1"]}, ef:"P2 en ejecución"}
+  ]},
+
+{ title:"Hilos de usuario y de kernel", u:"U2", g:2, ref:"Tanenbaum, cap. 2.2.4–2.2.6, págs. 106–111",
+  names:{P1:"PROCESO A (3 hilos)", P2:"PROCESO B", disk:"TECLADO"}, procs:["P1","P2"], init:{m:"usuario", c:"A (hilo 1)", p:{P1:"Ejecución", P2:"Listo"}, q:["P2"], v:{}},
+  code:`// hilos a nivel de usuario: el kernel ve UN solo proceso
+hilo_1:  read(teclado, ...);   // llamada bloqueante
+hilo_2:  calcular();
+hilo_3:  dibujar();`,
+  steps:[
+  {t:"El sistema en tiempo de ejecución", f:["P1","lib"],
+   x:"<p>Con hilos de usuario, la tabla de hilos está <b>dentro del proceso</b>, en una biblioteca. Cambiar de hilo con <code>thread_yield</code> es una llamada a procedimiento local: <b>sin TRAP</b>, sin cambio de modo y sin vaciar la caché. Es muy rápido.</p>",
+   k:[["Tabla de hilos","en el proceso"],["El kernel ve","un solo proceso"]], ef:"3 hilos dentro de A"},
+  {t:"Un hilo hace un read bloqueante", h:[["P1","syscall","read (hilo 1)","k",["read(teclado, ...);"]],["syscall","bcp","A: Bloqueado (con sus 3 hilos)","w"],["sched","cpu","despacha a B","s"]], w:["P1"],
+   x:"<p>El kernel no sabe que A tiene hilos: bloquea <b>todo el proceso</b>. Los hilos 2 y 3 podían trabajar, pero no corren.</p><p>Lo mismo pasa con un <b>fallo de página</b>. Y un hilo que no cede la CPU con thread_yield deja sin correr a los demás del proceso, porque dentro del proceso no hay interrupciones de reloj.</p>",
+   s:{m:"usuario", c:"B", p:{P1:"Bloqueado (los 3 hilos)", P2:"Ejecución"}, q:[]}, ef:"se bloquean los 3 hilos"},
+  {t:"Con hilos de kernel", code:`// hilos de kernel: el kernel tiene la tabla de hilos
+hilo_1:  read(teclado, ...);   // se bloquea SOLO este hilo
+hilo_2:  calcular();           // puede seguir ejecutando
+hilo_3:  dibujar();`,
+   h:[["P1","syscall","read (hilo 1)","k",["read(teclado, ...);"]],["syscall","bcp","solo el hilo 1: Bloqueado","k"],["sched","cpu","despacha al hilo 2 de A","s",["calcular();"]]],
+   x:"<p>Ahora la tabla de hilos está <b>en el kernel</b>. Cuando un hilo se bloquea, el kernel puede dar la CPU a otro hilo del mismo proceso. Además, en un multiprocesador, los hilos pueden correr <b>en paralelo</b>.</p><p>El costo: crear, destruir o sincronizar hilos pasa a ser una <b>llamada al sistema</b>, más cara.</p>",
+   s:{c:"A (hilo 2)", p:{P1:"Ejecución (hilo 2); hilo 1 bloqueado", P2:"Listo"}, q:["P2"]}, ef:"solo se bloquea el hilo 1"},
+  {t:"Híbridos y activaciones del planificador", h:[["syscall","lib","llamada ascendente: el hilo 1 se bloqueó","k"]],
+   x:"<p>La implementación <b>híbrida</b> multiplexa varios hilos de usuario sobre algunos hilos de kernel. Las <b>activaciones del planificador</b> hacen que el kernel avise al sistema de tiempo de ejecución con una <b>llamada ascendente</b> (<i>upcall</i>), para que elija otro hilo.</p>",
+   k:[["Usuario","rápido; se bloquea todo"],["Kernel","más caro; bloqueo selectivo"],["Híbrido","lo mejor de los dos"]], ef:"el sistema de tiempo de ejecución elige otro hilo"}
+  ]},
+
+{ title:"¿Cuándo actúa el planificador?", u:"U2", g:2, ref:"Tanenbaum, cap. 2.4.1, págs. 145–152",
+  names:{disk:"DISCO"}, procs:["P1","P2"], init:{m:"usuario", c:"P1", p:{P1:"Ejecución", P2:"—"}, q:[], v:{}},
+  code:`1. se crea un proceso (fork)          ¿sigue el padre o el hijo?
+2. termina un proceso (exit)          hay que elegir otro
+3. un proceso se bloquea              E/S, semáforo, mensaje
+4. llega una interrupción de E/S      se desbloquea alguien
+5. interrupción de reloj              solo si es apropiativo`,
+  steps:[
+  {t:"1. Se crea un proceso", h:[["P1","syscall","fork()","k"],["syscall","bcp","nuevo: P2 (Listo)","s"],["bcp","sched","¿padre o hijo?","s",["1. se crea un proceso (fork)"]]],
+   x:"<p>Después de un fork hay que decidir si sigue el padre o el hijo. Los dos son listos.</p>", s:{p:{P2:"Listo"}, q:["P2"]}, ef:"decide: sigue P1"},
+  {t:"3. Un proceso se bloquea", h:[["P1","syscall","read de disco","k"],["syscall","bcp","P1: Bloqueado","k"],["sched","cpu","despacha a P2","s",["3. un proceso se bloquea"]]],
+   x:"<p>Si el proceso en ejecución se bloquea, hay que elegir otro. A veces conviene saber por qué se bloqueó: por ejemplo, si espera a un proceso que tiene un recurso.</p>",
+   s:{c:"P2", p:{P1:"Bloqueado", P2:"Ejecución"}, q:[]}, ef:"entra P2"},
+  {t:"4. Llega una interrupción de E/S", h:[["disk","ctrl","listo","h"],["ctrl","intc","IRQ","i"],["intc","cpu","interrumpe a P2","i"],["isr","bcp","P1: Listo","s",["4. llega una interrupción de E/S"]]],
+   x:"<p>Se desbloqueó P1. El planificador decide: ¿sigue P2, entra P1 o algún otro?</p>", s:{p:{P1:"Listo"}, q:["P1"]}, ef:"P1 listo"},
+  {t:"5. Interrupción de reloj", h:[["clock","intc","tic","i"],["intc","cpu","IRQ de reloj","i"],["cpu","sched","fin del quantum: P2 → Listo","s",["5. interrupción de reloj"]],["sched","cpu","despacha a P1","s"]],
+   x:"<p>Solo cuenta si el planificador es <b>apropiativo</b>: deja correr al proceso un tiempo fijo (el quantum) y después lo suspende. Uno <b>no apropiativo</b> lo deja correr hasta que se bloquee o ceda la CPU, aunque se quede horas.</p>",
+   k:[["Apropiativo","usa el reloj"],["No apropiativo","espera que el proceso suelte la CPU"]],
+   s:{c:"P1", p:{P1:"Ejecución", P2:"Listo"}, q:["P2"]}, ef:"entra P1"},
+  {t:"2. Termina un proceso", h:[["P1","syscall","exit(0)","k",["2. termina un proceso (exit)"]],["syscall","bcp","P1: Terminado","k"],["sched","cpu","despacha a P2","s"]],
+   x:"<p>El proceso que termina ya no puede ejecutar: hay que elegir otro. Si no hay ninguno listo, corre un proceso inactivo del sistema.</p><p>El tema 8 sigue en el simulador de planificación (Gantt): FCFS, SJF, SRTF, Round Robin y prioridades.</p>",
+   k:[["Lotes","rendimiento, tiempo de retorno"],["Interactivo","tiempo de respuesta"],["Tiempo real","cumplir plazos"]],
+   s:{c:"P2", p:{P1:"Terminado", P2:"Ejecución"}, q:[]}, ef:"entra P2"}
+  ]},
+
+/* ---------------- U2 · Concurrencia ---------------- */
+{ title:"Condición de carrera: el spooler", u:"U2", g:3, ref:"Tanenbaum, cap. 2.3.1 y 2.3.2, págs. 117–120 (figs. 2-21 y 2-22)",
+  names:{P1:"PROCESO A", P2:"PROCESO B"}, procs:["P1","P2"], init:{m:"usuario", c:"A", p:{P1:"Ejecución", P2:"Listo"}, q:["P2"], v:{"in":"7", "ranura 7":"vacía"}},
+  code:`// cada proceso que quiere imprimir hace:
+siguiente_ranura = in;                    // lee la variable compartida
+directorio[siguiente_ranura] = archivo;   // anota su archivo
+in = siguiente_ranura + 1;                // avanza in`,
+  steps:[
+  {t:"A lee in", h:[["cpu","mem","A lee in = 7","u",["siguiente_ranura = in;"]]],
+   x:"<p>El directorio del spooler está en memoria compartida. <b>in</b> apunta a la próxima ranura libre. A lee 7 y lo guarda en su variable local.</p>", s:{v:{"A.siguiente_ranura":"7"}}, ef:"A tiene 7"},
+  {t:"Interrupción de reloj: le toca a B", h:[["clock","intc","fin del quantum de A","i"],["intc","cpu","IRQ","i"],["cpu","sched","A → Listo","s"],["sched","cpu","despacha a B","s"]],
+   x:"<p>Justo en ese momento se le termina el quantum a A. Todavía no escribió nada.</p>", s:{c:"B", p:{P1:"Listo", P2:"Ejecución"}, q:["P1"]}, ef:"B en ejecución"},
+  {t:"B hace todo su trabajo", h:[["cpu","mem","B lee in = 7","u",["siguiente_ranura = in;"]],["cpu","mem","directorio[7] = b.txt; in = 8","u",["directorio[siguiente_ranura] = archivo;","in = siguiente_ranura + 1;"]]],
+   x:"<p>B también lee 7 (nadie lo cambió), anota su archivo en la ranura 7 y deja in en 8.</p>", s:{v:{"in":"8", "ranura 7":"b.txt"}}, ef:"ranura 7 = b.txt"},
+  {t:"Vuelve A", h:[["cpu","sched","B → Listo","s"],["sched","cpu","A sigue donde quedó","s"]],
+   x:"<p>A sigue desde donde quedó, con su copia vieja: <b>siguiente_ranura = 7</b>.</p>", s:{c:"A", p:{P1:"Ejecución", P2:"Listo"}, q:["P2"]}, ef:"A sigue con 7"},
+  {t:"A pisa el archivo de B", h:[["cpu","mem","directorio[7] = a.txt; in = 8","w",["directorio[siguiente_ranura] = archivo;","in = siguiente_ranura + 1;"]]], w:["mem"],
+   x:"<p>A escribe en la ranura 7 y <b>pisa el archivo de B</b>. El directorio queda consistente (el demonio de impresión no nota nada), pero <b>B nunca imprime</b>.</p><p>Es una <b>condición de carrera</b>: el resultado depende de quién ejecuta y en qué momento. El patrón peligroso es <b>leer → modificar → escribir</b> sin exclusión mutua. La parte del código que toca lo compartido es la <b>región crítica</b>.</p>",
+   k:[["Condición 1","nunca dos a la vez en la región crítica"],["Condición 2","nada de suponer velocidades ni cantidad de CPU"],["Condición 3","quien está afuera no bloquea a otro"],["Condición 4","nadie espera para siempre"]],
+   s:{v:{"ranura 7":"a.txt"}}, ef:"se perdió b.txt"}
+  ]},
+
+{ title:"Exclusión mutua con TSL (espera ocupada)", u:"U2", g:3, ref:"Tanenbaum, cap. 2.3.3, págs. 120–125 (figs. 2-25 y 2-26)",
+  names:{cpu:"CPU 0", P1:"P1 (en CPU 0)", P2:"P2 (en CPU 1)"}, procs:["P1","P2"], init:{m:"usuario", c:"P1 en CPU 0 · P2 en CPU 1", p:{P1:"Ejecución", P2:"Ejecución"}, q:[], v:{CANDADO:"0"}},
+  code:`entrar_region:
+    TSL REGISTRO,CANDADO   | copia el candado al registro y lo pone en 1
+    CMP REGISTRO,#0        | ¿el candado era cero?
+    JNE entrar_region      | si no era cero, estaba puesto: repetir
+    RET                    | entra a la región crítica
+
+salir_region:
+    MOVE CANDADO,#0        | guarda 0 en el candado
+    RET`,
+  steps:[
+  {t:"P1 ejecuta TSL", h:[["cpu","mem","TSL: lee 0 y escribe 1 (bus bloqueado)","h",["TSL REGISTRO,CANDADO"]]],
+   x:"<p><b>TSL</b> (Test and Set Lock) lee el candado y escribe un 1 en una sola operación <b>indivisible</b>: la CPU bloquea el bus para que ninguna otra CPU toque esa palabra en el medio.</p>",
+   tr:"<b>Trampa</b> Deshabilitar las interrupciones no sirve en un multiprocesador: solo afecta a una CPU, y las otras siguen accediendo a la memoria.",
+   s:{v:{CANDADO:"1", "registro CPU 0":"0"}}, ef:"candado = 1"},
+  {t:"CMP: era 0, entra", f:["cpu"], cf:["CMP REGISTRO,#0","RET                    | entra a la región crítica"],
+   x:"<p>El registro tiene el valor <b>viejo</b> del candado, que era 0. Nadie estaba adentro: P1 entra a la región crítica.</p>", s:{p:{P1:"Ejecución (en la región crítica)"}}, ef:"P1 en la región crítica"},
+  {t:"P2 intenta en la CPU 1", h:[["cpu1","mem","TSL: lee 1 y escribe 1","w",["TSL REGISTRO,CANDADO"]]],
+   x:"<p>P2 hace TSL: lee 1 (ocupado) y vuelve a escribir 1, así que no cambia nada.</p>", s:{v:{"registro CPU 1":"1"}}, ef:"ocupado"},
+  {t:"P2 gira: espera ocupada", h:[["cpu1","mem","¿0? no… ¿0? no…","w",["JNE entrar_region"]]], w:["cpu1"],
+   x:"<p>El JNE lo manda de nuevo a TSL, una y otra vez. P2 <b>usa la CPU sin hacer nada útil</b>: eso es la espera ocupada. A un candado así se le llama <b>spinlock</b>.</p>",
+   s:{p:{P2:"Girando (espera ocupada)"}}, ef:"CPU 1 desperdiciada"},
+  {t:"P1 sale de la región", h:[["cpu","mem","MOVE CANDADO,#0","h",["MOVE CANDADO,#0"]]],
+   x:"<p>Para salir alcanza con una escritura común: poner el candado en 0.</p>", s:{p:{P1:"Ejecución"}, v:{CANDADO:"0"}}, ef:"candado = 0"},
+  {t:"P2 entra", h:[["cpu1","mem","TSL: lee 0 → entra","h",["TSL REGISTRO,CANDADO"]]],
+   x:"<p>El próximo TSL de P2 lee 0 y entra.</p><p>Variantes: <b>XCHG</b> (en los Intel x86) intercambia el registro con la memoria de forma atómica; <b>Peterson</b> lo logra solo con software. Todas tienen espera ocupada.</p>",
+   k:[["TSL / XCHG","hardware"],["Peterson","software, 2 procesos"],["Problema común","espera ocupada"]],
+   s:{p:{P2:"Ejecución (en la región crítica)"}, v:{CANDADO:"1"}}, ef:"P2 en la región crítica"}
+  ]},
+
+{ title:"Inversión de prioridades", u:"U2", g:3, ref:"Tanenbaum, cap. 2.3.4, págs. 125–126 (herencia de prioridades y Mars Pathfinder: complemento)",
+  names:{P1:"L (prioridad baja)", P2:"H (prioridad alta)", disk:"DISCO"}, procs:["P1","P2"], init:{m:"usuario", c:"L", p:{P1:"Ejecución", P2:"Bloqueado (espera E/S)"}, q:[], v:{candado:"0"}},
+  code:`entrar_region:
+    TSL REGISTRO,CANDADO
+    CMP REGISTRO,#0
+    JNE entrar_region      | gira mientras el candado esté puesto
+    RET`,
+  steps:[
+  {t:"L entra a la región crítica", h:[["cpu","mem","L: TSL → candado = 1","h",["TSL REGISTRO,CANDADO"]]],
+   x:"<p>Una sola CPU. El planificador siempre ejecuta al proceso <b>listo de mayor prioridad</b>. L, de prioridad baja, toma el candado.</p>", s:{v:{candado:"1"}, p:{P1:"Ejecución (en la región crítica)"}}, ef:"L tiene el candado"},
+  {t:"H se vuelve listo", h:[["disk","ctrl","terminó la E/S de H","h"],["ctrl","intc","IRQ","i"],["intc","cpu","interrumpe a L","i"],["isr","bcp","H: Listo","s"]],
+   x:"<p>Termina la E/S que esperaba H, que pasa a listo.</p>", s:{p:{P2:"Listo"}, q:["P2"]}, ef:"H listo"},
+  {t:"El planificador elige a H", h:[["bcp","sched","H tiene más prioridad","s"],["sched","cpu","despacha a H; L → Listo","s"]],
+   x:"<p>H tiene más prioridad: se le da la CPU. L queda listo, <b>todavía con el candado puesto</b>.</p>", s:{c:"H", p:{P1:"Listo (con el candado)", P2:"Ejecución"}, q:["P1"]}, ef:"H en la CPU"},
+  {t:"H gira para siempre", h:[["cpu","mem","¿candado 0? no… no… no…","w",["JNE entrar_region      | gira mientras el candado esté puesto"]]], w:["cpu","P1"],
+   x:"<p>H quiere entrar y gira. Como nunca se bloquea, <b>siempre está listo</b> y el planificador siempre lo elige. L nunca vuelve a ejecutar, así que <b>nunca suelta el candado</b>. La CPU queda al 100 % sin hacer nada útil.</p>",
+   tr:"<b>Trampa</b> No confundas tener el candado con tener la CPU. L tiene el candado pero no la CPU, y H tiene la CPU pero no el candado.",
+   s:{p:{P2:"Girando (espera ocupada)"}}, ef:"cuelgue con la CPU al 100 %"},
+  {t:"Cómo se resuelve", f:["sync","sched"],
+   x:"<p>1) <b>Bloquear en vez de girar</b>: con sleep/wakeup, semáforos o mutex, H se duerme, L puede ejecutar y libera el candado.</p><p>2) <i>Complemento:</i> si además hay procesos de prioridad media, la solución es la <b>herencia de prioridades</b>: mientras L tenga el candado que H necesita, L toma la prioridad de H. Así lo arreglaron en el Mars Pathfinder, en 1997.</p>",
+   k:[["Causa","espera ocupada + prioridades estrictas"],["Solución 1","bloquear"],["Solución 2","herencia de prioridades"]], ef:"solución"}
+  ]},
+
+{ title:"Sleep y wakeup: la señal perdida", u:"U2", g:3, ref:"Tanenbaum, cap. 2.3.4, págs. 125–128 (fig. 2-27)",
+  names:{P1:"PRODUCTOR", P2:"CONSUMIDOR"}, procs:["P1","P2"], init:{m:"usuario", c:"consumidor", p:{P1:"Listo", P2:"Ejecución"}, q:["P1"], v:{cuenta:"0", N:"100"}},
+  code:`productor:   elemento = producir_elemento();
+             if (cuenta == N) sleep();
+             insertar_elemento(elemento);
+             cuenta = cuenta + 1;
+             if (cuenta == 1) wakeup(consumidor);
+
+consumidor:  if (cuenta == 0) sleep();
+             elemento = quitar_elemento();
+             cuenta = cuenta - 1;
+             if (cuenta == N - 1) wakeup(productor);`,
+  steps:[
+  {t:"El consumidor lee cuenta = 0", h:[["cpu","mem","consumidor lee cuenta = 0","u",["if (cuenta == 0)"]]],
+   x:"<p>Búfer vacío. El consumidor lee <b>cuenta = 0</b> y va a dormirse… pero todavía no lo hizo.</p>", s:{v:{"consumidor vio":"0"}}, ef:"va a dormirse"},
+  {t:"Justo antes de dormir: fin del quantum", h:[["clock","intc","tic","i"],["intc","cpu","IRQ","i"],["cpu","sched","consumidor → Listo (despierto)","s"],["sched","cpu","despacha al productor","s"]],
+   x:"<p>Se le termina el quantum <b>entre</b> la comparación y el sleep. El consumidor queda listo, despierto.</p>", s:{c:"productor", p:{P1:"Ejecución", P2:"Listo"}, q:["P2"]}, ef:"entra el productor"},
+  {t:"El productor inserta y hace wakeup", h:[["cpu","mem","inserta; cuenta = 1","u",["insertar_elemento(elemento);","cuenta = cuenta + 1;"]],["P1","syscall","wakeup(consumidor)","k",["if (cuenta == 1) wakeup(consumidor);"]],["syscall","bcp","no estaba dormido: la señal se pierde","w"]], w:["bcp"],
+   x:"<p>El productor ve cuenta = 1, deduce que el consumidor estaba durmiendo y lo despierta. Pero el consumidor <b>no dormía</b>: el wakeup <b>se pierde</b>.</p>", s:{v:{cuenta:"1"}}, ef:"despertar perdido"},
+  {t:"El consumidor se duerme con un dato viejo", h:[["sched","cpu","despacha al consumidor","s"],["P2","syscall","sleep()","k",["if (cuenta == 0) sleep();"]],["syscall","bcp","consumidor: Bloqueado","k"]],
+   x:"<p>El consumidor sigue desde donde quedó, con su <b>copia vieja</b> (0), y se duerme. Ya hay un elemento en el búfer, pero nadie lo va a despertar.</p>",
+   s:{c:"productor", p:{P1:"Ejecución", P2:"Bloqueado"}, q:[]}, ef:"consumidor dormido"},
+  {t:"El productor llena el búfer y se duerme", h:[["cpu","mem","cuenta = 100 = N","u",["if (cuenta == N) sleep();"]],["P1","syscall","sleep()","k"],["syscall","bcp","los dos dormidos para siempre","w"]], w:["P1","P2"],
+   x:"<p>El productor llena el búfer y también se duerme. <b>Los dos quedan dormidos para siempre.</b></p><p>Parche: un <b>bit de espera de despertar</b> que guarde el wakeup perdido. Generalizado a un contador, eso es un <b>semáforo</b>.</p>",
+   s:{c:"nadie", p:{P1:"Bloqueado"}, v:{cuenta:"100"}}, ef:"los dos dormidos"}
+  ]},
+
+{ title:"Semáforos: productor-consumidor", u:"U2", g:3, ref:"Tanenbaum, cap. 2.3.5, págs. 128–130 (fig. 2-28)",
+  names:{P1:"PRODUCTOR", P2:"CONSUMIDOR"}, procs:["P1","P2"], init:{m:"usuario", c:"consumidor", p:{P1:"Listo", P2:"Ejecución"}, q:["P1"], v:{mutex:"1", vacias:"100", llenas:"0"}},
+  code:`productor:   down(&vacias);
+             down(&mutex);
+             insertar_elemento(elemento);
+             up(&mutex);
+             up(&llenas);
+
+consumidor:  down(&llenas);
+             down(&mutex);
+             elemento = quitar_elemento();
+             up(&mutex);
+             up(&vacias);`,
+  steps:[
+  {t:"El consumidor hace down con llenas = 0", h:[["P2","syscall","down(&llenas)","k",["down(&llenas);"]],["syscall","sync","llenas = 0 → a la cola de llenas","s"]],
+   x:"<p><b>down</b> pide una unidad del recurso. Si hay (valor &gt; 0), la toma y sigue. Si no hay, el proceso se <b>bloquea</b> en la cola del semáforo, <b>sin consumir CPU</b>.</p><p>Comprobar el valor, cambiarlo y dormirse es una <b>acción atómica</b>: en una CPU se logra deshabilitando las interrupciones unas pocas instrucciones; en varias, con TSL.</p>",
+   k:[["mutex","exclusión mutua (binario)"],["vacias","ranuras libres"],["llenas","ranuras ocupadas"]],
+   s:{m:"kernel", p:{P2:"Bloqueado (cola de llenas)"}, v:{"cola de llenas":"[consumidor]"}}, ef:"consumidor bloqueado"},
+  {t:"Entra el productor", h:[["sched","cpu","despacha al productor","s"]],
+   x:"<p>El consumidor bloqueado no compite por la CPU: el planificador elige al productor.</p>", s:{m:"usuario", c:"productor", p:{P1:"Ejecución"}, q:[]}, ef:"productor en ejecución"},
+  {t:"down(&vacias) y down(&mutex)", h:[["P1","syscall","down(&vacias): 100 → 99","k",["down(&vacias);"]],["syscall","sync","down(&mutex): 1 → 0","s",["down(&mutex);"]]],
+   x:"<p>Primero pide una <b>ranura libre</b> y recién después el <b>mutex</b> para tocar el búfer. Ese orden importa (ver el recorrido siguiente).</p>", s:{v:{vacias:"99", mutex:"0"}}, ef:"productor en la región crítica"},
+  {t:"Inserta y libera el mutex", h:[["cpu","mem","insertar_elemento","u",["insertar_elemento(elemento);"]],["P1","syscall","up(&mutex): 0 → 1","s",["up(&mutex);"]]],
+   x:"<p>Deja el elemento en el búfer y libera el mutex.</p>", s:{v:{mutex:"1"}}, ef:"elemento en el búfer"},
+  {t:"up(&llenas) despierta al consumidor", h:[["P1","syscall","up(&llenas)","s",["up(&llenas);"]],["syscall","sync","hay alguien en la cola de llenas","s"],["sync","bcp","consumidor: Bloqueado → Listo","s"]],
+   x:"<p><b>up</b> entrega una unidad. Si había alguien bloqueado, el sistema elige uno y le deja <b>completar su down</b>: por eso llenas <b>sigue en 0</b>. La unidad que entregó el productor se la llevó el consumidor.</p>",
+   tr:"<b>Trampa</b> No pienses up y down como sumar y restar. down es pedir una unidad del recurso y up es entregarla. Un up nunca se pierde: queda guardado en el valor o despierta a alguien.",
+   s:{p:{P2:"Listo"}, q:["P2"], v:{llenas:"0", "cola de llenas":"[]"}}, ef:"consumidor listo; llenas sigue en 0"},
+  {t:"El consumidor completa su parte", h:[["sched","cpu","despacha al consumidor","s"],["P2","syscall","down(&mutex) · quitar · up(&mutex)","s",["down(&mutex);","elemento = quitar_elemento();"]],["syscall","sync","up(&vacias): 99 → 100","s",["up(&vacias);"]]],
+   x:"<p>El consumidor toma el mutex, saca el elemento, lo libera y devuelve una ranura libre.</p><p>Dos usos de los semáforos: <b>mutex</b> para la <b>exclusión mutua</b>; <b>vacías y llenas</b> para la <b>sincronización</b> (que el productor pare con el búfer lleno y el consumidor con el búfer vacío).</p>",
+   s:{c:"consumidor", p:{P1:"Listo", P2:"Ejecución"}, q:["P1"], v:{vacias:"100", mutex:"1"}}, ef:"todo vuelve al inicio"}
+  ]},
+
+{ title:"Los down al revés: interbloqueo", u:"U2", g:3, ref:"Tanenbaum, cap. 2.3.6, págs. 130–131",
+  names:{P1:"PRODUCTOR", P2:"CONSUMIDOR"}, procs:["P1","P2"], init:{m:"usuario", c:"productor", p:{P1:"Ejecución", P2:"Listo"}, q:["P2"], v:{mutex:"1", vacias:"0 (búfer lleno)", llenas:"100"}},
+  code:`productor:   down(&mutex);      // ¡orden invertido!
+             down(&vacias);
+             insertar_elemento(elemento);
+             ...
+consumidor:  down(&llenas);
+             down(&mutex);
+             ...`,
+  steps:[
+  {t:"El productor toma el mutex", h:[["P1","syscall","down(&mutex): 1 → 0","k",["down(&mutex);      // ¡orden invertido!"]],["syscall","sync","mutex = 0","s"]],
+   x:"<p>El búfer está <b>lleno</b>. Con el orden invertido, el productor toma primero el mutex.</p>", s:{v:{mutex:"0"}}, ef:"productor tiene el mutex"},
+  {t:"down(&vacias) con el búfer lleno", h:[["P1","syscall","down(&vacias)","k",["down(&vacias);"]],["syscall","sync","vacias = 0 → bloqueado CON el mutex","w"]], w:["P1"],
+   x:"<p>No hay ranuras libres: el productor se bloquea… <b>con el mutex tomado</b>.</p>", s:{p:{P1:"Bloqueado (con el mutex)"}}, ef:"productor bloqueado con el mutex"},
+  {t:"El consumidor pasa el primer down", h:[["sched","cpu","despacha al consumidor","s"],["P2","syscall","down(&llenas): 100 → 99","k",["down(&llenas);"]]],
+   x:"<p>El consumidor podría sacar un elemento y liberar una ranura…</p>", s:{c:"consumidor", p:{P2:"Ejecución"}, q:[], v:{llenas:"99"}}, ef:"consumidor sigue"},
+  {t:"down(&mutex): interbloqueo", h:[["P2","syscall","down(&mutex)","k",["down(&mutex);\n             ..."]],["syscall","sync","mutex = 0 → bloqueado","w"]], w:["P1","P2","sync"],
+   x:"<p>…pero necesita el mutex, que lo tiene el productor dormido. <b>Los dos quedan bloqueados para siempre</b>: es un <b>interbloqueo</b>.</p><p>No es que ande más lento: se cuelga. Dormirse con un candado tomado es el origen de los interbloqueos (Unidad 6).</p>",
+   tr:"<b>Trampa</b> El orden de los down importa. Primero se pide el recurso (vacías o llenas) y recién después el mutex.",
+   s:{c:"nadie", p:{P2:"Bloqueado (espera el mutex)"}}, ef:"interbloqueo"}
+  ]},
+
+{ title:"Monitores", u:"U2", g:3, ref:"Tanenbaum, cap. 2.3.7, págs. 134–140 (figs. 2-33, 2-34 y 2-35)",
+  names:{P1:"PRODUCTOR", P2:"CONSUMIDOR", sync:"MONITOR"}, procs:["P1","P2"], init:{m:"usuario", c:"consumidor", p:{P1:"Listo", P2:"Ejecución"}, q:["P1"], v:{cuenta:"0", "dentro del monitor":"nadie"}},
+  code:`monitor ProductorConsumidor
+    condition lleno, vacio;
+    integer cuenta;
+    procedure insertar(elemento: integer);
+    begin
+        if cuenta = N then wait(lleno);
+        insertar_elemento(elemento);
+        cuenta := cuenta + 1;
+        if cuenta = 1 then signal(vacio)
+    end;
+    function quitar: integer;
+    begin
+        if cuenta = 0 then wait(vacio);
+        quitar := quitar_elemento;
+        cuenta := cuenta - 1;
+        if cuenta = N - 1 then signal(lleno)
+    end;
+end monitor;`,
+  steps:[
+  {t:"Entrar al monitor", h:[["P2","sync","llama a quitar","s",["function quitar: integer;"]]],
+   x:"<p>Un monitor es una construcción del <b>lenguaje</b>: procedimientos, variables y datos agrupados. El <b>compilador</b> agrega la exclusión mutua: solo un proceso puede estar activo adentro.</p>",
+   k:[["Exclusión mutua","la pone el compilador"],["Ejemplos","Java synchronized"]], s:{v:{"dentro del monitor":"consumidor"}}, ef:"consumidor adentro"},
+  {t:"wait(vacio) con cuenta = 0", h:[["sync","bcp","consumidor espera en vacio y libera el monitor","s",["if cuenta = 0 then wait(vacio);"]]],
+   x:"<p>wait bloquea al consumidor en la variable de condición <b>vacio</b> y <b>libera el monitor</b>, para que otro pueda entrar. Por eso no es sleep/wakeup otra vez: no hay una ventana entre mirar y dormirse.</p>",
+   s:{p:{P2:"Bloqueado (en vacio)"}, v:{"dentro del monitor":"nadie"}}, ef:"consumidor espera"},
+  {t:"El productor entra e inserta", h:[["sched","cpu","despacha al productor","s"],["P1","sync","insertar: cuenta = 1","s",["insertar_elemento(elemento);","cuenta := cuenta + 1;"]]],
+   x:"<p>Con el monitor libre, entra el productor e inserta.</p>", s:{c:"productor", p:{P1:"Ejecución"}, q:[], v:{cuenta:"1", "dentro del monitor":"productor"}}, ef:"cuenta = 1"},
+  {t:"signal(vacio)", h:[["sync","bcp","consumidor: Listo","s",["if cuenta = 1 then signal(vacio)"]]],
+   x:"<p>signal despierta al consumidor. Para que no queden dos adentro: <b>Hoare</b> deja correr ya al despertado y suspende al que señaló; <b>Brinch Hansen</b> (el que adopta el libro) exige que signal sea lo último del procedimiento, así el que señaló sale enseguida.</p>",
+   tr:"<b>Trampa</b> Un signal sin nadie esperando se pierde, porque las variables de condición no son contadores. Por eso va condicionado (if cuenta = 1). El up de un semáforo, en cambio, no se pierde nunca.",
+   s:{p:{P2:"Listo"}, q:["P2"], v:{"dentro del monitor":"nadie"}}, ef:"consumidor listo"}
+  ]},
+
+{ title:"Paso de mensajes", u:"U2", g:3, ref:"Tanenbaum, cap. 2.3.8, págs. 140–144 (fig. 2-36)",
+  names:{P1:"PRODUCTOR", P2:"CONSUMIDOR", sync:"BUZONES"}, procs:["P1","P2"], init:{m:"usuario", c:"consumidor", p:{P1:"Listo", P2:"Ejecución"}, q:["P1"], v:{"vacíos en tránsito":"0", "con elemento":"0"}},
+  code:`consumidor:  for (i = 0; i < N; i++) send(productor, &m);   // N mensajes vacíos
+             receive(productor, &m);                          // espera un elemento
+             extraer_elemento(&m, &elemento);
+             send(productor, &m);                             // devuelve un vacío
+
+productor:   receive(consumidor, &m);                         // espera un vacío
+             construir_mensaje(&m, elemento);
+             send(consumidor, &m);                            // envía un elemento`,
+  steps:[
+  {t:"El consumidor manda N mensajes vacíos", h:[["P2","syscall","send × N (vacíos)","k",["for (i = 0; i < N; i++) send(productor, &m);"]],["syscall","sync","N vacíos para el productor","s"]],
+   x:"<p><b>send</b> y <b>receive</b> son <b>llamadas al sistema</b>. Los N vacíos hacen de <b>control de flujo</b>: el productor nunca puede tener más de N elementos en tránsito.</p>",
+   s:{v:{"vacíos en tránsito":"N"}}, ef:"N vacíos enviados"},
+  {t:"El consumidor espera un elemento", h:[["P2","syscall","receive(productor)","k",["receive(productor, &m);"]],["syscall","bcp","no hay mensajes: Bloqueado","k"],["sched","cpu","despacha al productor","s"]],
+   x:"<p>Si no hay mensaje, <b>receive bloquea</b> hasta que llegue uno.</p>", s:{c:"productor", p:{P1:"Ejecución", P2:"Bloqueado (receive)"}, q:[]}, ef:"consumidor bloqueado"},
+  {t:"El productor toma un vacío y manda un elemento", h:[["P1","syscall","receive: toma un vacío","k",["receive(consumidor, &m);"]],["P1","syscall","send: mensaje con el elemento","k",["send(consumidor, &m);"]],["syscall","bcp","consumidor: Listo","s"]],
+   x:"<p>El productor consume un vacío, lo llena y lo manda. El consumidor se despierta.</p>", s:{p:{P2:"Listo"}, q:["P2"], v:{"vacíos en tránsito":"N − 1", "con elemento":"1"}}, ef:"un elemento enviado"},
+  {t:"El consumidor recibe y devuelve el vacío", h:[["sched","cpu","despacha al consumidor","s"],["P2","syscall","receive · extraer · send(vacío)","k",["extraer_elemento(&m, &elemento);","send(productor, &m);                             // devuelve un vacío"]]],
+   x:"<p>El total de mensajes en el sistema es siempre N.</p><p>Como <b>no necesita memoria compartida</b>, sirve igual en una sola máquina (entre procesos o entre hilos) y entre máquinas distintas. Problemas de red: <b>acuse de recibo</b>, <b>números de secuencia</b> y autenticación. Sin búfer se llama <b>rendezvous</b>. Ejemplo real: <b>MPI</b>.</p>",
+   tr:"<b>Trampa</b> El paso de mensajes no es solo para varias máquinas. También sirve entre hilos de un mismo proceso.",
+   s:{c:"consumidor", p:{P1:"Listo", P2:"Ejecución"}, q:["P1"], v:{"vacíos en tránsito":"N", "con elemento":"0"}}, ef:"el ciclo se repite"}
+  ]},
+
+{ title:"Lectores y escritores", u:"U2", g:3, ref:"Tanenbaum, cap. 2.5.2, págs. 167–168 (fig. 2-47)",
+  names:{P1:"LECTORES", P2:"ESCRITOR"}, procs:["P1","P2"], init:{m:"usuario", c:"lector 1", p:{P1:"Ejecución", P2:"Listo"}, q:["P2"], v:{cl:"0", bd:"1", mutex:"1"}},
+  code:`lector:   down(&mutex);  cl = cl + 1;
+          if (cl == 1) down(&bd);     // el primer lector bloquea la base
+          up(&mutex);
+          leer_base_de_datos();
+          down(&mutex);  cl = cl - 1;
+          if (cl == 0) up(&bd);       // el último lector la libera
+          up(&mutex);
+
+escritor: down(&bd);
+          escribir_base_de_datos();
+          up(&bd);`,
+  steps:[
+  {t:"El primer lector bloquea la base", h:[["P1","syscall","down(&mutex); cl = 1","k",["down(&mutex);  cl = cl + 1;"]],["syscall","sync","primer lector: down(&bd) → 0","s",["if (cl == 1) down(&bd);"]]],
+   x:"<p>Muchos pueden leer a la vez, pero un escritor necesita la base para él solo. <b>cl</b> cuenta los lectores; <b>bd</b> es el acceso a la base.</p>", s:{v:{cl:"1", bd:"0"}}, ef:"base tomada por los lectores"},
+  {t:"Llegan más lectores y entran directo", h:[["P1","syscall","lectores 2 y 3: cl = 3","k",["down(&mutex);  cl = cl + 1;"]]],
+   x:"<p>Como cl ya no es 1, los lectores nuevos <b>no tocan bd</b>: entran directo.</p>", s:{v:{cl:"3"}}, ef:"3 lectores adentro"},
+  {t:"Llega el escritor", h:[["sched","cpu","despacha al escritor","s"],["P2","syscall","down(&bd)","k",["escritor: down(&bd);"]],["syscall","sync","bd = 0 → bloqueado","s"]],
+   x:"<p>El escritor tiene que esperar a que salgan todos los lectores.</p>", s:{c:"lectores", p:{P2:"Bloqueado (cola de bd)"}, q:[]}, ef:"escritor espera"},
+  {t:"Siguen llegando lectores", h:[["P1","syscall","lector 4 entra: cl = 4","w",["down(&mutex);  cl = cl + 1;"]]], w:["P2"],
+   x:"<p>Si siempre llega un lector antes de que salga el último, cl <b>nunca llega a 0</b> y el escritor <b>no entra nunca</b>: sufre <b>inanición</b>. Esta solución da prioridad a los lectores.</p>", s:{v:{cl:"4"}}, ef:"inanición del escritor"},
+  {t:"El último lector libera la base", h:[["P1","syscall","cl = 0","k",["down(&mutex);  cl = cl - 1;"]],["syscall","sync","último lector: up(&bd)","s",["if (cl == 0) up(&bd);"]],["sync","bcp","escritor: Listo","s"]],
+   x:"<p>Recién cuando sale el último lector se hace up(&bd) y el escritor puede entrar.</p><p>La alternativa: cuando llega un escritor, los lectores nuevos esperan detrás de él. Así se gana <b>equidad</b> pero se pierde <b>concurrencia</b>, porque los lectores ya no pasan libremente.</p>",
+   k:[["Prioridad a lectores","más rendimiento"],["Prioridad a escritores","más equidad"]],
+   s:{p:{P2:"Listo"}, q:["P2"], v:{cl:"0", bd:"1"}}, ef:"el escritor puede entrar"}
+  ]},
+
+/* ---------------- U2 · Multiprocesadores ---------------- */
+{ title:"Multiprocesador: caché y SMP", u:"U2", g:4, ref:"Tanenbaum, cap. 8.1.1–8.1.3, págs. 526–542",
+  names:{cpu:"CPU 0", P1:"P1 (en CPU 0)", P2:"P2 (en CPU 1)"}, procs:["P1","P2"], init:{m:"usuario", c:"P1 en CPU 0 · P2 en CPU 1", p:{P1:"Ejecución", P2:"Ejecución"}, q:[], v:{"x en RAM":"5", "caché CPU 0":"—", "caché CPU 1":"—"}},
+  code:`// CPU 0 (P1)              // CPU 1 (P2)
+x = x + 1;                 y = x;`,
+  steps:[
+  {t:"Las dos CPU leen x", h:[["mem","cpu","x = 5 → caché de la CPU 0","h"],["mem","cpu1","x = 5 → caché de la CPU 1","h"]],
+   x:"<p>En un multiprocesador con memoria compartida (UMA con bus), cada CPU tiene su <b>caché</b> para no saturar el bus. Las dos se guardan una copia de x.</p>", s:{v:{"caché CPU 0":"5", "caché CPU 1":"5"}}, ef:"dos copias de x"},
+  {t:"La CPU 0 escribe x", h:[["cpu","mem","escribe x = 6","h",["x = x + 1;"]],["mem","cpu1","invalida la copia de la CPU 1","h"]],
+   x:"<p>Para que nadie lea un valor viejo, el <b>protocolo de coherencia de caché</b> <b>invalida</b> las otras copias del bloque.</p>",
+   tr:"<b>Trampa</b> Las otras copias se invalidan, no se actualizan con el valor nuevo. La próxima lectura trae el bloque otra vez por el bus.",
+   s:{v:{"x en RAM":"6", "caché CPU 0":"6", "caché CPU 1":"inválida"}}, ef:"copia invalidada"},
+  {t:"La CPU 1 vuelve a leer: fallo de caché", h:[["cpu1","mem","fallo de caché: trae x = 6","h",["y = x;"]]],
+   x:"<p>La CPU 1 no tiene el bloque válido: lo trae otra vez de la memoria y ahora ve 6.</p>", s:{v:{"caché CPU 1":"6"}}, ef:"la CPU 1 ve 6"},
+  {t:"Un solo SO para todas las CPU (SMP)", f:["cpu","cpu1","sched","bcp"],
+   x:"<p>Tres modelos: <b>un SO por CPU</b> (cada una con su copia; no comparten procesos), <b>maestro-esclavo</b> (todo el SO en una CPU, que es el cuello de botella) y <b>SMP</b> (una sola copia del SO; cualquier CPU puede ejecutarlo).</p><p>En SMP, si dos CPU eligen a la vez el mismo proceso, hay una condición de carrera en las tablas del kernel. Un <b>candado global</b> funciona, pero deja un solo kernel a la vez. Lo correcto es dividir el kernel en <b>regiones críticas independientes</b>, cada una con su mutex.</p>",
+   tr:"<b>Trampa</b> El candado global del SMP no lo hace equivalente a un maestro-esclavo. Cualquier CPU puede ejecutar el kernel, pero de a una por vez.",
+   k:[["SO por CPU","sin compartir procesos"],["Maestro-esclavo","una CPU corre el SO"],["SMP","una copia, todas lo ejecutan"]], ef:"repaso de los modelos"},
+  {t:"Girar o cambiar de proceso", f:["cpu1","mem"],
+   x:"<p>En un multiprocesador, el que tiene el candado <b>está ejecutando en otra CPU</b> y lo va a soltar pronto. Bloquearse cuesta un cambio de contexto y ensucia la caché, así que muchas veces conviene <b>girar un rato</b> (spinlock). Si la espera se alarga, conviene cambiar de proceso.</p><p>Con TSL, cada intento escribe y satura el bus: es mejor leer primero (el valor queda en la caché) y hacer TSL solo cuando el candado parece libre.</p>",
+   k:[["Espera corta","girar (spinlock)"],["Espera larga","bloquear"]], ef:"repaso"}
+  ]},
+
+{ title:"Planificación en multiprocesadores", u:"U2", g:4, ref:"Tanenbaum, cap. 8.1.4, págs. 542–548 (figs. 8-12 a 8-15)",
+  names:{cpu:"CPU 0", P1:"HILO A0", P2:"HILO A1"}, procs:["P1","P2"], init:{m:"usuario", c:"—", p:{P1:"Listo", P2:"Listo"}, q:["P1","P2"], v:{}},
+  code:`tiempo compartido   una cola global de listos para todas las CPU
+espacio compartido  un grupo de CPU para cada proceso, hasta que termine
+pandillas           los hilos de un proceso corren a la vez, en CPU distintas`,
+  steps:[
+  {t:"Tiempo compartido: una cola global", h:[["sched","cpu","A0 → CPU 0","s",["tiempo compartido"]],["sched","cpu1","A1 → CPU 1","s"]],
+   x:"<p>Una sola estructura de listos para todas las CPU: cuando una se libera, toma el siguiente. Reparte bien la carga, pero la cola compartida necesita su candado y un proceso puede cambiar de CPU a cada rato.</p><p>Otro problema: si un proceso que tiene un spinlock pierde la CPU, los demás giran en vano. Por eso existe la <b>planificación inteligente</b>: el proceso pone una bandera mientras tiene un spinlock y el planificador lo deja terminar.</p>",
+   s:{c:"A0 en CPU 0 · A1 en CPU 1", p:{P1:"Ejecución", P2:"Ejecución"}, q:[]}, ef:"cada hilo en una CPU"},
+  {t:"Afinidad de caché", h:[["sched","cpu","A0 vuelve a la CPU 0","s"]],
+   x:"<p>Conviene que un hilo vuelva a la <b>misma CPU</b> donde corrió antes, porque su caché todavía puede tener sus bloques (Vaswani y Zahorjan).</p><p>La <b>planificación de dos niveles</b> asigna cada proceso a una CPU y después cada CPU planifica sus procesos. Esto mantiene la afinidad, reduce la contienda por la cola y reparte la carga robando trabajo cuando una CPU queda ociosa.</p>",
+   k:[["Afinidad","reusar la caché"],["Dos niveles","asignar + planificar localmente"]], ef:"afinidad"},
+  {t:"Hilos que se comunican: el problema", h:[["cpu","mem","A0 envía y espera la respuesta","w"]], w:["cpu","cpu1"],
+   x:"<p>Si A0 y A1 se comunican mucho pero corren en <b>tiempos distintos</b>, cada petición-respuesta espera un quantum entero. Con quanta de 100 ms, cada intercambio puede tardar <b>200 ms</b> (fig. 8-14).</p>",
+   s:{p:{P2:"Listo"}, q:["P2"]}, ef:"200 ms por petición-respuesta"},
+  {t:"Espacio compartido", f:["sched","cpu","cpu1"], cf:["espacio compartido"],
+   x:"<p>Se le da a cada proceso un <b>grupo de CPU</b>, una por hilo, hasta que termine (fig. 8-13). Sin multiprogramación en cada CPU, no hay cambios de contexto. Acá un FCFS es difícil de superar (Krueger, 1994). Tucker y Gupta propusieron un servidor central que ajusta la cantidad de hilos a las CPU disponibles.</p>", ef:"repaso"},
+  {t:"Planificación por pandillas", h:[["sched","cpu","A0 → CPU 0 (mismo quantum)","s",["pandillas"]],["sched","cpu1","A1 → CPU 1 (mismo quantum)","s"]],
+   x:"<p>Tres partes: 1) los hilos relacionados se planifican como una unidad, la <b>pandilla</b>; 2) todos los miembros corren <b>a la vez</b> en CPU distintas; 3) todos empiezan y terminan sus quanta juntos (Ousterhout, 1982).</p><p>El tiempo se divide en quanta <b>sincronizados</b> para todas las CPU (fig. 8-15). Así la respuesta llega dentro del mismo quantum.</p>",
+   tr:"<b>Trampa</b> La traducción al español del libro dice que los quanta son asíncronos. Es un error: están sincronizados en todas las CPU.",
+   s:{c:"A0 en CPU 0 · A1 en CPU 1", p:{P1:"Ejecución", P2:"Ejecución"}, q:[]}, ef:"respuesta en el mismo quantum"}
+  ]}
+];
+
+/* =====================================================================
+   3. VALIDACIÓN DE LOS DATOS (la usa también el script de pruebas)
+   ===================================================================== */
+function codeOf(ti, si){ const T = TOPICS[ti]; for (let i = si; i >= 0; i--) if (T.steps[i].code) return T.steps[i].code; return T.code; }
+function validar(){
+  const errs = [];
+  TOPICS.forEach((T, ti) => {
+    if (!T.steps.length) errs.push(`tema ${ti}: sin pasos`);
+    T.steps.forEach((S, si) => {
+      const id = `tema ${ti+1} paso ${si+1}`, code = codeOf(ti, si);
+      (S.h || []).forEach(h => {
+        if (!route(h[0], h[1])) errs.push(`${id}: no hay ruta ${h[0]}→${h[1]}`);
+        if (!KIND[h[3]]) errs.push(`${id}: tipo ${h[3]}`);
+        if (!h[2]) errs.push(`${id}: salto sin carga`);
+        if (Array.isArray(h[4])) h[4].forEach(f => { if (code.indexOf(f) < 0) errs.push(`${id}: foco no está en el código: ${f}`); });
+      });
+      (S.cf || []).forEach(f => { if (code.indexOf(f) < 0) errs.push(`${id}: foco cf no está: ${f}`); });
+      [...(S.f || []), ...(S.w || [])].forEach(n => { if (!NODES[n]) errs.push(`${id}: nodo ${n}`); });
+      if (S.s && S.s.p) Object.keys(S.s.p).forEach(p => { if (!T.procs.includes(p)) errs.push(`${id}: proceso ${p}`); });
+      if (!(S.h && S.h.length) && !(S.f && S.f.length)) errs.push(`${id}: ni saltos ni foco`);
+    });
+  });
+  return errs;
+}
+
+/* =====================================================================
+   4. ESTADO Y UTILIDADES
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+const NS = "http://www.w3.org/2000/svg";
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const clamp = (a, b, v) => Math.max(a, Math.min(b, v));
+let RED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const store = { get(k){ try { return localStorage.getItem("expso." + k); } catch(e){ return null; } },
+                set(k, v){ try { localStorage.setItem("expso." + k, v); } catch(e){} } };
+
+const S = { ti:0, si:0, el:0, tl:null, auto:false, speed:1, done:new Set(), cam:"guiado", vis:"completo",
+            filtro:"todos", open:new Set([0]), shownCode:null, sig:"", free:{s:1,tx:0,ty:0}, guided:{s:1,tx:0,ty:0},
+            last:0, finished:false };
+
+const nameOf = id => (TOPICS[S.ti].names && TOPICS[S.ti].names[id]) || NODES[id].name;
+// "PROCESO P1" → "Proceso P1", "L (PRIORIDAD BAJA)" → "L (prioridad baja)": las siglas y nombres cortos quedan en mayúscula
+const procName = id => nameOf(id).split(" ").map((w, i) => {
+  const core = w.replace(/[()]/g, "");
+  if (/\d/.test(core) || core.length <= 2 || core === "CPU") return w;
+  const low = w.toLowerCase(); return i === 0 ? low.charAt(0).toUpperCase() + low.slice(1) : low; }).join(" ");
+
+/* =====================================================================
+   5. DIBUJO DEL ESCENARIO
+   ===================================================================== */
+const P = (x, y) => `${x.toFixed(1)},${y.toFixed(1)}`;
+function prism(cx, cy, s, ht, k){       // prisma isométrico: base en (cx,cy), alto ht
+  const w = W*s, h = H*s, top = cy - ht;
+  const tcls = k ? "g-k" : "g-top";
+  return `<polygon class="g-side" points="${P(cx-w,top)} ${P(cx,top+h)} ${P(cx,cy+h)} ${P(cx-w,cy)}"/>`+
+         `<polygon class="g-side2" points="${P(cx,top+h)} ${P(cx+w,top)} ${P(cx+w,cy)} ${P(cx,cy+h)}"/>`+
+         `<polygon class="${tcls}" points="${P(cx,top-h)} ${P(cx+w,top)} ${P(cx,top+h)} ${P(cx-w,top)}"/>`;
+}
+function glyph(g, x, y){
+  switch (g){
+  case "proc": return prism(x,y+4,.42,6)+`<polygon class="g-side" points="${P(x-26,y-6)} ${P(x+2,y-20)} ${P(x+2,y-54)} ${P(x-26,y-40)}"/>`+
+      `<polygon class="g-k" points="${P(x-22,y-12)} ${P(x-2,y-22)} ${P(x-2,y-49)} ${P(x-22,y-39)}"/>`+
+      `<path class="g-line" d="M${x-18} ${y-30}l12-6M${x-18} ${y-24}l12-6M${x-18} ${y-36}l8-4"/>`;
+  case "lib": return prism(x,y+2,.55,7)+prism(x-3,y-8,.5,7)+prism(x+2,y-18,.5,7,1);
+  case "gate": return prism(x-24,y,.13,40)+prism(x+24,y,.13,40)+prism(x,y-40,.5,7,1);
+  case "bcp": return prism(x,y+2,.55,14)+[-14,0,14].map((d,i)=>`<polygon class="${i===1?"g-k":"g-top"}" points="${P(x+d-9,y-14+d*.5)} ${P(x+d+9,y-23+d*.5)} ${P(x+d+9,y-40+d*.5)} ${P(x+d-9,y-31+d*.5)}"/>`).join("");
+  case "sem": return prism(x,y+2,.3,5)+`<path class="g-line" d="M${x} ${y-4}V${y-22}"/>`+prism(x,y-20,.2,34)+
+      `<circle class="g-k" cx="${x-5}" cy="${y-46}" r="4.5"/><circle class="g-top" cx="${x-5}" cy="${y-35}" r="4.5"/><circle class="g-top" cx="${x-5}" cy="${y-24}" r="4.5"/>`;
+  case "queue": return prism(x+26,y-13,.2,14)+prism(x,y,.2,14)+prism(x-26,y+13,.2,14,1)+`<path class="g-kl" d="M${x+40} ${y-40}l-58 29m0 0l9 0m-9 0l4-8"/>`;
+  case "plug": return prism(x,y+2,.42,18,1)+`<path class="g-line" d="M${x-8} ${y-20}v-14M${x+8} ${y-24}v-14"/>`;
+  case "bolt": return prism(x,y+2,.36,5)+`<polygon class="g-k" points="${P(x+6,y-52)} ${P(x-12,y-22)} ${P(x-1,y-22)} ${P(x-7,y-2)} ${P(x+13,y-32)} ${P(x+2,y-32)}"/>`;
+  case "chip": return prism(x,y+2,.62,7)+prism(x,y-6,.32,10,1)+
+      `<path class="g-line" d="M${x-40} ${y-2}l-5 2.5M${x-30} ${y+3}l-5 2.5M${x-20} ${y+8}l-5 2.5M${x+40} ${y-2}l5 2.5M${x+30} ${y+3}l5 2.5M${x+20} ${y+8}l5 2.5"/>`;
+  case "bell": return prism(x,y+2,.34,5)+`<path class="g-k" d="M${x-16} ${y-8}q0-30 16-32q16 2 16 32z"/><circle class="g-top" cx="${x}" cy="${y-5}" r="4"/>`;
+  case "ram": return prism(x,y+2,.7,6)+[-24,-8,8,24].map((d,i)=>prism(x+d,y-4+d*-.0,.11,8,i===1)).join("");
+  case "board": return prism(x,y+2,.62,5)+prism(x-6,y-3,.26,12,1)+prism(x+24,y-2,.1,6)+prism(x-30,y+4,.1,6);
+  case "clock": return prism(x,y+2,.34,5)+`<ellipse class="g-k" cx="${x}" cy="${y-24}" rx="17" ry="17"/><path class="g-line" style="stroke:var(--bg)" d="M${x} ${y-24}v-11M${x} ${y-24}l8 5"/>`;
+  case "rom": return prism(x,y+2,.48,10,1)+`<path class="g-line" d="M${x-34} ${y}l-5 2.5M${x-22} ${y+6}l-5 2.5M${x+34} ${y}l5 2.5M${x+22} ${y+6}l5 2.5"/>`;
+  case "disk": return `<path class="g-side" d="M${x-30} ${y-6}v-18a30 15 0 0 0 60 0v18a30 15 0 0 1-60 0z"/><path class="g-line" d="M${x-30} ${y-15}a30 15 0 0 0 60 0"/><ellipse class="g-k" cx="${x}" cy="${y-24}" rx="30" ry="15"/><ellipse class="g-top" cx="${x}" cy="${y-24}" rx="6" ry="3"/>`;
+  case "dma": return prism(x,y+2,.45,8)+`<path class="g-kl" d="M${x-22} ${y-22}h40m0 0l-7-5m7 5l-7 5M${x+22} ${y-36}h-40m0 0l7-5m-7 5l7 5"/>`;
+  }
+  return "";
+}
+function plateWidth(id){ const n = nameOf(id), r = NODES[id].role; return Math.max(n.length*7.4, r.length*5.6) + 20; }
+
+function drawScene(){
+  const svg = $("#scene");
+  const x0 = COLX[0]-W, y0 = ROW0-H;
+  const bandY1 = ROW0 + RG*.5, bandY2 = ROW0 + RG*2.5;
+  let h = `<defs><pattern id="isogrid" patternUnits="userSpaceOnUse" x="${x0}" y="${y0}" width="${2*W}" height="${2*H}">
+    <path d="M0 ${H} L${W} 0 L${2*W} ${H} L${W} ${2*H} Z" fill="none" stroke="var(--line)" stroke-width="1"/></pattern></defs>`;
+  h += `<g id="cam"><rect x="-760" y="-760" width="2430" height="2510" fill="url(#isogrid)" opacity=".85" class="gridbg"/>`;
+  h += `<g class="bandg"><rect x="-760" y="-760" width="2430" height="${760+bandY1}" fill="var(--band-user)"/>
+        <rect x="-760" y="${bandY1}" width="2430" height="${bandY2-bandY1}" fill="var(--band-kernel)"/>
+        <rect x="-760" y="${bandY2}" width="2430" height="2000" fill="var(--band-hw)"/>
+        <line class="band-sep" x1="-760" x2="1670" y1="${bandY1}" y2="${bandY1}"/><line class="band-sep" x1="-760" x2="1670" y1="${bandY2}" y2="${bandY2}"/>
+        <text class="band-l" x="14" y="22">MODO USUARIO</text>
+        <text class="band-l" x="14" y="${bandY1+20}">KERNEL · MODO KERNEL</text>
+        <text class="band-l" x="14" y="${bandY2+20}">HARDWARE</text>
+        <text class="band-note" x="${(COLX[1]+COLX[2])/2}" y="${bandY1+15}" text-anchor="middle">frontera: TRAP ↓ · retorno ↑</text>
+        <text class="band-note" x="${(COLX[1]+COLX[2])/2}" y="${bandY2+17}" text-anchor="middle">el driver programa ↓ · la interrupción sube ↑</text></g>`;
+  h += `<g id="cables">` + EDGES.map(([a,b], i) => { const p = pos(a), q = pos(b);
+      return `<line class="cable d${i%10}" id="c-${a}-${b}" x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}"/>`; }).join("") + `</g>`;
+  h += `<g id="pings"><circle class="ping" id="ping1" r="0" opacity="0"/><circle class="ping" id="ping2" r="0" opacity="0"/></g>`;
+  h += `<g id="nodes">` + Object.keys(NODES).sort((a,b) => (NODES[a].r - NODES[b].r) || (NODES[a].c - NODES[b].c)).map((id, i) => {
+    const {x, y} = pos(id);
+    const tile = `<polygon class="f-left" points="${P(x-W,y)} ${P(x,y+H)} ${P(x,y+H+D)} ${P(x-W,y+D)}"/>`+
+                 `<polygon class="f-right" points="${P(x,y+H)} ${P(x+W,y)} ${P(x+W,y+D)} ${P(x,y+H+D)}"/>`+
+                 `<polygon class="f-top" points="${P(x,y-H)} ${P(x+W,y)} ${P(x,y+H)} ${P(x-W,y)}"/>`;
+    const py = y + H + D + 8;
+    return `<g class="node d${i%10}" id="n-${id}" data-id="${id}" tabindex="0" role="button" aria-label="${NODES[id].name}: ${NODES[id].role}">
+      <g class="tilegrp">${tile}${glyph(NODES[id].g, x, y)}</g>
+      <line class="plate-tick" x1="${x}" y1="${y+H+D}" x2="${x}" y2="${py}"/>
+      <rect class="plate" id="pl-${id}" x="${x-60}" y="${py}" width="120" height="32" rx="7"/>
+      <text class="p-name" id="pn-${id}" x="${x}" y="${py+14}"></text>
+      <text class="p-role" x="${x}" y="${py+26}">${esc(NODES[id].role)}</text></g>`;
+  }).join("") + `</g>`;
+  h += `<g id="trail">${[0,1,2,3].map(i => `<circle class="trail" id="tr${i}" r="0"/>`).join("")}</g>`;
+  h += `<g id="pkt" opacity="0"><polygon class="arr" id="pktArr" points="0,-4 8,0 0,4"/><circle class="dotc" r="5.5"/>
+        <g id="pktCap"><rect class="cap" id="pktRect" x="0" y="-27" height="17" rx="4"/><text class="lbl" id="pktLbl" x="0" y="-15.5"></text></g></g>`;
+  h += `</g>`;
+  svg.innerHTML = h;
+  svg.querySelectorAll(".node").forEach(n => {
+    n.addEventListener("pointerenter", () => showHover(n.dataset.id));
+    n.addEventListener("pointerleave", hideHover);
+    n.addEventListener("focus", () => showHover(n.dataset.id));
+    n.addEventListener("blur", hideHover);
+  });
+}
+function relabel(){
+  Object.keys(NODES).forEach(id => {
+    const {x} = pos(id), w = plateWidth(id);
+    $("#pn-"+id).textContent = nameOf(id);
+    const r = $("#pl-"+id); r.setAttribute("width", w); r.setAttribute("x", x - w/2);
+  });
+}
+
+/* tarjeta flotante */
+function showHover(id){
+  S.hover = id; const N = NODES[id], card = $("#hover");
+  card.innerHTML = `<h4>${esc(nameOf(id))}</h4><div class="r">${esc(N.role)}</div><p>${esc(N.def)}</p><ul>${N.facts.map(f => `<li>${esc(f)}</li>`).join("")}</ul>`;
+  const wrap = $("#svgwrap").getBoundingClientRect(), r = $("#n-"+id+" .tilegrp").getBoundingClientRect();
+  let left = NODES[id].c === 2 ? r.left - wrap.left - 262 : r.right - wrap.left + 12;
+  left = clamp(6, wrap.width - 256, left);
+  const top = clamp(6, Math.max(6, wrap.height - 210), r.top - wrap.top - 10);
+  card.style.left = left + "px"; card.style.top = top + "px"; card.classList.add("on");
+  $("#n-"+id).classList.add("is-hover");
+}
+function hideHover(){ if (S.hover) $("#n-"+S.hover)?.classList.remove("is-hover"); S.hover = null; $("#hover").classList.remove("on"); }
+
+/* =====================================================================
+   6. LÍNEA DE TIEMPO DE UN PASO
+   ===================================================================== */
+function build(){
+  const T = TOPICS[S.ti], St = T.steps[S.si], code = codeOf(S.ti, S.si);
+  const typed = code !== S.shownCode;
+  const typeMs = typed ? Math.min(1800, code.length*24) : 0;
+  let t = typeMs + (typed ? 280 : 420);
+  const hops = (St.h || []).map(h => {
+    const r = route(h[0], h[1]); const dur = clamp(520, 1400, 360 + r.len*1.1);
+    const o = {from:h[0], to:h[1], label:h[2], kind:KIND[h[3]], focus:h[4], r, start:t, end:t+dur}; t += dur + 200; return o; });
+  if (!hops.length) t += 700; else t -= 200;
+  const rowAt = hops.length ? hops[hops.length-1].start : typeMs;
+  // nodos ya vistos en el tema (modo progresivo)
+  const prevSeen = new Set(["P1"]);
+  for (let i = 0; i < S.si; i++){ const s = T.steps[i]; (s.h||[]).forEach(h => route(h[0],h[1]).nodes.forEach(n => prevSeen.add(n))); (s.f||[]).forEach(n => prevSeen.add(n)); (s.w||[]).forEach(n => prevSeen.add(n)); }
+  // fragmentos de código ya usados en pasos anteriores con el mismo código
+  const prevRg = [];
+  for (let i = 0; i < S.si; i++) if (codeOf(S.ti, i) === code){ const s = T.steps[i];
+    (s.h||[]).forEach(h => { if (Array.isArray(h[4])) prevRg.push(...h[4]); }); (s.cf||[]).forEach(f => prevRg.push(f)); }
+  S.tl = {code, typed, typeMs, hops, rowAt, end:t, prevSeen, prevRg};
+  S.el = 0; S.sig = ""; S.finished = false;
+  S.shownCode = code;
+  guidedCam();
+}
+
+/* cámara guiada: encuadra los nodos del paso */
+function guidedCam(){
+  const St = TOPICS[S.ti].steps[S.si]; const ids = new Set(St.f || []);
+  S.tl.hops.forEach(h => h.r.nodes.forEach(n => ids.add(n)));
+  (St.w || []).forEach(n => ids.add(n));
+  let x1 = 1e9, y1 = 1e9, x2 = -1e9, y2 = -1e9;
+  ids.forEach(id => { const {x, y} = pos(id), hw = Math.max(110, plateWidth(id)/2 + 10);
+    x1 = Math.min(x1, x - hw); x2 = Math.max(x2, x + hw); y1 = Math.min(y1, y - 80); y2 = Math.max(y2, y + 95); });
+  x1 -= 20; y1 -= 20; x2 += 20; y2 += 20;
+  const s = clamp(1, 1.3, Math.min(VB.w/(x2-x1), VB.h/(y2-y1)));   // poco zoom: que siempre se vea el contexto
+  let tx = VB.w/2 - (x1+x2)/2*s, ty = VB.h/2 - (y1+y2)/2*s;
+  tx = clamp(VB.w - VB.w*s, 0, tx); ty = clamp(VB.h - VB.h*s, 0, ty);
+  S.guided = {s, tx, ty};
+  if (S.cam === "guiado") applyCam(S.guided);
+}
+function applyCam(c){ $("#cam").style.transform = `translate(${c.tx}px, ${c.ty}px) scale(${c.s})`; }
+
+/* =====================================================================
+   7. RENDER POR CUADRO
+   ===================================================================== */
+const easeTravel = t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3)/2;
+function curHop(){ const tl = S.tl; let cur = -1, done = 0;
+  tl.hops.forEach((h, i) => { if (S.el >= h.end) done = i+1; else if (S.el >= h.start && cur < 0) cur = i; }); return {cur, done}; }
+
+function frame(now){
+  const dt = S.last ? Math.min(100, now - S.last) : 16; S.last = now;
+  const tl = S.tl;
+  if (tl){
+    S.el += dt * S.speed * (RED ? 1000 : 1);
+    if (S.el >= tl.end + 700 && !S.finished){ S.finished = true; S.done.add(S.ti + "-" + S.si); renderLists(); }
+    if (S.auto && S.el >= tl.end + 2600/S.speed) next(true);
+    else draw();
+  }
+  requestAnimationFrame(frame);
+}
+
+function draw(){
+  const tl = S.tl, St = TOPICS[S.ti].steps[S.si];
+  const {cur, done} = curHop();
+  const typedChars = tl.typeMs ? Math.min(tl.code.length, Math.floor(S.el / tl.typeMs * tl.code.length)) : tl.code.length;
+  const rowShown = S.el >= tl.rowAt, ended = S.el >= tl.end;
+  const sig = [cur, done, rowShown, ended, S.el >= tl.typeMs, typedChars < tl.code.length ? typedChars : "x", S.vis].join("|");
+  if (sig !== S.sig){ S.sig = sig; drawState(cur, done, rowShown, ended, typedChars); }
+  // paquete
+  const pk = $("#pkt");
+  if (cur >= 0){
+    const h = tl.hops[cur], dur = h.end - h.start, e = S.el - h.start;
+    const d = easeTravel(clamp(0, 1, e/dur)) * h.r.len, p = pointAt(h.r, d);
+    const sc = Math.min(.55 + .45*Math.min(1, e/160), .75 + .25*Math.min(1, (dur - e)/160));
+    pk.setAttribute("opacity", 1); pk.setAttribute("class", "k-" + h.kind);
+    pk.setAttribute("transform", `translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) scale(${sc.toFixed(3)})`);
+    const arr = $("#pktArr"), rem = h.r.len - d;
+    arr.setAttribute("transform", `rotate(${(p.ang*180/Math.PI).toFixed(1)}) translate(13 0)`); arr.style.opacity = rem < 16 ? 0 : 1;
+    [9,17,25,33].forEach((o, i) => { const c = $("#tr"+i); if (d - o > 0){ const q = pointAt(h.r, d - o);
+      c.setAttribute("cx", q.x); c.setAttribute("cy", q.y); c.setAttribute("r", [3.4,2.7,2,1.4][i]); c.setAttribute("opacity", [.42,.3,.2,.11][i]); c.setAttribute("class", "trail k-" + h.kind); }
+      else c.setAttribute("r", 0); });
+  } else { pk.setAttribute("opacity", 0); [0,1,2,3].forEach(i => $("#tr"+i).setAttribute("r", 0)); }
+  // pings de salida y llegada
+  const p1 = $("#ping1"), p2 = $("#ping2"); p1.setAttribute("opacity", 0); p2.setAttribute("opacity", 0);
+  tl.hops.forEach(h => {
+    const a = S.el - h.start; if (a >= 0 && a < 360){ const q = pos(h.from), k = a/360;
+      p1.setAttribute("cx", q.x); p1.setAttribute("cy", q.y); p1.setAttribute("r", 3 + 8*k); p1.setAttribute("opacity", .5*(1-k)); p1.setAttribute("class", "ping k-" + h.kind); }
+    const b = S.el - h.end; if (b >= 0 && b < 540){ const q = pos(h.to), k = b/540;
+      p2.setAttribute("cx", q.x); p2.setAttribute("cy", q.y); p2.setAttribute("r", 5 + 16*k); p2.setAttribute("opacity", .7*(1-k)); p2.setAttribute("class", "ping k-" + h.kind); }
+  });
+}
+
+function drawState(cur, done, rowShown, ended, typedChars){
+  const tl = S.tl, St = TOPICS[S.ti].steps[S.si];
+  // nodos
+  const active = new Map(), visited = new Set();
+  tl.hops.forEach((h, i) => {
+    if (i < done){ h.r.nodes.forEach(n => visited.add(n)); }
+    if (i === cur){ active.set(h.from, h.kind); }
+  });
+  if (done > 0){ const lh = tl.hops[done-1]; if (cur < 0 || done === tl.hops.length) active.set(lh.to, lh.kind); }
+  if (!tl.hops.length && S.el >= tl.typeMs) (St.f || []).forEach(n => active.set(n, "user"));
+  const warn = new Set(rowShown ? (St.w || []) : []);
+  // visibles (modo progresivo)
+  let vis = null;
+  if (S.vis === "progresivo"){ vis = new Set(tl.prevSeen);
+    tl.hops.forEach(h => { if (S.el >= h.start) h.r.nodes.forEach(n => vis.add(n)); });
+    if (S.el >= tl.typeMs){ (St.f || []).forEach(n => vis.add(n)); }
+    warn.forEach(n => vis.add(n)); }
+  Object.keys(NODES).forEach(id => {
+    const el = $("#n-"+id); let cls = "node";
+    if (warn.has(id)) cls += " is-warn k-warn";
+    else if (active.has(id)) cls += " is-active k-" + active.get(id);
+    else if (visited.has(id)) cls += " is-visited";
+    if (vis && !vis.has(id)) cls += " is-off";
+    if (S.hover === id) cls += " is-hover";
+    el.setAttribute("class", cls);
+  });
+  // cables
+  const used = new Map(), act = new Map();
+  tl.hops.forEach((h, i) => { for (let j = 1; j < h.r.nodes.length; j++){ const a = h.r.nodes[j-1], b = h.r.nodes[j], k = ekey(a,b);
+    if (i === cur) act.set(k, {kind:h.kind, rev:k !== a+"|"+b}); else if (i < done) used.set(k, h.kind); } });
+  EDGES.forEach(([a,b]) => { const k = a+"|"+b, el = $("#c-"+a+"-"+b); let cls = "cable";
+    if (act.has(k)){ const o = act.get(k); cls += " is-active k-" + o.kind + (o.rev ? " rev" : ""); }
+    else if (used.has(k)) cls += " is-used k-" + used.get(k);
+    if (vis && !(vis.has(a) && vis.has(b))) cls += " is-off";
+    el.setAttribute("class", cls); });
+  if (cur >= 0){ const lbl = tl.hops[cur].label, w = lbl.length*5.9 + 14;
+    $("#pktLbl").textContent = lbl; $("#pktLbl").setAttribute("x", -w/2 + 7);
+    $("#pktRect").setAttribute("width", w); $("#pktRect").setAttribute("x", -w/2); }
+  drawCode(cur, done, ended, typedChars);
+  drawTables(rowShown);
+  drawFoot(cur, done);
+  drawStatus(cur);
+}
+
+/* código con resaltado */
+const KW = new Set("if else while for return int void TRUE monitor condition integer procedure function begin end then wait signal mov int TSL CMP JNE RET MOVE down up sleep wakeup send receive fork execve waitpid read write exit".split(" "));
+function tokenize(code){
+  const re = /(\/\/[^\n]*|;[^\n]*|\|[^\n]*|\/\*.*?\*\/)|("[^"\n]*"|'[^'\n]*')|(\b\d[\dA-Fa-f]*h\b|\b\d+\b)|([A-Za-zÁÉÍÓÚáéíóúñÑ_][\wÁÉÍÓÚáéíóúñÑ]*)|(\s+)|([^\s])/g;
+  const out = []; let m;
+  while ((m = re.exec(code))){ const t = m[0], c = m[1] ? "tk-com" : m[2] ? "tk-str" : m[3] ? "tk-num" : (m[4] && KW.has(t)) ? "tk-kw" : ""; out.push({t, s:m.index, c}); }
+  return out;
+}
+function ranges(code, list){ const r = []; (list || []).forEach(f => { const i = code.indexOf(f); if (i >= 0) r.push([i, i + f.length]); }); return r; }
+function drawCode(cur, done, ended, typedChars){
+  const tl = S.tl, St = TOPICS[S.ti].steps[S.si], code = tl.code;
+  const typing = typedChars < code.length;
+  let now = [], nowKind = "user", all = false;
+  const doneList = [...tl.prevRg];
+  if (!typing){
+    tl.hops.forEach((h, i) => { const f = h.focus;
+      if (i === cur){ if (f === "*") all = true; else if (Array.isArray(f)){ now = ranges(code, f); nowKind = h.kind; } }
+      else if (i < done && Array.isArray(f)) doneList.push(...f); });
+    if (St.cf){ if (!tl.hops.length && !ended){ now = ranges(code, St.cf); } else if (ended) doneList.push(...St.cf); }
+  }
+  const doneR = ranges(code, doneList);
+  const inR = (rs, s, e) => rs.some(([a,b]) => s < b && e > a);
+  let html = "";
+  for (const tk of tokenize(code)){
+    if (tk.s >= typedChars) break;
+    const txt = tk.t.slice(0, typedChars - tk.s), s = tk.s, e = tk.s + txt.length;
+    let cls = tk.c;
+    if (/\S/.test(txt)){
+      if (inR(now, s, e)) cls += ` hl-now k-${nowKind}`; else if (inR(doneR, s, e)) cls += " hl-done"; else if (all) cls += " hl-all";
+    }
+    html += cls ? `<span class="${cls.trim()}">${esc(txt)}</span>` : esc(txt);
+  }
+  if (typing) html += `<span class="cursor"></span>`;
+  $("#code").innerHTML = html;
+  $("#codeSr").textContent = "Código del paso: " + code;
+}
+
+/* estado del sistema y bitácora */
+function stateAt(si, includeCur){
+  const T = TOPICS[S.ti];
+  const st = {m:T.init.m, c:T.init.c, p:{...T.init.p}, q:[...T.init.q], v:{...T.init.v}};
+  const upto = includeCur ? si : si - 1; let changed = {};
+  for (let i = 0; i <= upto; i++){ const s = T.steps[i].s; if (!s) continue;
+    if (s.m !== undefined) st.m = s.m; if (s.c !== undefined) st.c = s.c; if (s.q) st.q = [...s.q];
+    if (s.p) Object.assign(st.p, s.p); if (s.v) Object.assign(st.v, s.v);
+    if (i === si) changed = s.v || {}; }
+  return {st, changed};
+}
+const badgeCls = e => { const w = (e || "").toLowerCase();
+  return w.startsWith("ejec") ? "b-ejec" : w.startsWith("listo") ? "b-listo" : w.startsWith("bloq") ? "b-bloq" : w.startsWith("term") ? "b-term" : w.startsWith("gira") ? "b-gir" : ""; };
+function drawTables(rowShown){
+  const T = TOPICS[S.ti], {st, changed} = stateAt(S.si, rowShown);
+  const mcls = st.m === "kernel" ? "b-kernel" : st.m === "usuario" ? "b-usuario" : "";
+  $("#cpuBox").innerHTML = `<dt>Modo de la CPU</dt><dd><span class="badge ${mcls}">${esc(st.m)}</span></dd>
+    <dt>En la CPU</dt><dd>${esc(st.c)}</dd><dt>Cola de listos</dt><dd>${st.q.length ? st.q.map(p => esc(procName(p))).join(" → ") : "vacía"}</dd>`;
+  $("#procBody").innerHTML = T.procs.map(p => `<tr><td>${esc(procName(p))}</td><td><span class="badge ${badgeCls(st.p[p])}">${esc(st.p[p] || "—")}</span></td></tr>`).join("");
+  $("#vars").innerHTML = Object.entries(st.v).map(([k, v]) => `<span class="var${rowShown && k in changed ? " chg" : ""}">${esc(k)} = ${esc(v)}</span>`).join("");
+  // bitácora
+  let rows = "";
+  for (let i = 0; i <= S.si; i++){
+    const s = T.steps[i], cur = i === S.si; if (cur && !rowShown) break;
+    const pend = cur && S.el < S.tl.end;
+    const reco = (s.h || []).map(h => `${nameOf(h[0])} → ${nameOf(h[1])}`).filter((v, j, a) => a.indexOf(v) === j).join(" · ") || (s.f || []).map(nameOf).join(", ");
+    const m = stateAt(i, true).st.m, warn = (s.h || []).some(h => h[3] === "w") || (s.w || []).length;
+    rows += `<tr class="${warn ? "warn" : ""} ${pend ? "pend" : ""} ${cur ? "rowin" : ""} d${Math.min(9, S.si - i)}"><td class="m">${i+1}</td><td>${esc(s.t)}</td><td class="m">${esc(reco)}</td><td class="m">${esc(m)}</td><td class="ef">${esc(s.ef || "")}</td></tr>`;
+  }
+  $("#logBody").innerHTML = rows;
+}
+function drawFoot(cur, done){
+  const tl = S.tl; let h = null;
+  if (cur >= 0) h = tl.hops[cur]; else if (done > 0) h = tl.hops[done-1];
+  $("#footNow").innerHTML = h ? `<b>${esc(nameOf(h.from))} → ${esc(nameOf(h.to))}</b> · ${esc(h.label)}` : `<b>${esc(TOPICS[S.ti].steps[S.si].t)}</b>`;
+  $("#footRuta").textContent = tl.hops.length ? "Ruta del paso: " + tl.hops.map(x => x.r.nodes.map(nameOf).join(" › ")).join("   |   ") : "Paso sin recorrido: mirá el componente resaltado y el detalle.";
+}
+function drawStatus(cur){
+  const T = TOPICS[S.ti], tl = S.tl, k = cur >= 0 ? tl.hops[cur].kind : (tl.hops.length ? tl.hops[tl.hops.length-1].kind : "user");
+  $("#stDot").className = "dot k-" + k;
+  $("#stTxt").textContent = `Tema ${S.ti+1} · paso ${S.si+1} de ${T.steps.length}`;
+}
+
+/* =====================================================================
+   8. LISTAS, PANEL DE DETALLE Y PROGRESO
+   ===================================================================== */
+function visibleTopics(){ return TOPICS.map((T, i) => i).filter(i => S.filtro === "todos" || TOPICS[i].u === S.filtro); }
+function renderChips(){
+  const opts = [["todos","Todos"],["U1","Unidad 1"],["U2","Unidad 2"]];
+  $("#chips").innerHTML = opts.map(([v, l]) => `<button class="chip" data-f="${v}" aria-pressed="${S.filtro === v}">${l}</button>`).join("");
+  $("#chips").querySelectorAll(".chip").forEach(b => b.onclick = () => { S.filtro = b.dataset.f; renderChips(); renderLists(); });
+}
+function renderLists(){
+  let html = "", lastG = -1;
+  visibleTopics().forEach(ti => { const T = TOPICS[ti];
+    if (T.g !== lastG){ html += `<div class="grp-h">${GROUPS[T.g]}</div>`; lastG = T.g; }
+    const open = S.open.has(ti), curT = ti === S.ti;
+    html += `<div class="topic ${open ? "is-open" : ""} ${curT ? "is-cur" : ""}"><button data-t="${ti}" aria-expanded="${open}"><span class="num">${String(ti+1).padStart(2,"0")}</span><span class="tt">${esc(T.title)}</span><span class="u">${T.u}</span><svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+      <div class="steps"><ol>${T.steps.map((s, si) => { const done = S.done.has(ti+"-"+si), cur = curT && si === S.si;
+        return `<li class="${done ? "is-done" : ""} ${cur ? "is-cur" : ""} ${cur && !S.finished ? "is-playing" : ""}"><button data-t="${ti}" data-s="${si}"><span class="sc k-sync">${si+1}</span>${esc(s.t)}</button></li>`; }).join("")}</ol></div></div>`;
+  });
+  $("#topics").innerHTML = html;
+  $("#topics").querySelectorAll("button[data-t]").forEach(b => b.onclick = () => {
+    const ti = +b.dataset.t;
+    if (b.dataset.s !== undefined) go(ti, +b.dataset.s);
+    else { if (S.open.has(ti) && ti === S.ti) S.open.delete(ti); else { S.open.add(ti); if (ti !== S.ti) go(ti, 0); } renderLists(); }
+  });
+  renderProg();
+}
+function renderProg(){
+  $("#prog").innerHTML = TOPICS.map((T, ti) => `<div class="grp" style="flex-grow:${T.steps.length}" data-t="${ti}" title="${esc(T.title)}">${T.steps.map((s, si) => {
+    const k = ti+"-"+si, cur = ti === S.ti && si === S.si;
+    return `<span class="seg k-sync ${S.done.has(k) ? "is-done" : ""} ${cur && !S.finished ? "is-running" : ""} ${cur ? "is-current" : ""}"></span>`; }).join("")}</div>`).join("");
+  $("#prog").querySelectorAll(".grp").forEach(g => g.onclick = () => go(+g.dataset.t, 0));
+}
+function renderDetail(){
+  const T = TOPICS[S.ti], St = T.steps[S.si];
+  $("#detalle").innerHTML = `<div class="step-in">
+    <div class="eyebrow">Tema ${S.ti+1} · ${T.u} · ${GROUPS[T.g]} · paso ${S.si+1} de ${T.steps.length}</div>
+    <h2>${esc(St.t)}</h2>
+    <div class="txt">${St.x}</div>
+    ${St.k ? `<table class="kv">${St.k.map(([a, b]) => `<tr><td>${esc(a)}</td><td>${esc(b)}</td></tr>`).join("")}</table>` : ""}
+    ${St.tr ? `<div class="trampa">${St.tr}</div>` : ""}
+    <div class="ref">Libro: ${esc(T.ref)}</div>
+    <div class="nav"><button class="btn" id="dPrev">◀ Anterior</button><button class="btn" id="dNext">Siguiente ▶</button></div>
+    <div class="legend">
+      <span class="k-user"><i></i>Modo usuario</span><span class="k-kernel"><i></i>Kernel</span>
+      <span class="k-hw"><i></i>Hardware y bus</span><span class="k-irq"><i></i>Interrupción</span>
+      <span class="k-sync"><i></i>Planificación y sincronización</span><span class="k-warn"><i></i>Problema o costo</span>
+    </div></div>`;
+  $("#dPrev").onclick = () => prev(); $("#dNext").onclick = () => next();
+}
+
+/* =====================================================================
+   9. NAVEGACIÓN
+   ===================================================================== */
+function go(ti, si){
+  const topicChanged = ti !== S.ti;
+  S.ti = ti; S.si = si; S.open.add(ti);
+  if (topicChanged) relabel();
+  build(); renderDetail(); renderLists(); hideHover();
+  try { history.replaceState(null, "", `#t=${ti+1}&p=${si+1}`); } catch(e){}
+  store.set("pos", ti + "," + si);
+}
+function next(fromAuto){
+  const T = TOPICS[S.ti];
+  if (S.si < T.steps.length - 1) go(S.ti, S.si + 1);
+  else { const vt = visibleTopics(), i = vt.indexOf(S.ti);
+    if (i >= 0 && i < vt.length - 1) go(vt[i+1], 0); else if (fromAuto){ S.auto = false; $("#bAuto").setAttribute("aria-pressed", "false"); } }
+}
+function prev(){ if (S.si > 0) go(S.ti, S.si - 1); else { const vt = visibleTopics(), i = vt.indexOf(S.ti); if (i > 0) go(vt[i-1], TOPICS[vt[i-1]].steps.length - 1); } }
+function replay(){ S.shownCode = null; build(); renderLists(); }
+
+/* =====================================================================
+   10. CÁMARA LIBRE
+   ===================================================================== */
+function vbPoint(cx, cy){ const svg = $("#scene"), pt = svg.createSVGPoint(); pt.x = cx; pt.y = cy; return pt.matrixTransform(svg.getScreenCTM().inverse()); }
+function zoomAt(p, f){ const c = S.free, s2 = clamp(.5, 3.5, c.s * f); const wx = (p.x - c.tx)/c.s, wy = (p.y - c.ty)/c.s;
+  S.free = {s:s2, tx:p.x - wx*s2, ty:p.y - wy*s2}; applyCam(S.free); }
+function setCam(mode){
+  S.cam = mode; $("#camG").setAttribute("aria-pressed", mode === "guiado"); $("#camL").setAttribute("aria-pressed", mode === "libre");
+  $("#stage").classList.toggle("free", mode === "libre");
+  ["#zIn","#zOut","#zReset"].forEach(s => $(s).disabled = mode !== "libre");
+  if (mode === "libre") S.free = {...S.guided}; else applyCam(S.guided);
+}
+function initFree(){
+  const svg = $("#scene"); let drag = null;
+  svg.addEventListener("pointerdown", e => { if (S.cam !== "libre") return; drag = {p:vbPoint(e.clientX, e.clientY), c:{...S.free}}; svg.setPointerCapture(e.pointerId); $("#stage").classList.add("dragging"); });
+  svg.addEventListener("pointermove", e => { if (!drag) return; const p = vbPoint(e.clientX, e.clientY);
+    S.free = {s:drag.c.s, tx:drag.c.tx + (p.x - drag.p.x), ty:drag.c.ty + (p.y - drag.p.y)}; applyCam(S.free); });
+  const end = () => { drag = null; $("#stage").classList.remove("dragging"); };
+  svg.addEventListener("pointerup", end); svg.addEventListener("pointercancel", end);
+  svg.addEventListener("wheel", e => { if (S.cam !== "libre") return; try { e.preventDefault(); } catch(_){}
+    zoomAt(vbPoint(e.clientX, e.clientY), Math.exp(-e.deltaY * .0012)); }, {passive:false});
+  $("#zIn").onclick = () => zoomAt({x:VB.w/2, y:VB.h/2}, 1.25);
+  $("#zOut").onclick = () => zoomAt({x:VB.w/2, y:VB.h/2}, .8);
+  $("#zReset").onclick = () => { S.free = {...S.guided}; applyCam(S.free); };
+}
+
+/* =====================================================================
+   11. ARRANQUE
+   ===================================================================== */
+function setTheme(t){ document.documentElement.dataset.theme = t; store.set("theme", t); }
+function init(){
+  const errs = validar(); if (errs.length) console.error("Datos inválidos:\n" + errs.join("\n"));
+  setTheme(store.get("theme") || "dark");
+  drawScene(); renderChips();
+  $("#bPrev").onclick = prev; $("#bNext").onclick = () => next(); $("#bReplay").onclick = replay;
+  $("#bAuto").onclick = () => { S.auto = !S.auto; $("#bAuto").setAttribute("aria-pressed", S.auto); if (S.auto && S.finished) next(true); };
+  $("#speed").onchange = e => { S.speed = +e.target.value; store.set("speed", S.speed); };
+  const sp = store.get("speed"); if (sp){ S.speed = +sp; $("#speed").value = sp; }
+  $("#bTheme").onclick = () => setTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light");
+  $("#camG").onclick = () => setCam("guiado"); $("#camL").onclick = () => setCam("libre");
+  $("#visC").onclick = () => { S.vis = "completo"; $("#visC").setAttribute("aria-pressed", true); $("#visP").setAttribute("aria-pressed", false); S.sig = ""; };
+  $("#visP").onclick = () => { S.vis = "progresivo"; $("#visP").setAttribute("aria-pressed", true); $("#visC").setAttribute("aria-pressed", false); S.sig = ""; };
+  document.addEventListener("keydown", e => { if (e.target.closest && e.target.closest("select")) return;
+    if (e.key === "ArrowRight"){ next(); e.preventDefault(); } else if (e.key === "ArrowLeft"){ prev(); e.preventDefault(); } else if (e.key === "r" || e.key === "R") replay(); });
+  initFree();
+  let ti = 0, si = 0;
+  const m = location.hash.match(/t=(\d+)&p=(\d+)/), saved = (store.get("pos") || "").split(",");
+  if (m){ ti = +m[1] - 1; si = +m[2] - 1; } else if (saved.length === 2){ ti = +saved[0]; si = +saved[1]; }
+  if (!TOPICS[ti]) ti = 0; if (!TOPICS[ti].steps[si]) si = 0;
+  S.ti = -1; relabelPending = true;
+  const svg = $("#scene"); svg.classList.add("pre");
+  S.ti = ti; relabel(); S.open = new Set([ti]);
+  S.tl = null; renderDetail(); renderLists();
+  requestAnimationFrame(() => requestAnimationFrame(() => { svg.classList.remove("pre"); setTimeout(() => go(ti, si), RED ? 0 : 900); }));
+  requestAnimationFrame(frame);
+  window.__explorador = { TOPICS, NODES, EDGES, route, validar, go, next, prev, S, setSpeed:v => { S.speed = v; }, fin:() => { if (S.tl) S.el = S.tl.end + 800; } };
+}
+let relabelPending = false;
+init();
+</script>
+</body>
+</html>

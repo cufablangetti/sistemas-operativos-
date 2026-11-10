@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Exclusión mutua paso a paso</title>
+<style>
+  :root{
+    --bg:#f4f5f8; --panel:#fff; --borde:#d6dae2; --texto:#1b1f24; --suave:#5b6572;
+    --a:#2563eb; --a-bg:#e8f0ff; --b:#9333ea; --b-bg:#f4e9ff; --mem:#0f766e; --mem-bg:#e6f6f4;
+    --ok:#15803d; --ok-bg:#e9f8ee; --mal:#c2410c; --mal-bg:#fff0e8; --cerebro:#7c3aed; --cerebro-bg:#f3edff;
+    --linea:#fff7d6; --linea-b:#e0b400; --acento:#3d63c9;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2;
+      --a:#60a5fa; --a-bg:#15233d; --b:#c084fc; --b-bg:#2a1a3d; --mem:#2dd4bf; --mem-bg:#0f2a27;
+      --ok:#4ade80; --ok-bg:#13291b; --mal:#fb923c; --mal-bg:#2c1b12; --cerebro:#a78bfa; --cerebro-bg:#221a38;
+      --linea:#3a3214; --linea-b:#d4a72c; --acento:#6f8ff0;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2;
+    --a:#60a5fa; --a-bg:#15233d; --b:#c084fc; --b-bg:#2a1a3d; --mem:#2dd4bf; --mem-bg:#0f2a27;
+    --ok:#4ade80; --ok-bg:#13291b; --mal:#fb923c; --mal-bg:#2c1b12; --cerebro:#a78bfa; --cerebro-bg:#221a38;
+    --linea:#3a3214; --linea-b:#d4a72c; --acento:#6f8ff0;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--texto); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .envoltura{max-width:1180px; margin:0 auto; padding:18px 16px 48px}
+  h1{font-size:1.35rem; margin:0 0 4px}
+  .sub{color:var(--suave); margin:0 0 14px; font-size:.92rem}
+  .tarjeta{background:var(--panel); border:1px solid var(--borde); border-radius:12px; padding:14px 16px}
+  .barra{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px}
+  select,button{font:inherit; font-size:.9rem; padding:7px 12px; border-radius:8px; border:1px solid var(--borde);
+    background:var(--panel); color:var(--texto); cursor:pointer}
+  button:hover:not(:disabled),select:hover{border-color:var(--acento)}
+  button:disabled{opacity:.45; cursor:not-allowed}
+  button.prim{background:var(--acento); color:#fff; border-color:var(--acento); font-weight:650}
+  .modo{display:inline-flex; border:1px solid var(--borde); border-radius:8px; overflow:hidden}
+  .modo button{border:0; border-radius:0}
+  .modo button.on{background:var(--acento); color:#fff}
+  .contador{margin-left:auto; color:var(--suave); font-size:.88rem}
+  .grilla{display:grid; grid-template-columns:290px 1fr; gap:12px}
+  @media (max-width:820px){ .grilla{grid-template-columns:1fr} .contador{margin-left:0} }
+  h2{font-size:.82rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave); margin:0 0 8px}
+  .mem{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px}
+  .celda{border:2px solid var(--mem); background:var(--mem-bg); border-radius:9px; padding:6px 10px; min-width:86px; text-align:center}
+  .celda .nom{font:600 .78rem ui-monospace,Consolas,monospace; color:var(--mem)}
+  .celda .val{font:700 1.35rem ui-monospace,Consolas,monospace}
+  .celda.cambio{animation:destello .7s}
+  @keyframes destello{0%{box-shadow:0 0 0 6px var(--linea-b)}100%{box-shadow:0 0 0 0 transparent}}
+  .proc{border:2px solid; border-radius:9px; padding:8px 10px; margin-bottom:8px; font-size:.86rem}
+  .proc.A{border-color:var(--a); background:var(--a-bg)} .proc.B{border-color:var(--b); background:var(--b-bg)}
+  .proc .fila{display:flex; justify-content:space-between; gap:8px}
+  .proc b{font-size:.95rem}
+  .rc{border-radius:10px; padding:10px; text-align:center; font-weight:650; border:2px dashed var(--borde); margin-top:6px}
+  .rc.uno{border-color:var(--ok); background:var(--ok-bg); color:var(--ok)}
+  .rc.dos{border-color:var(--mal); background:var(--mal-bg); color:var(--mal); border-style:solid; animation:destello 1s infinite}
+  .codigos{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  @media (max-width:560px){ .codigos{grid-template-columns:1fr} }
+  .cod{border:2px solid; border-radius:10px; overflow:hidden; background:var(--panel)}
+  .cod.A{border-color:var(--a)} .cod.B{border-color:var(--b)}
+  .cod .tit{padding:5px 10px; font-weight:650; font-size:.85rem; display:flex; justify-content:space-between; align-items:center}
+  .cod.A .tit{background:var(--a-bg); color:var(--a)} .cod.B .tit{background:var(--b-bg); color:var(--b)}
+  .cod ol{margin:0; padding:6px 0; list-style:none; counter-reset:l}
+  .cod li{font:13px/1.55 ui-monospace,Consolas,monospace; padding:1px 10px 1px 34px; position:relative; white-space:pre-wrap; border-left:4px solid transparent}
+  .cod li::before{counter-increment:l; content:counter(l); position:absolute; left:8px; color:var(--suave); font-size:11px; top:3px}
+  .cod li.rcl{background:rgba(127,127,127,.07)}
+  .cod li.sig::after{content:"◀ sigue"; position:absolute; right:8px; color:var(--suave); font-size:11px}
+  .cod li.ejec{background:var(--linea); border-left-color:var(--linea-b); font-weight:700}
+  .quien{font-size:.75rem; padding:1px 8px; border-radius:10px; background:var(--linea-b); color:#000}
+  .ejecutar{margin-top:8px; width:100%}
+  .porque{margin-top:12px; border-left:5px solid var(--acento); background:var(--panel); border-radius:10px; padding:12px 14px; border:1px solid var(--borde); border-left-width:5px}
+  .porque .paso{font-size:.8rem; color:var(--suave); font-weight:650; text-transform:uppercase; letter-spacing:.04em}
+  .porque p{margin:4px 0 0}
+  .marca{display:block; margin-top:8px; border-radius:8px; padding:7px 10px; font-size:.9rem}
+  .marca.ojo{background:var(--mal-bg); border:1px solid var(--mal)}
+  .marca.cer{background:var(--cerebro-bg); border:1px solid var(--cerebro)}
+  .ideas{margin-top:14px}
+  .ideas ul{margin:6px 0 0; padding-left:20px}
+  .ideas li{margin:4px 0}
+  .leyenda{font-size:.82rem; color:var(--suave); margin-top:8px}
+  .tag{display:inline-block; font-size:.72rem; font-weight:700; padding:1px 7px; border-radius:9px; margin-left:6px; vertical-align:2px}
+  .tag.prob{background:var(--mal-bg); color:var(--mal); border:1px solid var(--mal)}
+  .tag.sol{background:var(--ok-bg); color:var(--ok); border:1px solid var(--ok)}
+  code{font-family:ui-monospace,Consolas,monospace; font-size:.9em}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <h1>Exclusión mutua con espera ocupada</h1>
+  <p class="sub">Dos procesos quieren entrar a su región crítica. Elegí un escenario y apretá <b>Siguiente paso</b>:
+    cada clic ejecuta <b>una línea</b> del proceso que eligió el planificador. Arriba a la izquierda ves la memoria compartida;
+    a la derecha, el código con la línea que se acaba de ejecutar resaltada. En el modo <b>«Vos sos el planificador»</b>
+    elegís quién ejecuta e intentás romper la solución. (Tanenbaum, cap. 2.3.3, págs. 120–125)</p>
+
+  <div class="tarjeta">
+    <div class="barra">
+      <select id="esc" aria-label="Escenario">
+        <optgroup label="Problema">
+          <option value="candado">1 · Variable de candado (falla)</option>
+          <option value="alternancia">2 · Alternancia estricta (falla)</option>
+        </optgroup>
+        <optgroup label="Solución">
+          <option value="peterson">3 · Peterson (funciona)</option>
+          <option value="tsl">4 · TSL (funciona)</option>
+        </optgroup>
+        <optgroup label="Consecuencia de girar">
+          <option value="inversion">5 · Inversión de prioridades</option>
+        </optgroup>
+      </select>
+      <div class="modo" role="group" aria-label="Modo">
+        <button id="m-guion" class="on">Guion</button>
+        <button id="m-libre">Vos sos el planificador</button>
+      </div>
+      <button id="ant">◀ Anterior</button>
+      <button id="sig" class="prim">Siguiente paso ▶</button>
+      <button id="rei">↺ Reiniciar</button>
+      <span class="contador" id="cont"></span>
+    </div>
+
+    <div class="grilla">
+      <div>
+        <h2>Memoria compartida</h2>
+        <div class="mem" id="mem"></div>
+        <h2>Procesos</h2>
+        <div id="procs"></div>
+        <div class="rc" id="rc"></div>
+        <div class="leyenda">Las líneas sombreadas del código son la región crítica.</div>
+      </div>
+      <div>
+        <h2 id="tit-esc"></h2>
+        <div class="codigos" id="codigos"></div>
+      </div>
+    </div>
+
+    <div class="porque" id="porque"></div>
+  </div>
+
+  <div class="tarjeta ideas">
+    <h2>Ideas clave y frases de examen</h2>
+    <ul id="ideas"></ul>
+  </div>
+</div>
+
+<script id="motor">
+// ====================================================================
+// MOTOR — ejecuta el código de verdad, línea por línea.
+// Cada línea: {t: texto, run(st, p) -> próxima línea, nota(st, p) -> por qué}
+// El guion es la secuencia de quién ejecuta; {ev} son eventos del SO.
+// ====================================================================
+const otro = p => p === "A" ? "B" : "A";
+const num = p => p === "A" ? 0 : 1;
+
+const ESCENARIOS = {
+  candado: {
+    titulo: "Variable de candado", tipo: "prob", procs: ["A", "B"], mem0: {candado: 0}, rc: [2, 3],
+    codigo: p => [
+      {t: "while (candado != 0) ;   /* espero */", run: s => s.mem.candado !== 0 ? 0 : 1,
+       nota: (s, p) => s.mem.candado !== 0 ? `${p} lee candado = 1: ocupado, sigue girando.` : `${p} lee candado = 0: libre, así que sale del while. Todavía NO lo puso en 1.`},
+      {t: "candado = 1;", run: s => (s.mem.candado = 1, 2), nota: (s, p) => `${p} pone candado = 1 y se considera adentro.`},
+      {t: "region_critica();", run: () => 3, nota: (s, p) => `${p} trabaja con los datos compartidos.`},
+      {t: "candado = 0;", run: s => (s.mem.candado = 0, 4), nota: (s, p) => `${p} libera el candado.`},
+      {t: "region_no_critica();", run: () => 0, nota: (s, p) => `${p} hace su trabajo privado y vuelve a empezar.`}
+    ],
+    guion: ["A", {quien: "B", nota: "El planificador saca a A justo entre LEER el candado y ESCRIBIRLO. B también lo lee en 0.", marca: ["ojo", "Este es el hueco: leer y escribir son dos pasos separados."]},
+            "B", {quien: "A", nota: "A vuelve y escribe candado = 1 sin volver a leerlo: ya había decidido que estaba libre.", marca: ["ojo", "Los DOS están en la región crítica. Viola la condición 1. Es el mismo error del spooler."]},
+            "B", "A"],
+    ideas: [
+      "⚠️ Falla porque <b>leer y escribir el candado son dos pasos</b>: entre uno y otro el planificador puede cambiar de proceso.",
+      "Viola la <b>condición 1</b> (nunca dos adentro). Es exactamente el error del spooler con <code>in</code>.",
+      "🧠 Frase de examen: «la variable de candado no sirve porque la prueba y la asignación no son atómicas».",
+      "TSL (escenario 4) es esta misma idea, pero con el hardware haciendo los dos pasos en uno."
+    ]
+  },
+  alternancia: {
+    titulo: "Alternancia estricta", tipo: "prob", procs: ["A", "B"], mem0: {turno: 0}, rc: [1, 2],
+    codigo: p => {
+      const yo = num(p), el = 1 - yo;
+      return [
+        {t: `while (turno != ${yo}) ;   /* espero mi turno */`, run: s => s.mem.turno !== yo ? 0 : 1,
+         nota: s => s.mem.turno !== yo ? `turno = ${s.mem.turno}: no le toca a ${p}, sigue girando (gasta CPU).` : `turno = ${yo}: le toca a ${p}, entra.`},
+        {t: "region_critica();", run: () => 2, nota: () => `${p} trabaja en la región crítica.`},
+        {t: `turno = ${el};   /* le paso el turno */`, run: s => (s.mem.turno = el, 3), nota: () => `${p} le pasa el turno a ${otro(p)}.`},
+        {t: p === "A" ? "region_no_critica();   /* LARGA */" : "region_no_critica();   /* corta */",
+         run: (s) => { s.trabajo[p] = (s.trabajo[p] || 0) + 1; const dura = p === "A" ? 6 : 1; if (s.trabajo[p] >= dura){ s.trabajo[p] = 0; return 0; } return 3; },
+         nota: (s) => p === "A" ? `A sigue con su trabajo privado, que es largo (${s.trabajo.A || 6}/6).` : "B termina enseguida su trabajo privado y vuelve a querer entrar."}
+      ];
+    },
+    guion: ["A", "A", "A", "A", "B", "B", "B", "B",
+            {quien: "B", nota: "B quiere entrar otra vez, pero turno = 0 (le toca a A).", marca: ["ojo", "A está AFUERA de la región crítica (en su parte larga) y aun así bloquea a B. Viola la condición 3."]},
+            "B", "B", "A", "A", "A"],
+    ideas: [
+      "Garantiza la exclusión mutua (nunca dos adentro), pero <b>obliga a alternar</b>: A, B, A, B…",
+      "⚠️ Viola la <b>condición 3</b>: un proceso que está <b>afuera</b> de su región crítica bloquea al otro. (En clase dijiste la 2: es la 3.)",
+      "Si un proceso es mucho más lento, el rápido gira esperando aunque nadie use la región crítica.",
+      "🧠 Frase de examen: «la alternancia estricta no es buena idea cuando un proceso es mucho más lento que el otro»."
+    ]
+  },
+  peterson: {
+    titulo: "Solución de Peterson", tipo: "sol", procs: ["A", "B"], mem0: {"interesado[0]": "F", "interesado[1]": "F", turno: "–"}, rc: [3, 4],
+    codigo: p => {
+      const yo = num(p), el = 1 - yo, k = `interesado[${yo}]`, ko = `interesado[${el}]`;
+      return [
+        {t: `${k} = TRUE;   /* levanto mi cartel */`, run: s => (s.mem[k] = "T", 1), nota: () => `${p} avisa que quiere entrar.`},
+        {t: `turno = ${yo};   /* escribo turno */`, run: s => (s.mem.turno = yo, 2), nota: () => `${p} escribe turno = ${yo}. El último que escribe turno es el que cede.`},
+        {t: `while (turno == ${yo} && ${ko} == TRUE) ;`, run: s => (s.mem.turno === yo && s.mem[ko] === "T") ? 2 : 3,
+         nota: s => (s.mem.turno === yo && s.mem[ko] === "T")
+           ? `turno == ${yo} (${p} escribió último) Y ${otro(p)} está interesado → ${p} espera, girando.`
+           : (s.mem[ko] !== "T" ? `${otro(p)} no está interesado → ${p} entra directo.` : `turno = ${s.mem.turno}: el último en escribir fue ${otro(p)}, que cede → ${p} entra.`)},
+        {t: "region_critica();", run: () => 4, nota: () => `${p} trabaja en la región crítica.`},
+        {t: `${k} = FALSE;   /* bajo mi cartel */`, run: s => (s.mem[k] = "F", 5), nota: () => `${p} baja su cartel. Esto es lo que destraba al otro.`},
+        {t: "region_no_critica();", run: () => 0, nota: () => `${p} hace su trabajo privado.`}
+      ];
+    },
+    guion: ["A", "B", "A", {quien: "B", nota: "B escribe turno = 1 DESPUÉS que A. Ahora B es el último que escribió.", marca: ["cer", "El último que escribe turno cede: como turno es UNA sola variable, no pueden esperar los dos."]},
+            "A", "B", "B", "A",
+            {quien: "A", nota: "A sale y baja su cartel.", marca: ["cer", "Lo que libera a B no es un cambio de turno: es que A ponga interesado[0] = FALSE."]},
+            "B", "B", "B"],
+    ideas: [
+      "Dos variables: <code>interesado[]</code> (quién quiere entrar) y <code>turno</code> (quién escribió último).",
+      "🧠 <b>El último que escribe turno cede.</b> De las 4 combinaciones de la condición del while, solo una hace esperar: turno es mío Y el otro está interesado.",
+      "✅ Cumple las 4 condiciones y es <b>solo software</b>. Pero <b>sigue siendo espera ocupada</b>: el que espera gasta CPU (ver escenario 5).",
+      "Probá el modo «Vos sos el planificador»: no hay orden que meta a los dos adentro."
+    ]
+  },
+  tsl: {
+    titulo: "Instrucción TSL (hardware)", tipo: "sol", procs: ["A", "B"], mem0: {CANDADO: 0}, rc: [3, 4, 5],
+    codigo: p => [
+      {t: "entrar_region: TSL REGISTRO,CANDADO", run: s => { s.reg[p] = s.mem.CANDADO; s.mem.CANDADO = 1; return 1; },
+       nota: s => `De un solo golpe: copia el candado al REGISTRO de ${p} (quedó ${s.reg[p]}) y pone CANDADO = 1. Nadie puede meterse en el medio: el bus está bloqueado.`},
+      {t: "        CMP REGISTRO,#0", run: s => (s.z[p] = s.reg[p] === 0, 2), nota: s => `¿El valor VIEJO era 0? ${s.z[p] ? "Sí: estaba libre." : "No: ya estaba ocupado."}`},
+      {t: "        JNE entrar_region", run: s => s.z[p] ? 3 : 0, nota: s => s.z[p] ? "Era igual a 0: no salta, sigue de largo." : `No era 0: salta a entrar_region y vuelve a probar (girando).`},
+      {t: "        RET   ; ganó, entra", run: () => 4, nota: () => `${p} ganó el candado y entra a la región crítica.`},
+      {t: "region_critica();", run: () => 5, nota: () => `${p} trabaja en la región crítica.`},
+      {t: "salir_region: MOVE CANDADO,#0", run: s => (s.mem.CANDADO = 0, 6), nota: () => `${p} libera: CANDADO = 0.`},
+      {t: "region_no_critica();", run: () => 0, nota: () => `${p} hace su trabajo privado.`}
+    ],
+    guion: ["A", {quien: "B", nota: "B hace TSL: escribe 1 (ya era 1, no cambia nada) y en su registro queda el valor viejo: 1.", marca: ["cer", "TSL escribe 1 siempre; lo que te dice si ganaste es el valor VIEJO que quedó en tu registro."]},
+            "A", "A", "B", "B", "A", "A", "B", "B", "B", "A", "B", "B", "B", "B"],
+    ideas: [
+      "🧠 Es la variable de candado <b>sin el hueco</b>: el hardware hace leer y escribir en una sola operación indivisible.",
+      "📌 TSL bloquea el <b>bus de memoria</b>, no «a las otras CPU»; deshabilitar interrupciones bloquea una sola CPU.",
+      "CMP + JNE juntos son un <code>if</code>. El REGISTRO es privado de cada proceso («tu mano»).",
+      "✅ Exclusión mutua perfecta, pero ⚠️ <b>espera ocupada</b>: el culpable de la inversión de prioridades es girar, no TSL."
+    ]
+  },
+  inversion: {
+    titulo: "Inversión de prioridades (TSL + prioridades estrictas)", tipo: "prob", procs: ["A", "B"], nombres: {A: "L (baja)", B: "H (alta)"},
+    mem0: {CANDADO: 0}, rc: [3, 4, 5], estados0: {A: "Ejecución", B: "Bloqueado"}, prioridad: true,
+    codigo: p => ESCENARIOS.tsl.codigo(p),
+    guion: ["A", "A", "A", {quien: "A", nota: "L ganó el candado y está por trabajar en su región crítica."},
+            {ev: "h_listo", nota: "H termina su E/S → pasa a LISTO. El planificador siempre elige al de mayor prioridad listo: H → EJECUCIÓN y L → LISTO (con el candado agarrado).", marca: ["cer", "Separá dos columnas: quién tiene la CPU (H) y quién tiene el candado (L)."]},
+            "B", "B", {quien: "B", nota: "H no consiguió el candado: vuelve a probar."}, "B", "B", "B",
+            {ev: "quantum", nota: "Se acaba el quantum de H → H pasa a LISTO (no a bloqueado). El planificador elige otra vez al de mayor prioridad: H.", marca: ["ojo", "Fin de quantum → LISTO, nunca BLOQUEADO. Y TSL no es una llamada al sistema: H no tiene con qué bloquearse."]},
+            "B", "B", {quien: "B", nota: "Y así para siempre.", marca: ["ojo", "Para liberar el candado L tiene que EJECUTAR «MOVE CANDADO,#0», y para ejecutar necesita la CPU, que nunca recibe. NO es interbloqueo: H no está bloqueado, está girando con la CPU al 100 %."]}],
+    ideas: [
+      "Los 3 ingredientes: <b>prioridades estrictas + espera ocupada + el de baja tiene el recurso</b> que necesita el de alta.",
+      "⚠️ H consigue la CPU siempre; lo que no consigue es el candado. <b>La prioridad no falla: se respeta de más.</b>",
+      "⚠️ <b>No es interbloqueo</b>: H está ejecutando (girando) y L está LISTO; nadie está bloqueado. L sufre inanición.",
+      "🧠 Solución: <b>bloquearse en vez de girar</b> (semáforos, mutex). Con un tercero de prioridad media hace falta además la <b>herencia de prioridades</b> (caso Mars Pathfinder, complemento)."
+    ]
+  }
+};
+
+function nuevoEstado(id){
+  const e = ESCENARIOS[id];
+  return {
+    mem: Object.assign({}, e.mem0), pc: {A: 0, B: 0}, reg: {A: "–", B: "–"}, z: {A: null, B: null}, trabajo: {},
+    estado: Object.assign({A: "Listo", B: "Listo"}, e.estados0 || {}), cpu: e.estados0 ? "A" : null,
+    paso: 0, ultimo: null, nota: "", marca: null, cambios: []
+  };
+}
+const clonar = s => JSON.parse(JSON.stringify(s));
+const enRC = (id, s, p) => ESCENARIOS[id].rc.includes(s.pc[p]);
+
+// ejecuta una línea del proceso p (o un evento) y devuelve el estado nuevo
+function ejecutar(id, s0, accion){
+  const e = ESCENARIOS[id], s = clonar(s0);
+  const memAntes = JSON.stringify(s.mem);
+  s.marca = null; s.cambios = [];
+  if (accion.ev === "h_listo"){
+    s.estado.B = "Ejecución"; s.estado.A = "Listo"; s.cpu = "B"; s.ultimo = null; s.nota = accion.nota;
+  } else if (accion.ev === "quantum"){
+    s.estado.B = "Listo"; s.nota = accion.nota; s.estado.B = "Ejecución"; s.ultimo = null;
+  } else {
+    const p = accion.quien;
+    if (e.prioridad){ s.estado[p] = "Ejecución"; s.cpu = p; }
+    const linea = e.codigo(p)[s.pc[p]];
+    s.ultimo = {p, linea: s.pc[p]};
+    s.pc[p] = linea.run(s, p);
+    s.nota = accion.nota || linea.nota(s, p);
+  }
+  if (accion.marca) s.marca = accion.marca;
+  else if (!accion.ev && e.procs.every(p => enRC(id, s, p))) s.marca = ["ojo", "Los DOS están en la región crítica: se violó la exclusión mutua."];
+  const ma = JSON.parse(memAntes);
+  s.cambios = Object.keys(s.mem).filter(k => ma[k] !== s.mem[k]);
+  s.paso++;
+  return s;
+}
+const accionDe = g => typeof g === "string" ? {quien: g} : g;
+
+// corre un guion completo (para las pruebas)
+function correr(id, guion){
+  let s = nuevoEstado(id); const hist = [s];
+  (guion || ESCENARIOS[id].guion).forEach(g => { s = ejecutar(id, s, accionDe(g)); hist.push(s); });
+  return hist;
+}
+if (typeof module !== "undefined") module.exports = {ESCENARIOS, nuevoEstado, ejecutar, correr, enRC};
+</script>
+
+<script>
+// ====================================================================
+// INTERFAZ
+// ====================================================================
+const $ = id => document.getElementById(id);
+let id = "candado", hist = [], libre = false;
+
+function reiniciar(){
+  hist = [nuevoEstado(id)];
+  pintar();
+}
+function actual(){ return hist[hist.length - 1]; }
+const nombre = p => (ESCENARIOS[id].nombres || {})[p] || p;
+
+function pintar(){
+  const e = ESCENARIOS[id], s = actual();
+  $("tit-esc").innerHTML = "Código · " + e.titulo + (e.tipo === "sol" ? '<span class="tag sol">SOLUCIÓN</span>' : '<span class="tag prob">PROBLEMA</span>');
+  // memoria
+  $("mem").innerHTML = Object.entries(s.mem).map(([k, v]) =>
+    `<div class="celda${s.cambios.includes(k) ? " cambio" : ""}"><div class="nom">${k}</div><div class="val">${v}</div></div>`).join("");
+  // procesos
+  $("procs").innerHTML = e.procs.map(p => {
+    const dentro = enRC(id, s, p);
+    return `<div class="proc ${p}"><div class="fila"><b>${nombre(p)}</b><span>${dentro ? "🔒 en región crítica" : "afuera"}</span></div>` +
+      `<div class="fila"><span>Estado: <b>${s.estado[p]}</b></span>${id === "tsl" || id === "inversion" ? `<span>REGISTRO = <b>${s.reg[p]}</b></span>` : ""}</div></div>`;
+  }).join("");
+  const adentro = e.procs.filter(p => enRC(id, s, p));
+  $("rc").className = "rc" + (adentro.length === 1 ? " uno" : adentro.length === 2 ? " dos" : "");
+  $("rc").textContent = adentro.length === 0 ? "Región crítica: vacía" : adentro.length === 1 ? "Región crítica: " + nombre(adentro[0]) + " ✓" : "⚠️ Región crítica: " + adentro.map(nombre).join(" y ") + " A LA VEZ";
+  // código
+  $("codigos").innerHTML = e.procs.map(p => {
+    const lineas = e.codigo(p);
+    const ej = s.ultimo && s.ultimo.p === p ? s.ultimo.linea : -1;
+    const puedo = libre && puedeEjecutar(p);
+    return `<div class="cod ${p}"><div class="tit"><span>Proceso ${nombre(p)}</span>${ej >= 0 ? '<span class="quien">▶ ejecutó ' + nombre(p) + "</span>" : ""}</div><ol>` +
+      lineas.map((l, i) => `<li class="${e.rc.includes(i) ? "rcl " : ""}${i === ej ? "ejec " : ""}${i === s.pc[p] ? "sig" : ""}">${esc(l.t)}</li>`).join("") +
+      `</ol>${libre ? `<div style="padding:0 10px 10px"><button class="ejecutar" data-p="${p}" ${puedo ? "" : "disabled"}>Ejecutar una línea de ${nombre(p)}</button>` +
+      (!puedo && e.prioridad ? `<div class="leyenda">El planificador no te deja: hay uno de mayor prioridad listo.</div>` : "") + "</div>" : ""}</div>`;
+  }).join("");
+  document.querySelectorAll(".ejecutar").forEach(b => b.onclick = () => { hist.push(ejecutar(id, actual(), {quien: b.dataset.p})); pintar(); });
+  // por qué
+  const total = e.guion.length;
+  $("porque").innerHTML = `<div class="paso">${s.paso === 0 ? "Inicio" : "Paso " + s.paso + (s.ultimo ? " · ejecutó " + nombre(s.ultimo.p) : " · evento del SO")}</div>` +
+    `<p>${s.paso === 0 ? inicio() : s.nota}</p>` +
+    (s.marca ? `<span class="marca ${s.marca[0] === "ojo" ? "ojo" : "cer"}">${s.marca[0] === "ojo" ? "⚠️ " : "🧠 "}${s.marca[1]}</span>` : "");
+  $("cont").textContent = libre ? `Modo libre · ${s.paso} pasos` : `Paso ${s.paso} de ${total}`;
+  $("sig").disabled = libre || s.paso >= total;
+  $("ant").disabled = hist.length <= 1;
+  $("ideas").innerHTML = e.ideas.map(t => `<li>${t}</li>`).join("");
+}
+function inicio(){
+  const e = ESCENARIOS[id];
+  if (id === "inversion") return "L (baja prioridad) está ejecutando; H (alta) está bloqueado esperando una E/S. Los dos usan TSL para entrar a la región crítica.";
+  return libre ? "Elegí qué proceso ejecuta su próxima línea con los botones debajo de cada código. ¿Podés meter a los dos en la región crítica?"
+               : "Apretá «Siguiente paso». El planificador del guion elige quién ejecuta cada línea.";
+}
+function puedeEjecutar(p){
+  const e = ESCENARIOS[id], s = actual();
+  if (!e.prioridad) return true;
+  if (p === "B") return s.estado.B !== "Bloqueado";
+  return s.estado.B === "Bloqueado";          // L solo corre mientras H esté bloqueado
+}
+function esc(t){ return t.replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+
+$("sig").onclick = () => { const s = actual(), g = ESCENARIOS[id].guion[s.paso]; if (g) { hist.push(ejecutar(id, s, accionDe(g))); pintar(); } };
+$("ant").onclick = () => { if (hist.length > 1){ hist.pop(); pintar(); } };
+$("rei").onclick = reiniciar;
+$("esc").onchange = e => { id = e.target.value; reiniciar(); };
+$("m-guion").onclick = () => { libre = false; $("m-guion").classList.add("on"); $("m-libre").classList.remove("on"); reiniciar(); };
+$("m-libre").onclick = () => {
+  libre = true; $("m-libre").classList.add("on"); $("m-guion").classList.remove("on"); reiniciar();
+};
+document.addEventListener("keydown", e => { if (e.key === "ArrowRight") $("sig").click(); if (e.key === "ArrowLeft") $("ant").click(); });
+reiniciar();
+</script>
+</body>
+</html>

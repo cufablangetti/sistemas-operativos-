@@ -3,7 +3,7 @@
 > **Este archivo es para la IA que retoma la tutoría en otra computadora.**
 > Leelo completo antes de responderle nada al estudiante.
 
-Última actualización: **2026-11-03**
+Última actualización: **2026-11-09**
 
 ---
 
@@ -38,6 +38,11 @@ Material en `material_so/` (**nunca modificar los originales**). Libro principal
 - **El mapa conceptual acumulativo, U1 + U2** — fuente única `plan/mapa_conceptual.md`; salidas `plan/mapa_conceptual.pdf` (50 págs., con anexos de errores, cruces y trampas) y `visuales/mapa_conceptual.html` (buscador, filtros por tipo de marca, cruces clickeables). Las dudas que el estudiante anotó en **`googleia.md`** (raíz del proyecto, su chat con otro asistente) están incorporadas como ❓.
 
 **⭐ QUÉ QUIERE AHORA EL ESTUDIANTE (pedido explícito del 3/11):** *repasar y ordenar bien las Unidades 1 y 2 con el mapa conceptual antes de empezar la Unidad 3*, "para tener todo fresco". Lo que más le importa es **el mapa**. Si pide ayuda con el repaso, conviene recorrer el mapa rama por rama, hacerle recitar las 🔢 secuencias y repasar juntos los ⚠️ errores y 📌 trampas (el HTML tiene filtros para cada uno).
+
+**🆕 9/11 — lo que se hizo sobre el mapa gráfico (pedido explícito, "SIN CAMBIAR NADA DE LO QUE YA ESTÁ"):**
+- Se leyó `preguntasrepaso.md` (raíz; su chat de repaso con otra IA: **64 preguntas**, del tema 1 de la U1 a sleep/wakeup) y se agregaron **57 comentarios 💬** en `visuales/mapa_grafico.html`, como comentarios de un .docx: burbuja en la caja + panel lateral con filtros (U1/U2/con corrección/sin resolver), buscador, «Resuelto» y una pestaña «🎛 Gráficos». Todo va en un bloque agregado antes de `</body>`; lo de arriba quedó idéntico byte por byte (copia previa en `_trabajo/mapa_grafico_antes_comentarios.html`).
+- **Errores de la otra IA marcados con ⚠️ en los comentarios:** (1) le dio por bueno que la inversión de prioridades es «inanición + interbloqueo» → **no es interbloqueo**: H está ejecutando (girando), L está LISTO; (2) le dijo que el planificador y los drivers son «procesos del kernel» → el planificador es código del kernel que llama la interrupción de reloj; los drivers son procesos solo en un microkernel. También se aclaró «se bloquea ≠ se cae» (hilos de usuario) y la híbrida (el kernel no ve los hilos de usuario).
+- **Formato de explicación nuevo (vale para TODAS las unidades, está en `CLAUDE.md`)**: simulador paso a paso / paneles lado a lado con + y − / calculadora con estado ok-al límite-saturado, y siempre 3–4 viñetas de ideas clave con ⚠️ y 🧠. Se hicieron 4 gráficos con ese formato (ver sección 7).
 
 **Cuestionarios: POSPUESTOS por decisión del estudiante.** El de la U2 **ya está generado** (2026-11-03: `unidades/u02-procesos/cuestionario.md`, 21 preguntas, 100 p, y `respuestas.md`, que NO se le muestra; numéricos verificados con `_trabajo/verificar_cuestionario_u02.js` y `.py`); el de la U1 está pausado (partes C–F). Quiere hacerlos **los dos juntos, más adelante**. No insistirle; cuando los pida, tomárselos y corregir con la Fase 5.
 
@@ -242,11 +247,26 @@ Todos en `_trabajo/`:
 
 **Repaso** (en `visuales/`): **`mapa_conceptual.html`** — el mapa conceptual acumulativo, primera entrada de `visuales/index.html`. **`mapa_grafico.html`** (pedido del 3/11: "como un mapa conceptual de papel") — grafo de 103 cajas con nota técnica, flechas rotuladas y 20 cruces punteados; cada caja abre `mapa_conceptual.html#id`. Los datos (`NODOS`, `CRUCES`) están escritos a mano dentro del HTML: **al agregar una unidad, sumarle sus cajas y cruces ahí también**, con destinos que existan en `plan/mapa_conceptual.md`. Se prueba con `node _trabajo/verificar_mapa_grafico.js` (sin superposiciones, destinos válidos, clic → rama correcta). **El estudiante pidió no modificar `mapa_conceptual.html`** para esto: el gráfico va en un archivo aparte.
 
+**`explorador_so.html`** (2026-11-06, pedido del estudiante a partir de un brief de un explorador de consultas SQL, adaptado a SO). Es una maqueta isométrica con 18 componentes en tres franjas (usuario, kernel y hardware) y **23 recorridos y 120 pasos** de las U1 y U2. Los datos están en el arreglo `TOPICS` dentro del HTML. **Al cerrar la U3, agregarle recorridos** (traducción con TLB, fallo de página, reemplazo); quizás haga falta sumar nodos (MMU/TLB, tabla de páginas). Se prueba con `node _trabajo/verificar_explorador_so.js [carpeta_capturas]` (13 pruebas, 0 fallos al crearlo).
+
+**Gráficos con el formato de explicación (9/11):**
+
+| Archivo | Tipo | Qué hace | Verificación |
+|---|---|---|---|
+| `unidades/u02-procesos/visuales/exclusion_mutua.html` | Simulador | Candado y alternancia (problema), Peterson y TSL (solución) e inversión de prioridades; memoria en casillas, código con la línea ejecutada, modo «vos sos el planificador» | `_trabajo/verificar_exclusion_mutua.js` (guiones + búsqueda exhaustiva de entrelazados hasta 14 pasos: Peterson y TSL nunca dos adentro) |
+| `unidades/u02-procesos/visuales/cambio_de_contexto.html` | Simulador | Los 8 pasos de la fig. 2-5 con 3 disparadores (disco, llamada, fin de quantum); CPU, pila, vector y BCP; color por actor | `_trabajo/verificar_cambio_contexto.js` |
+| `visuales/comparaciones.html` | Paneles | Hilos usuario/kernel/híbrido (botón `read` bloqueante), Chrome, hipervisores 1/2, búfer/caché, SO de multiprocesadores | prueba de navegador |
+| `visuales/calculadoras.html` | Calculadoras | 1 − pⁿ, Tm con caché, quantum, Σ Cᵢ/Pᵢ, n · f, lotería (con «bloqueado») | `_trabajo/verificar_calculadoras.js` |
+
+Prueba de navegador de todo lo del 9/11 (comentarios + los 4 gráficos, 56 pruebas): `node _trabajo/verificar_comentarios_y_graficos.js [carpeta_capturas]`. La prueba vieja `verificar_mapa_grafico.js` sigue en 0 fallos.
+
+**Al cerrar cada unidad nueva:** (1) sus gráficos con este formato; (2) sumarlos a `GRAFICOS` (pestaña 🎛) en el bloque de comentarios de `mapa_grafico.html` y a `visuales/index.html`; (3) si trae un chat de dudas, sumarlas a `COMENTARIOS` con la clave de la caja.
+
 ### ⚠️ Deuda pendiente — visualizaciones prometidas y NO entregadas
 
 **Cumplir lo que se promete en el mismo turno, o no prometerlo.** Falta:
 
-1. **Espera ocupada e inversión de prioridades.** Debería tener: dos columnas separadas **quién tiene la CPU / quién tiene el candado**, avance paso a paso, el fin de quantum visible (H → LISTO → lo vuelven a elegir), y un **interruptor "H gira" vs "H duerme"**. Opcional, no bloquea el cierre de la unidad.
+1. **Espera ocupada e inversión de prioridades — saldada en parte el 9/11** con `exclusion_mutua.html` (escenario 5: estados de L y H, quién tiene el candado, fin de quantum → LISTO → lo vuelven a elegir). **Falta solo el interruptor «H gira» vs «H duerme».** Debería tener: dos columnas separadas **quién tiene la CPU / quién tiene el candado**, avance paso a paso, el fin de quantum visible (H → LISTO → lo vuelven a elegir), y un **interruptor "H gira" vs "H duerme"**. Opcional, no bloquea el cierre de la unidad.
 
 **Método que funcionó para la de productor-consumidor y conviene repetir:** escribir primero el motor en un `.js` de `_trabajo/` con pruebas que afirmen las propiedades (nunca dos en la región crítica, el interbloqueo aparece, etc.), correrlo, pegarlo en el HTML, y después **extraer el `<script>` del HTML y correrle las mismas pruebas** para confirmar que la copia no divergió.
 

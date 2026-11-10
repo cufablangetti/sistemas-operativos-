@@ -142,6 +142,18 @@ Ideas según el tema:
 - **Sistemas de archivos**: i-nodos y bloques indirectos, FAT, asignación contigua, enlazada e indexada.
 - **E/S y disco**: planificación de disco FCFS, SSTF, SCAN, C-SCAN y LOOK, con gráfico del recorrido del cabezal; RAID.
 
+### Formato de explicación de los gráficos (pedido del estudiante, 9/11 — vale para todas las unidades)
+Para cada tema, el gráfico interactivo se elige según su tipo:
+- **Algoritmo, protocolo o proceso con estados** → simulador paso a paso con «Siguiente paso» y «Reiniciar»: variables compartidas visibles como casillas de memoria, el código al costado resaltando la línea exacta que se ejecuta y quién la ejecuta, y un panel que explique el porqué de cada paso. Si hay versión problema vs. solución, un selector para comparar escenarios.
+- **Arquitectura o comparación de estructuras** → diagrama con paneles lado a lado, cajas y flechas, colores consistentes por categoría, y ventajas (+) / desventajas (−) debajo de cada panel.
+- **Fórmula o condición numérica** → calculadora con deslizadores, barra de resultado y estado (ok / al límite / saturado), con botón para cargar el ejemplo del apunte si existe.
+- **Después de cada gráfico**: 3–4 viñetas con las ideas clave y frases de examen. Respetar los ⚠️ y 🧠 del apunte (marcarlos dentro del simulador). Analogías concretas, español rioplatense, texto conciso: el peso explicativo va en el gráfico.
+
+Modelos ya hechos para copiar el estilo: `unidades/u02-procesos/visuales/exclusion_mutua.html` y `cambio_de_contexto.html` (simuladores), `visuales/comparaciones.html` (paneles) y `visuales/calculadoras.html` (calculadoras). Los gráficos nuevos de cada unidad también se agregan a la pestaña «🎛 Gráficos» de `visuales/mapa_grafico.html`.
+
+### Comentarios de dudas en el mapa gráfico
+Si el estudiante trae un chat con sus dudas (como `preguntasrepaso.md`), se agregan como comentarios 💬 en `visuales/mapa_grafico.html`, al lado de la caja que corresponde, **sin tocar nada de lo existente**: van en el arreglo `COMENTARIOS` del bloque agregado al final del archivo. Cada uno lleva la pregunta resumida, una respuesta corta según el libro y la clase, y un «Ojo» cuando la otra IA o el estudiante se equivocaron.
+
 ---
 
 ## Fase 4 — Cuestionario: "cuestionario unidad N"

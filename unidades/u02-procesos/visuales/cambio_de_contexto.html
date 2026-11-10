@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cambio de contexto paso a paso</title>
+<style>
+  :root{
+    --bg:#f4f5f8; --panel:#fff; --borde:#d6dae2; --texto:#1b1f24; --suave:#5b6572; --acento:#3d63c9;
+    --hw:#b45309; --hw-bg:#fff4e0; --asm:#0f766e; --asm-bg:#e6f6f4; --c:#2563eb; --c-bg:#e8f0ff;
+    --plan:#9333ea; --plan-bg:#f4e9ff; --disp:#475569; --disp-bg:#eef1f5; --proc:#be123c; --proc-bg:#ffe9ee;
+    --hl:#facc15; --mal:#c2410c; --mal-bg:#fff0e8; --cer:#7c3aed; --cer-bg:#f3edff;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+      --hw:#fbbf24; --hw-bg:#2b2210; --asm:#2dd4bf; --asm-bg:#0f2a27; --c:#60a5fa; --c-bg:#15233d;
+      --plan:#c084fc; --plan-bg:#2a1a3d; --disp:#94a3b8; --disp-bg:#1e242d; --proc:#fb7185; --proc-bg:#2d151b;
+      --hl:#eab308; --mal:#fb923c; --mal-bg:#2c1b12; --cer:#a78bfa; --cer-bg:#221a38;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+    --hw:#fbbf24; --hw-bg:#2b2210; --asm:#2dd4bf; --asm-bg:#0f2a27; --c:#60a5fa; --c-bg:#15233d;
+    --plan:#c084fc; --plan-bg:#2a1a3d; --disp:#94a3b8; --disp-bg:#1e242d; --proc:#fb7185; --proc-bg:#2d151b;
+    --hl:#eab308; --mal:#fb923c; --mal-bg:#2c1b12; --cer:#a78bfa; --cer-bg:#221a38;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--texto); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .envoltura{max-width:1180px; margin:0 auto; padding:18px 16px 48px}
+  h1{font-size:1.35rem; margin:0 0 4px}
+  .sub{color:var(--suave); margin:0 0 14px; font-size:.92rem}
+  .tarjeta{background:var(--panel); border:1px solid var(--borde); border-radius:12px; padding:14px 16px; margin-bottom:12px}
+  .barra{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px}
+  button{font:inherit; font-size:.9rem; padding:7px 12px; border-radius:8px; border:1px solid var(--borde); background:var(--panel); color:var(--texto); cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--acento)}
+  button:disabled{opacity:.45; cursor:not-allowed}
+  button.prim{background:var(--acento); color:#fff; border-color:var(--acento); font-weight:650}
+  .escs{display:inline-flex; flex-wrap:wrap; border:1px solid var(--borde); border-radius:8px; overflow:hidden}
+  .escs button{border:0; border-radius:0}
+  .escs button.on{background:var(--acento); color:#fff}
+  .contador{margin-left:auto; color:var(--suave); font-size:.88rem}
+  .grilla{display:grid; grid-template-columns:230px 1fr; gap:14px}
+  @media (max-width:860px){ .grilla{grid-template-columns:1fr} .contador{margin-left:0} }
+  h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave); margin:0 0 6px}
+  .pasos{list-style:none; margin:0; padding:0}
+  .pasos li{display:flex; gap:8px; align-items:flex-start; padding:5px 7px; border-radius:7px; font-size:.84rem; line-height:1.35; margin-bottom:2px; cursor:pointer}
+  .pasos li .n{flex:0 0 22px; height:22px; border-radius:50%; display:grid; place-items:center; font-weight:700; font-size:.75rem; border:1.5px solid}
+  .pasos li.hecho{opacity:.6}
+  .pasos li.ahora{background:var(--hl); color:#000; opacity:1}
+  .act-HARDWARE .n,.n.HARDWARE{border-color:var(--hw); color:var(--hw)}
+  .n.ENSAMBLADOR{border-color:var(--asm); color:var(--asm)} .n.C{border-color:var(--c); color:var(--c)}
+  .n.PLANIFICADOR{border-color:var(--plan); color:var(--plan)} .n.DISPOSITIVO{border-color:var(--disp); color:var(--disp)} .n.PROCESO{border-color:var(--proc); color:var(--proc)}
+  .pasos li.ahora .n{border-color:#000; color:#000}
+  .diag{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+  @media (max-width:640px){ .diag{grid-template-columns:1fr} }
+  .caja{border:1.5px solid var(--borde); border-radius:10px; padding:9px 11px; transition:box-shadow .2s}
+  .caja.hl{box-shadow:0 0 0 4px var(--hl); border-color:var(--hl)}
+  .caja h3{margin:0 0 6px; font-size:.86rem}
+  .reg{display:flex; justify-content:space-between; font:13px/1.7 ui-monospace,Consolas,monospace; border-bottom:1px dashed var(--borde)}
+  .reg:last-child{border-bottom:0}
+  .reg b{font-weight:700}
+  .reg.cambio b{background:var(--hl); color:#000; border-radius:4px; padding:0 4px}
+  .ancho2{grid-column:span 2} @media (max-width:640px){ .ancho2{grid-column:auto} }
+  .bcps{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+  .bcp{border:1.5px solid var(--borde); border-radius:8px; padding:6px 9px}
+  .bcp.hl{box-shadow:0 0 0 3px var(--hl); border-color:var(--hl)}
+  .estado{display:inline-block; padding:1px 8px; border-radius:9px; font-size:.78rem; font-weight:700}
+  .estado.Ejecución{background:#16a34a; color:#fff} .estado.Listo{background:#2563eb; color:#fff} .estado.Bloqueado{background:#dc2626; color:#fff}
+  .pila{font:13px/1.6 ui-monospace,Consolas,monospace; min-height:56px}
+  .pila div{border:1px solid var(--borde); border-radius:5px; padding:1px 7px; margin-bottom:3px; background:var(--bg)}
+  .vec{font:12.5px/1.6 ui-monospace,Consolas,monospace}
+  .vec div{padding:0 5px; border-radius:4px}
+  .vec div.hl{background:var(--hl); color:#000; font-weight:700}
+  .disparo{font-size:.88rem}
+  .porque{border:1px solid var(--borde); border-left:5px solid var(--acento); border-radius:10px; padding:12px 14px; margin-top:12px}
+  .actor{display:inline-block; font-size:.74rem; font-weight:800; letter-spacing:.04em; padding:2px 9px; border-radius:9px; margin-right:6px}
+  .actor.HARDWARE{background:var(--hw-bg); color:var(--hw); border:1px solid var(--hw)}
+  .actor.ENSAMBLADOR{background:var(--asm-bg); color:var(--asm); border:1px solid var(--asm)}
+  .actor.C{background:var(--c-bg); color:var(--c); border:1px solid var(--c)}
+  .actor.PLANIFICADOR{background:var(--plan-bg); color:var(--plan); border:1px solid var(--plan)}
+  .actor.DISPOSITIVO{background:var(--disp-bg); color:var(--disp); border:1px solid var(--disp)}
+  .actor.PROCESO{background:var(--proc-bg); color:var(--proc); border:1px solid var(--proc)}
+  .porque p{margin:6px 0 0}
+  .marca{display:block; margin-top:8px; border-radius:8px; padding:7px 10px; font-size:.9rem}
+  .marca.ojo{background:var(--mal-bg); border:1px solid var(--mal)}
+  .marca.cer{background:var(--cer-bg); border:1px solid var(--cer)}
+  table{border-collapse:collapse; width:100%; font-size:.88rem}
+  th,td{border:1px solid var(--borde); padding:6px 8px; text-align:left; vertical-align:top}
+  th{background:var(--bg)}
+  .tabla-wrap{overflow-x:auto}
+  ul{margin:6px 0 0; padding-left:20px} li{margin:4px 0}
+  code{font-family:ui-monospace,Consolas,monospace; font-size:.9em}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <h1>Interrupción y cambio de contexto</h1>
+  <p class="sub">Los 8 pasos de la fig. 2-5. Elegí <b>qué lo dispara</b> y avanzá con <b>Siguiente paso</b>: se resalta la parte de la máquina que cambia
+    y el color dice <b>quién</b> actúa (hardware, ensamblador, C o planificador). La secuencia es la misma en los tres casos; cambia el disparador y lo que hace el paso 5.
+    (Tanenbaum, cap. 2.1.6, págs. 91–93)</p>
+
+  <div class="tarjeta">
+    <div class="barra">
+      <div class="escs" role="group" aria-label="Disparador">
+        <button data-e="disco" class="on">💽 Interrupción de disco</button>
+        <button data-e="llamada">📞 Llamada al sistema read()</button>
+        <button data-e="quantum">⏱ Fin de quantum</button>
+      </div>
+      <button id="ant">◀ Anterior</button>
+      <button id="sig" class="prim">Siguiente paso ▶</button>
+      <button id="rei">↺ Reiniciar</button>
+      <span class="contador" id="cont"></span>
+    </div>
+    <div class="grilla">
+      <div>
+        <h2>Los pasos (para recitar)</h2>
+        <ol class="pasos" id="pasos"></ol>
+      </div>
+      <div>
+        <div class="diag">
+          <div class="caja" id="c-disp"><h3>⚡ Disparador</h3><div class="disparo" id="disp"></div></div>
+          <div class="caja" id="c-cpu"><h3>🧠 CPU (registros)</h3><div id="cpu"></div></div>
+          <div class="caja" id="c-pila"><h3>📚 Pila</h3><div class="pila" id="pila"></div></div>
+          <div class="caja ancho2" id="c-tabla"><h3>🗂 Tabla de procesos (en memoria del kernel)</h3><div class="bcps" id="bcps"></div></div>
+          <div class="caja" id="c-vec"><h3>📋 Vector de interrupciones <span style="font-weight:400;color:var(--suave);font-size:.75rem">(números de ejemplo)</span></h3><div class="vec" id="vec"></div></div>
+        </div>
+        <div class="porque" id="porque"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tarjeta">
+    <h2>Los tres disparadores, comparados</h2>
+    <div class="tabla-wrap"><table>
+      <tr><th></th><th>💽 Interrupción de disco</th><th>📞 Llamada al sistema</th><th>⏱ Fin de quantum</th></tr>
+      <tr><th>¿Quién lo provoca?</th><td>Un dispositivo, de afuera: P1 no hizo nada</td><td>El propio proceso, con <b>TRAP</b></td><td>El reloj (dispositivo), en el último tic del quantum</td></tr>
+      <tr><th>Paso 2: a dónde salta</th><td>Entrada del disco en el vector</td><td>Dirección fija del manejador de llamadas</td><td>Entrada del reloj en el vector</td></tr>
+      <tr><th>Paso 5: qué hace el servicio en C</th><td>Entrega el dato: <b>P2 Bloqueado → Listo</b></td><td>Pide el dato al driver: <b>P1 Ejecución → Bloqueado</b></td><td>Quantum agotado: <b>P1 Ejecución → Listo</b></td></tr>
+      <tr><th>¿Siempre cambia de proceso?</th><td>No: el planificador puede seguir con P1</td><td>Sí, si P1 se bloqueó</td><td>Sí, si hay otro listo</td></tr>
+    </table></div>
+  </div>
+
+  <div class="tarjeta">
+    <h2>Ideas clave y frases de examen</h2>
+    <ul>
+      <li>🧠 <b>«Esto es todo lo que hace el hardware»: pasos 1 y 2</b> (apilar PC y PSW; cargar el PC nuevo). Del 3 en adelante es software del SO.</li>
+      <li>⚠️ El hardware <b>apila</b>; el que copia al <b>BCP</b> es la rutina en <b>ensamblador</b> (paso 3). Primero pila, después BCP.</li>
+      <li>⚠️ <b>PSW ≠ estado del BCP</b>: el PSW es un registro (bits de condición y bit de modo); el estado (Ejecución/Listo/Bloqueado) es un dato del SO.</li>
+      <li>📌 Guardar registros y cambiar la pila <b>no se puede escribir en C</b>: por eso es ensamblador. Y el cambio de contexto cuesta: por eso el quantum no puede ser muy chico.</li>
+    </ul>
+  </div>
+</div>
+
+<script id="motor">
+// ====================================================================
+// MOTOR — estado de la máquina y los 8 pasos (+ el disparador) por escenario
+// ====================================================================
+const P1_PC_SIG = "0x0422";        // la próxima instrucción de P1 cuando lo interrumpen
+function inicial(esc){
+  return {
+    esc,
+    cpu: {proceso: "P1", PC: "0x0420", SP: "0x7F00", R1: "15", modo: "usuario"},
+    pila: [],
+    bcp: {
+      P1: {estado: "Ejecución", PC: "—", PSW: "—", SP: "—", R1: "—"},
+      P2: {estado: esc === "disco" ? "Bloqueado" : "Listo", PC: "0x0910", PSW: "usuario", SP: "0x6E00", R1: "3"}
+    },
+    vec: null, hl: [], cambios: []
+  };
+}
+const VECTOR = [["0", "división por cero"], ["8", "reloj → manejador_reloj"], ["14", "disco → manejador_disco"]];
+
+function pasos(esc){
+  const disparo = {
+    disco: {actor: "DISPOSITIVO", corto: "El disco termina y avisa", texto: "El controlador de disco terminó la lectura que había pedido <b>P2</b>. Avisa al chip controlador de interrupciones, que activa un pin de la CPU y pone el número del dispositivo (14) en el bus.",
+            marca: ["cer", "P1 no hizo nada: el evento viene de afuera. Es una interrupción."]},
+    llamada: {actor: "PROCESO", corto: "P1 ejecuta TRAP", texto: "<b>P1</b> llama a <code>read(fd, buf, n)</code>. La biblioteca pone el número de la llamada en un registro y ejecuta la instrucción <b>TRAP</b>.",
+              marca: ["cer", "Acá el disparador es el propio proceso: una llamada al sistema. La mecánica que sigue es la misma."]},
+    quantum: {actor: "DISPOSITIVO", corto: "Último tic del quantum", texto: "Llega un tic del reloj. El SO descuenta el quantum de P1 y esta vez llega a 0.",
+              marca: ["cer", "Interrupción de reloj ≠ fin de quantum: con un quantum de 50 tics, los 49 anteriores solo descontaron y no cambiaron nada."]}
+  }[esc];
+  return [
+    Object.assign({hl: ["c-disp"], aplicar: () => {}}, disparo),
+    {actor: "HARDWARE", corto: "Apila PC y PSW", hl: ["c-pila", "c-cpu"], texto: "El hardware <b>apila</b> el contador de programa (la próxima instrucción de P1) y el PSW, en la pila. No sabe nada del BCP: es «bruto».",
+     aplicar: s => { s.pila = ["PSW = usuario", "PC = " + P1_PC_SIG]; }},
+    {actor: "HARDWARE", corto: "Carga el PC nuevo (vector)", hl: ["c-vec", "c-cpu"],
+     texto: esc === "llamada" ? "TRAP salta a una <b>dirección fija</b> (el manejador de llamadas al sistema) y pone el bit de modo del PSW en <b>kernel</b>." : "El hardware usa el número del dispositivo como índice en el <b>vector de interrupciones</b>, carga de ahí el PC del manejador y pasa a <b>modo kernel</b>.",
+     marca: ["cer", "«Esto es todo lo que hace el hardware»: los pasos 1 y 2. Desde acá, todo es software del SO."],
+     aplicar: s => { s.vec = esc === "disco" ? "14" : esc === "quantum" ? "8" : "TRAP"; s.cpu.PC = esc === "disco" ? "manejador_disco" : esc === "quantum" ? "manejador_reloj" : "manejador_llamadas"; s.cpu.modo = "kernel"; }},
+    {actor: "ENSAMBLADOR", corto: "Guarda los registros en el BCP", hl: ["c-tabla", "c-pila"], texto: "Una rutina en ensamblador copia el PC y el PSW de la pila, y los demás registros (SP, R1…), al <b>BCP de P1</b>. Ahora la «foto» de P1 está a salvo.",
+     marca: ["ojo", "El PSW que se guarda es un registro de hardware. El campo «estado» del BCP es otra cosa (todavía dice Ejecución)."],
+     aplicar: s => { Object.assign(s.bcp.P1, {PC: P1_PC_SIG, PSW: "usuario", SP: "0x7F00", R1: "15"}); s.pila = []; }},
+    {actor: "ENSAMBLADOR", corto: "Establece la pila nueva", hl: ["c-cpu", "c-pila"], texto: "La rutina en ensamblador apunta el SP a una pila del kernel para que el manejador trabaje.",
+     marca: ["cer", "Guardar registros y cambiar la pila no se puede escribir en C: por eso esta parte es ensamblador."],
+     aplicar: s => { s.cpu.SP = "pila_kernel"; s.pila = ["(pila del kernel)"]; }},
+    {actor: "C", corto: "Corre el servicio en C", hl: ["c-tabla"],
+     texto: {disco: "El servicio de interrupción del disco copia el dato al búfer de P2. P2 estaba esperando ese dato: <b>P2 pasa de Bloqueado a Listo</b>.",
+             llamada: "Corre el código de <code>read</code>: le pide el bloque al driver del disco. El dato no está en memoria, así que <b>P1 pasa de Ejecución a Bloqueado</b>.",
+             quantum: "El servicio del reloj ve que el quantum de P1 se agotó: <b>P1 pasa de Ejecución a Listo</b>."}[esc],
+     marca: esc === "quantum" ? ["ojo", "Fin de quantum → LISTO, nunca BLOQUEADO: P1 puede seguir, solo le falta la CPU."] : esc === "llamada" ? ["cer", "Bloqueado es solo para quien espera un evento (acá, el disco)."] : null,
+     aplicar: s => { if (esc === "disco") s.bcp.P2.estado = "Listo"; if (esc === "llamada") s.bcp.P1.estado = "Bloqueado"; if (esc === "quantum") s.bcp.P1.estado = "Listo"; }},
+    {actor: "PLANIFICADOR", corto: "El planificador elige", hl: ["c-tabla"],
+     texto: esc === "disco" ? "El planificador mira los listos (P1 y P2) y en este ejemplo elige <b>P2</b>; podría haber seguido P1, depende de la política. P1 queda <b>Listo</b>."
+                            : "El planificador elige al siguiente de los listos: <b>P2</b>.",
+     marca: ["cer", "El manejador atiende el evento; el planificador decide quién usa la CPU. Son partes distintas del SO (los dos en modo kernel)."],
+     aplicar: s => { if (s.bcp.P1.estado === "Ejecución") s.bcp.P1.estado = "Listo"; s.elegido = "P2"; }},
+    {actor: "C", corto: "Vuelve al ensamblador", hl: ["c-cpu"], texto: "El procedimiento en C termina y regresa a la rutina en ensamblador.", aplicar: () => {}},
+    {actor: "ENSAMBLADOR", corto: "Arranca el proceso nuevo", hl: ["c-cpu", "c-tabla"], texto: "La rutina en ensamblador carga en la CPU los registros guardados en el <b>BCP de P2</b> (PC, SP, R1, PSW en modo usuario) y su mapa de memoria. <b>P2 pasa a Ejecución</b>. Cuando le vuelva a tocar a P1, se restaura de su BCP y sigue en " + P1_PC_SIG + " como si nada.",
+     aplicar: s => { const b = s.bcp.P2; Object.assign(s.cpu, {proceso: "P2", PC: b.PC, SP: b.SP, R1: b.R1, modo: "usuario"}); b.estado = "Ejecución"; s.pila = ["(pila de P2)"]; }}
+  ];
+}
+function estadoEn(esc, k){                      // estado después de aplicar los pasos 0..k-1
+  const s = inicial(esc), ps = pasos(esc);
+  for (let i = 0; i < k; i++) ps[i].aplicar(s);
+  return s;
+}
+if (typeof module !== "undefined") module.exports = {inicial, pasos, estadoEn, P1_PC_SIG};
+</script>
+
+<script>
+const $ = id => document.getElementById(id);
+let esc = "disco", k = 0;
+function pintar(){
+  const ps = pasos(esc), s = estadoEn(esc, k), antes = estadoEn(esc, Math.max(0, k - 1)), p = k > 0 ? ps[k - 1] : null;
+  $("pasos").innerHTML = ps.map((x, i) => `<li class="${i < k - 1 ? "hecho" : i === k - 1 ? "ahora" : ""}" data-i="${i + 1}"><span class="n ${x.actor}">${i === 0 ? "⚡" : i}</span><span>${x.corto}</span></li>`).join("");
+  document.querySelectorAll("#pasos li").forEach(li => li.onclick = () => { k = +li.dataset.i; pintar(); });
+  const dif = (a, b) => a !== b ? " cambio" : "";
+  $("disp").innerHTML = {disco: "💽 El disco terminó lo que pidió P2", llamada: "📞 P1 ejecuta <code>read()</code> → TRAP", quantum: "⏱ Tic del reloj: se agota el quantum de P1"}[esc] +
+    `<div style="margin-top:6px;color:var(--suave);font-size:.82rem">Proceso en la CPU: <b>${s.cpu.proceso}</b> · modo <b>${s.cpu.modo}</b></div>`;
+  $("cpu").innerHTML = [["PC", "PC"], ["SP", "SP"], ["R1", "R1"], ["PSW (modo)", "modo"]].map(([n, c]) =>
+    `<div class="reg${k > 0 ? dif(s.cpu[c], antes.cpu[c]) : ""}"><span>${n}</span><b>${s.cpu[c]}</b></div>`).join("");
+  $("pila").innerHTML = s.pila.length ? s.pila.slice().reverse().map(x => `<div>${x}</div>`).join("") : "<span style='color:var(--suave);font-size:.82rem'>(vacía)</span>";
+  $("bcps").innerHTML = ["P1", "P2"].map(pr => {
+    const b = s.bcp[pr], a = antes.bcp[pr];
+    return `<div class="bcp${k > 0 && JSON.stringify(b) !== JSON.stringify(a) ? " hl" : ""}"><b>BCP ${pr}</b> <span class="estado ${b.estado}">${b.estado}</span>` +
+      ["PC", "PSW", "SP", "R1"].map(c => `<div class="reg${k > 0 ? dif(b[c], a[c]) : ""}"><span>${c}</span><b>${b[c]}</b></div>`).join("") + "</div>";
+  }).join("");
+  $("vec").innerHTML = VECTOR.map(([n, d]) => `<div class="${s.vec === n ? "hl" : ""}">${n.padStart(2, " ")} │ ${d}</div>`).join("") +
+    `<div class="${s.vec === "TRAP" ? "hl" : ""}" style="margin-top:4px">TRAP → dirección fija</div>`;
+  ["c-disp", "c-cpu", "c-pila", "c-tabla", "c-vec"].forEach(c => $(c).classList.toggle("hl", !!p && p.hl.includes(c)));
+  $("porque").innerHTML = p
+    ? `<span class="actor ${p.actor}">${p.actor}</span><b>${k === 1 ? "Disparador" : "Paso " + (k - 1)}: ${p.corto}</b><p>${p.texto}</p>` +
+      (p.marca ? `<span class="marca ${p.marca[0] === "ojo" ? "ojo" : "cer"}">${p.marca[0] === "ojo" ? "⚠️ " : "🧠 "}${p.marca[1]}</span>` : "")
+    : "<b>Situación inicial:</b> P1 está ejecutando en modo usuario." + (esc === "disco" ? " P2 está <b>Bloqueado</b>, esperando un dato del disco." : " P2 está <b>Listo</b>.") + " Apretá «Siguiente paso».";
+  $("cont").textContent = k === 0 ? "Inicio" : (k === 1 ? "Disparador" : `Paso ${k - 1} de 8`);
+  $("sig").disabled = k >= ps.length; $("ant").disabled = k === 0;
+}
+$("sig").onclick = () => { if (k < pasos(esc).length){ k++; pintar(); } };
+$("ant").onclick = () => { if (k > 0){ k--; pintar(); } };
+$("rei").onclick = () => { k = 0; pintar(); };
+document.querySelectorAll(".escs button").forEach(b => b.onclick = () => {
+  esc = b.dataset.e; k = 0; document.querySelectorAll(".escs button").forEach(x => x.classList.toggle("on", x === b)); pintar();
+});
+document.addEventListener("keydown", e => { if (e.key === "ArrowRight") $("sig").click(); if (e.key === "ArrowLeft") $("ant").click(); });
+pintar();
+</script>
+</body>
+</html>

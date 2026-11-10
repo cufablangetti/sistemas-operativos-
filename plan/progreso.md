@@ -1,6 +1,6 @@
 # Progreso — Sistemas Operativos
 
-Última actualización: 2026-11-03
+Última actualización: 2026-11-09
 
 ## Estado de las fases
 
@@ -55,6 +55,10 @@
 - **2026-11-03** — **Clase de la Unidad 2 terminada**: tema 10.4 (planificación de multiprocesadores) y cierre. Generado **`repaso_u02.pdf`** (168 páginas: la clase completa, armada desde el historial del chat con `_trabajo/armar_repaso_u02.py`) y su índice de páginas (`_trabajo/indice_repaso_u02.md`, 528 títulos, 0 sin ubicar). Arrancado el **mapa conceptual acumulativo** con las Unidades 1 y 2: 915 nodos, 42 secuencias numeradas, 37 errores marcados, 101 nodos con cruces entre unidades, referencia doble (Tanenbaum + página del repaso). Se incorporaron las dudas del archivo `googleia.md` (marcadas ❓). Al verificar las páginas del libro se corrigieron referencias de la clase del tema 8 (los algoritmos interactivos son 2.4.3, págs. 154–160; tiempo real 2.4.4, págs. 160–161). Página interactiva probada en Chrome sin ventana (`_trabajo/verificar_mapa_conceptual.js`: 13 pruebas, 0 fallos). **Por pedido del estudiante, los cuestionarios de la U1 (partes C–F) y de la U2 quedan para después, juntos**; antes quiere repasar bien las dos unidades con el mapa y recién ahí empezar la U3.
 
 - **2026-11-03** — Generado el **cuestionario de la Unidad 2** (21 preguntas, 100 p) con sus respuestas aparte; ejercicios numéricos verificados por script. Queda **pendiente junto con el de la U1**, por pedido del estudiante.
+
+- **2026-11-06** — Nueva visualización **`visuales/explorador_so.html`**: el recorrido paso a paso de cada operación por usuario → kernel → hardware (23 temas y 120 pasos de las U1 y U2), probada con `_trabajo/verificar_explorador_so.js`, 0 fallos.
+
+- **2026-11-09** — Repaso de U1 y U2: **57 comentarios 💬** con las dudas de `preguntasrepaso.md` agregados al mapa gráfico (sin tocar lo existente; se marcaron 2 errores de la otra IA: inversión de prioridades ≠ interbloqueo, y el planificador no es un proceso). Cuatro gráficos nuevos con el **formato de explicación por tipo** (pedido para todas las unidades): simuladores de exclusión mutua y de cambio de contexto, comparaciones de arquitecturas y calculadoras. Verificados con scripts y 56 pruebas de navegador.
 
 ## Cronograma
 

@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calculadoras de la U1 y la U2</title>
+<style>
+  :root{
+    --bg:#f4f5f8; --panel:#fff; --borde:#d6dae2; --texto:#1b1f24; --suave:#5b6572; --acento:#3d63c9;
+    --ok:#15803d; --ok-bg:#e9f8ee; --lim:#b45309; --lim-bg:#fff4e0; --sat:#dc2626; --sat-bg:#fdecec;
+    --barra:#e5e8ee; --cer:#7c3aed; --cer-bg:#f3edff; --mal:#c2410c; --mal-bg:#fff0e8;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+      --ok:#4ade80; --ok-bg:#13291b; --lim:#fbbf24; --lim-bg:#2b2210; --sat:#f87171; --sat-bg:#2d1515;
+      --barra:#2a2f38; --cer:#a78bfa; --cer-bg:#221a38; --mal:#fb923c; --mal-bg:#2c1b12;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+    --ok:#4ade80; --ok-bg:#13291b; --lim:#fbbf24; --lim-bg:#2b2210; --sat:#f87171; --sat-bg:#2d1515;
+    --barra:#2a2f38; --cer:#a78bfa; --cer-bg:#221a38; --mal:#fb923c; --mal-bg:#2c1b12;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--texto); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .envoltura{max-width:1000px; margin:0 auto; padding:18px 16px 48px}
+  h1{font-size:1.35rem; margin:0 0 4px}
+  .sub{color:var(--suave); margin:0 0 12px; font-size:.92rem}
+  .tabs{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px}
+  button{font:inherit; font-size:.88rem; padding:7px 12px; border-radius:8px; border:1px solid var(--borde); background:var(--panel); color:var(--texto); cursor:pointer}
+  button:hover{border-color:var(--acento)}
+  .tabs button.on{background:var(--acento); color:#fff; border-color:var(--acento); font-weight:650}
+  button.ej{border-color:var(--acento); color:var(--acento); font-weight:650}
+  .tarjeta{background:var(--panel); border:1px solid var(--borde); border-radius:12px; padding:14px 16px; margin-bottom:12px}
+  .seccion{display:none} .seccion.on{display:block}
+  .formula{font:600 1.05rem ui-monospace,Consolas,monospace; background:var(--bg); border-radius:8px; padding:8px 12px; display:inline-block; margin-bottom:10px}
+  .ctrl{display:grid; grid-template-columns:minmax(150px,220px) 1fr 86px; gap:10px; align-items:center; margin:8px 0}
+  @media (max-width:560px){ .ctrl{grid-template-columns:1fr 70px} .ctrl input[type=range]{grid-column:1 / -1; grid-row:2} }
+  .ctrl label{font-size:.9rem}
+  input[type=range]{width:100%; accent-color:var(--acento)}
+  input[type=number]{width:100%; font:inherit; padding:5px 7px; border-radius:7px; border:1px solid var(--borde); background:var(--bg); color:var(--texto)}
+  .ejemplos{display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 12px}
+  .res{margin-top:12px}
+  .barra{height:26px; background:var(--barra); border-radius:13px; overflow:hidden; position:relative}
+  .barra .relleno{height:100%; border-radius:13px; transition:width .25s, background .25s}
+  .barra .tope{position:absolute; top:-3px; bottom:-3px; width:2px; background:var(--texto); opacity:.6}
+  .barra .tx{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.88rem}
+  .numero{font:700 1.6rem ui-monospace,Consolas,monospace; margin:6px 0 2px}
+  .cuenta{font:13.5px/1.6 ui-monospace,Consolas,monospace; color:var(--suave); white-space:pre-wrap}
+  .estado{display:inline-block; font-weight:700; font-size:.85rem; padding:3px 11px; border-radius:12px; border:1.5px solid; margin:4px 0}
+  .estado.ok{color:var(--ok); background:var(--ok-bg); border-color:var(--ok)}
+  .estado.lim{color:var(--lim); background:var(--lim-bg); border-color:var(--lim)}
+  .estado.sat{color:var(--sat); background:var(--sat-bg); border-color:var(--sat)}
+  table{border-collapse:collapse; width:100%; font-size:.9rem; margin:6px 0}
+  th,td{border:1px solid var(--borde); padding:5px 7px; text-align:center}
+  th{background:var(--bg)}
+  td input[type=number]{max-width:90px}
+  .ideas ul{margin:6px 0 0; padding-left:20px} .ideas li{margin:4px 0}
+  h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave); margin:0 0 6px}
+  .ref{font-size:.8rem; color:var(--suave)}
+  .lot{display:grid; grid-template-columns:70px 90px 1fr 110px; gap:8px; align-items:center; margin:6px 0}
+  @media (max-width:560px){ .lot{grid-template-columns:50px 70px 1fr} .lot .bl{grid-column:1 / -1} }
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <h1>Calculadoras de la U1 y la U2</h1>
+  <p class="sub">Mové los deslizadores (o escribí el número) y mirá la barra y el estado. El botón <b>«Ejemplo del apunte»</b> carga los datos del libro o de la clase para comprobar que te da lo mismo que en tu repaso.</p>
+
+  <div class="tabs" id="tabs">
+    <button data-t="mp" class="on">U1 · Multiprogramación</button>
+    <button data-t="cache">U1 · Tiempo con caché</button>
+    <button data-t="q">U2 · Quantum</button>
+    <button data-t="tr">U2 · Tiempo real</button>
+    <button data-t="me">U2 · Maestro-esclavo</button>
+    <button data-t="lot">U2 · Lotería</button>
+  </div>
+
+  <!-- MULTIPROGRAMACIÓN -->
+  <section class="seccion on" id="s-mp"><div class="tarjeta">
+    <div class="formula">Uso de CPU = 1 − pⁿ</div>
+    <div class="ejemplos"><button class="ej" id="mp-ej">Ejemplo del apunte: p = 0,8 y n = 5</button></div>
+    <div class="ctrl"><label for="mp-p">p = fracción del tiempo esperando E/S</label><input type="range" id="mp-p" min="0.05" max="0.95" step="0.05" value="0.8"><input type="number" id="mp-pn" min="0.05" max="0.95" step="0.05" value="0.8"></div>
+    <div class="ctrl"><label for="mp-n">n = procesos en memoria (grado de multiprogramación)</label><input type="range" id="mp-n" min="1" max="15" step="1" value="5"><input type="number" id="mp-nn" min="1" max="15" step="1" value="5"></div>
+    <div class="res"><div class="barra"><div class="relleno" id="mp-bar"></div><div class="tx" id="mp-tx"></div></div>
+      <div class="numero" id="mp-num"></div><span class="estado" id="mp-est"></span><div class="cuenta" id="mp-cta"></div></div>
+    <div style="overflow-x:auto"><table id="mp-tabla"></table></div>
+    <p class="ref">(Tanenbaum, cap. 2.1.7, fig. 2-6)</p>
+  </div>
+  <div class="tarjeta ideas"><h2>Ideas clave y frases de examen</h2><ul>
+    <li>🧠 pⁿ es la probabilidad de que los <b>n estén esperando E/S a la vez</b>: solo ahí la CPU queda ociosa.</li>
+    <li>📌 El modelo ingenuo («calcula el 20 %, con 5 procesos está al 100 %») es <b>demasiado optimista</b>: supone que nunca esperan a la vez.</li>
+    <li>Cada proceso nuevo aporta menos: de 1 a 2 se gana mucho; de 10 a 11, casi nada.</li>
+  </ul></div></section>
+
+  <!-- CACHÉ -->
+  <section class="seccion" id="s-cache"><div class="tarjeta">
+    <div class="formula">Tm = h · t<sub>caché</sub> + (1 − h) · (t<sub>caché</sub> + t<sub>RAM</sub>)</div>
+    <div class="ejemplos"><button class="ej" id="ca-ej1">Ejemplo del apunte: 1 ns, 10 ns, 95 %</button><button class="ej" id="ca-ej2">Mala localidad: 50 %</button></div>
+    <div class="ctrl"><label for="ca-tc">t<sub>caché</sub> (ns)</label><input type="range" id="ca-tc" min="0.5" max="5" step="0.5" value="1"><input type="number" id="ca-tcn" min="0.5" max="5" step="0.5" value="1"></div>
+    <div class="ctrl"><label for="ca-tr">t<sub>RAM</sub> (ns)</label><input type="range" id="ca-tr" min="5" max="100" step="1" value="10"><input type="number" id="ca-trn" min="5" max="100" step="1" value="10"></div>
+    <div class="ctrl"><label for="ca-h">h = tasa de aciertos (%)</label><input type="range" id="ca-h" min="0" max="100" step="1" value="95"><input type="number" id="ca-hn" min="0" max="100" step="1" value="95"></div>
+    <div class="res"><div class="barra"><div class="relleno" id="ca-bar"></div><div class="tx" id="ca-tx"></div></div>
+      <div class="numero" id="ca-num"></div><span class="estado" id="ca-est"></span><div class="cuenta" id="ca-cta"></div></div>
+    <p class="ref">La barra es Tm comparado con no tener caché (t<sub>RAM</sub>): cuanto más corta, mejor.</p>
+  </div>
+  <div class="tarjeta ideas"><h2>Ideas clave y frases de examen</h2><ul>
+    <li>🧠 <b>La caché vale lo que vale la localidad del programa.</b> Con 95 % de aciertos, 6,67 veces más rápida; con 50 %, solo 1,67.</li>
+    <li>⚠️ En un fallo se paga <b>mirar la caché + ir a la RAM</b> (1 + 10 = 11 ns), no solo los 10 de la RAM.</li>
+    <li>Es un promedio ponderado: cada tiempo por la fracción de veces que ocurre.</li>
+  </ul></div></section>
+
+  <!-- QUANTUM -->
+  <section class="seccion" id="s-q"><div class="tarjeta">
+    <div class="formula">desperdicio = s / (q + s)   ·   espera del último = (n − 1) · (q + s)</div>
+    <div class="ejemplos"><button class="ej" id="q-ej1">Ejemplo del libro: q = 4 ms, s = 1 ms</button><button class="ej" id="q-ej2">Ejemplo del libro: q = 100 ms con 50 pedidos</button></div>
+    <div class="ctrl"><label for="q-q">q = quantum (ms)</label><input type="range" id="q-q" min="1" max="200" step="1" value="4"><input type="number" id="q-qn" min="1" max="200" step="1" value="4"></div>
+    <div class="ctrl"><label for="q-s">s = cambio de proceso (ms)</label><input type="range" id="q-s" min="0.1" max="5" step="0.1" value="1"><input type="number" id="q-sn" min="0.1" max="5" step="0.1" value="1"></div>
+    <div class="ctrl"><label for="q-n">n = procesos en la cola</label><input type="range" id="q-n" min="2" max="100" step="1" value="50"><input type="number" id="q-nn" min="2" max="100" step="1" value="50"></div>
+    <div class="res">
+      <div style="font-size:.85rem; font-weight:650">CPU perdida en conmutar</div>
+      <div class="barra"><div class="relleno" id="q-bar"></div><div class="tx" id="q-tx"></div></div>
+      <span class="estado" id="q-est"></span>
+      <div style="font-size:.85rem; font-weight:650; margin-top:10px">Espera del último de la cola (peor caso)</div>
+      <div class="barra"><div class="relleno" id="q-bar2"></div><div class="tx" id="q-tx2"></div></div>
+      <span class="estado" id="q-est2"></span>
+      <div class="cuenta" id="q-cta"></div></div>
+    <p class="ref">(Tanenbaum, cap. 2.4.3, págs. 154–155)</p>
+  </div>
+  <div class="tarjeta ideas"><h2>Ideas clave y frases de examen</h2><ul>
+    <li>🧠 Quantum <b>corto</b> → mucha CPU perdida en conmutar. Quantum <b>largo</b> → mala respuesta (degenera en FCFS).</li>
+    <li>📌 Frase del libro: <i>«un quántum con un valor entre 20 y 50 mseg constituye a menudo una solución razonable»</i>.</li>
+    <li>Conviene que el quantum sea algo más largo que la ráfaga típica, para que la mayoría termine antes de agotarlo.</li>
+  </ul></div></section>
+
+  <!-- TIEMPO REAL -->
+  <section class="seccion" id="s-tr"><div class="tarjeta">
+    <div class="formula">Planificable si  Σ Cᵢ / Pᵢ ≤ 1</div>
+    <div class="ejemplos"><button class="ej" id="tr-ej1">Ejemplo del libro: (100, 50), (200, 30), (500, 100)</button><button class="ej" id="tr-ej2">Ejercicio de la clase: (50, 15), (100, 20), (200, 40)</button></div>
+    <div style="overflow-x:auto"><table><thead><tr><th>Evento</th><th>Pᵢ período (ms)</th><th>Cᵢ CPU (ms)</th><th>Cᵢ / Pᵢ</th><th></th></tr></thead><tbody id="tr-filas"></tbody></table></div>
+    <button id="tr-mas">+ Agregar evento</button>
+    <div class="res"><div class="barra"><div class="relleno" id="tr-bar"></div><div class="tope" style="left:calc(100% / 1.5)"></div><div class="tx" id="tr-tx"></div></div>
+      <div class="ref" style="text-align:right">la raya marca el 100 %</div>
+      <span class="estado" id="tr-est"></span><div class="cuenta" id="tr-cta"></div>
+      <div class="ctrl"><label for="tr-np">¿Y un evento nuevo de período… (ms)?</label><input type="range" id="tr-np" min="50" max="2000" step="50" value="1000"><input type="number" id="tr-npn" min="50" max="2000" step="50" value="1000"></div>
+      <div class="cuenta" id="tr-max"></div></div>
+    <p class="ref">(Tanenbaum, cap. 2.4.4, págs. 160–161)</p>
+  </div>
+  <div class="tarjeta ideas"><h2>Ideas clave y frases de examen</h2><ul>
+    <li>📌 Trampa 1: va <b>Cᵢ / Pᵢ</b> (CPU que necesita / cada cuánto ocurre). Si un término da más que 1, lo invertiste.</li>
+    <li>📌 Trampa 2: pasá todo a la misma unidad antes de dividir.</li>
+    <li>🧠 Cuanto más seguido ocurre un evento, menos puede trabajar cada vez. Los Cᵢ son del <b>peor caso</b>.</li>
+    <li>Es condición <b>necesaria</b>: si se pasa de 1, seguro que no es planificable.</li>
+  </ul></div></section>
+
+  <!-- MAESTRO-ESCLAVO -->
+  <section class="seccion" id="s-me"><div class="tarjeta">
+    <div class="formula">La maestra no se satura si  n · f ≤ 1</div>
+    <div class="ejemplos"><button class="ej" id="me-ej1">Ejemplo del libro: 10 % con 10 CPU</button><button class="ej" id="me-ej2">Ejercicio de la clase: 8 CPU al 15 %</button></div>
+    <div class="ctrl"><label for="me-n">n = cantidad de CPU</label><input type="range" id="me-n" min="1" max="32" step="1" value="8"><input type="number" id="me-nn" min="1" max="32" step="1" value="8"></div>
+    <div class="ctrl"><label for="me-f">f = fracción del tiempo en llamadas al sistema (%)</label><input type="range" id="me-f" min="1" max="50" step="1" value="15"><input type="number" id="me-fn" min="1" max="50" step="1" value="15"></div>
+    <div class="res"><div class="barra"><div class="relleno" id="me-bar"></div><div class="tope" style="left:calc(100% / 1.5)"></div><div class="tx" id="me-tx"></div></div>
+      <span class="estado" id="me-est"></span><div class="cuenta" id="me-cta"></div></div>
+    <p class="ref">(Tanenbaum, cap. 8.1.2, págs. 534–538)</p>
+  </div>
+  <div class="tarjeta ideas"><h2>Ideas clave y frases de examen</h2><ul>
+    <li>Cada esclava le manda a la maestra una fracción f de su trabajo; con n CPU, la maestra recibe n · f.</li>
+    <li>📌 Frase del libro: <i>«si el 10 % del tiempo está manejando llamadas al sistema, con 10 CPU el maestro casi se saturará y con 20 estará completamente sobrecargado»</i>.</li>
+    <li>🔗 Tiene la misma forma que Σ Cᵢ/Pᵢ ≤ 1 de tiempo real.</li>
+  </ul></div></section>
+
+  <!-- LOTERÍA -->
+  <section class="seccion" id="s-lot"><div class="tarjeta">
+    <div class="formula">fracción de CPU = boletos del proceso / boletos de los que compiten</div>
+    <div class="ejemplos"><button class="ej" id="lo-ej1">Ejemplo de la clase: A 5, B 15, C 30</button><button class="ej" id="lo-ej2">C le regala 20 a A</button></div>
+    <div id="lo-filas"></div>
+    <div class="cuenta" id="lo-cta"></div>
+    <p class="ref">(Tanenbaum, cap. 2.4.3, págs. 159–160)</p>
+  </div>
+  <div class="tarjeta ideas"><h2>Ideas clave y frases de examen</h2><ul>
+    <li>⚠️ <b>Boletos ≠ porcentajes</b>: el porcentaje es boletos / total (error que ya cometiste).</li>
+    <li>🧠 Es <b>probabilístico</b>: a la larga tiende a esa fracción, pero en un intervalo corto no hay garantía.</li>
+    <li>Un proceso <b>bloqueado</b> no participa del sorteo: sus boletos no cuentan mientras espera.</li>
+    <li>Los procesos cooperativos pueden <b>transferirse boletos</b> (el cliente al servidor).</li>
+  </ul></div></section>
+</div>
+
+<script id="motor">
+// ====================================================================
+// FÓRMULAS (las verifica _trabajo/verificar_calculadoras.js)
+// ====================================================================
+const F = {
+  multiprog: (p, n) => 1 - Math.pow(p, n),
+  tm: (tc, tr, h) => h * tc + (1 - h) * (tc + tr),
+  desperdicio: (q, s) => s / (q + s),
+  esperaUltimo: (q, s, n) => (n - 1) * (q + s),
+  planif: filas => filas.reduce((a, [P, C]) => a + C / P, 0),
+  maxC: (U, P) => Math.max(0, (1 - U) * P),
+  maestro: (n, f) => n * f,
+  nMax: f => Math.floor(1 / f + 1e-9),
+  loteria: bs => { const t = bs.reduce((a, b) => a + b, 0); return bs.map(b => t ? b / t : 0); }
+};
+// estado: ok / al límite / saturado
+function estado(x, limite, aviso){ return x > limite ? "sat" : x > aviso ? "lim" : "ok"; }
+if (typeof module !== "undefined") module.exports = {F, estado};
+</script>
+
+<script>
+const $ = id => document.getElementById(id);
+const fmt = (x, d = 2) => x.toLocaleString("es-AR", {minimumFractionDigits: d, maximumFractionDigits: d});
+const pct = (x, d = 2) => fmt(x * 100, d) + " %";
+const COL = {ok: "var(--ok)", lim: "var(--lim)", sat: "var(--sat)"};
+function pintarEstado(el, est, textos){ el.className = "estado " + est; el.textContent = textos[est]; }
+function barra(id, frac, est, tx){ $(id).style.width = Math.max(0, Math.min(100, frac * 100)) + "%"; $(id).style.background = COL[est]; $(id.replace("bar", "tx")).textContent = tx; }
+
+document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("on", x === b));
+  document.querySelectorAll(".seccion").forEach(s => s.classList.toggle("on", s.id === "s-" + b.dataset.t));
+  try { localStorage.setItem("calculadoras_tab", b.dataset.t); } catch (e) {}
+});
+try { const t = localStorage.getItem("calculadoras_tab"); const b = t && document.querySelector(`#tabs button[data-t="${t}"]`); if (b) b.click(); } catch (e) {}
+
+// enlaza un deslizador con su casilla numérica
+function par(id, alCambiar){
+  const r = $(id), n = $(id + "n");
+  r.addEventListener("input", () => { n.value = r.value; alCambiar(); });
+  n.addEventListener("input", () => { if (n.value !== "") { r.value = n.value; alCambiar(); } });
+  return {get: () => +n.value, set: v => { r.value = v; n.value = v; }};
+}
+
+// ---- multiprogramación
+const mpP = par("mp-p", mp), mpN = par("mp-n", mp);
+function mp(){
+  const p = mpP.get(), n = mpN.get(), u = F.multiprog(p, n);
+  const est = u >= 0.9 ? "lim" : u < 0.5 ? "sat" : "ok";
+  barra("mp-bar", u, est, pct(u));
+  $("mp-num").textContent = pct(u);
+  pintarEstado($("mp-est"), est, {ok: "Buen uso de la CPU", lim: "Cerca del techo: más procesos casi no suman", sat: "CPU ociosa buena parte del tiempo"});
+  $("mp-cta").textContent = `1 − ${fmt(p)}^${n} = 1 − ${fmt(Math.pow(p, n), 4)} = ${fmt(u, 4)}`;
+  let t = "<tr><th>n</th>" + [1, 2, 3, 4, 5, 6, 8, 10].map(k => `<th>${k}</th>`).join("") + "</tr><tr><th>uso</th>" +
+          [1, 2, 3, 4, 5, 6, 8, 10].map(k => `<td${k === n ? ' style="font-weight:700;outline:2px solid var(--acento)"' : ""}>${pct(F.multiprog(p, k), 1)}</td>`).join("") + "</tr>";
+  $("mp-tabla").innerHTML = t;
+}
+$("mp-ej").onclick = () => { mpP.set(0.8); mpN.set(5); mp(); };
+
+// ---- caché
+const caTc = par("ca-tc", ca), caTr = par("ca-tr", ca), caH = par("ca-h", ca);
+function ca(){
+  const tc = caTc.get(), tr = caTr.get(), h = caH.get() / 100, tm = F.tm(tc, tr, h);
+  const est = h >= 0.9 ? "ok" : h >= 0.7 ? "lim" : "sat";
+  barra("ca-bar", tm / tr, est, fmt(tm) + " ns de " + fmt(tr, 0) + " ns sin caché");
+  $("ca-num").textContent = "Tm = " + fmt(tm) + " ns  ·  " + fmt(tr / tm) + " veces más rápida";
+  pintarEstado($("ca-est"), est, {ok: "Buena localidad", lim: "Localidad regular", sat: "Mala localidad: la caché casi no ayuda"});
+  $("ca-cta").textContent = `Acierto: ${fmt(tc)} ns   ·   Fallo: ${fmt(tc)} + ${fmt(tr, 0)} = ${fmt(tc + tr)} ns\nTm = ${fmt(h)} × ${fmt(tc)} + ${fmt(1 - h)} × ${fmt(tc + tr)} = ${fmt(tm)} ns`;
+}
+$("ca-ej1").onclick = () => { caTc.set(1); caTr.set(10); caH.set(95); ca(); };
+$("ca-ej2").onclick = () => { caTc.set(1); caTr.set(10); caH.set(50); ca(); };
+
+// ---- quantum
+const qQ = par("q-q", qq), qS = par("q-s", qq), qN = par("q-n", qq);
+function qq(){
+  const q = qQ.get(), s = qS.get(), n = qN.get(), d = F.desperdicio(q, s), w = F.esperaUltimo(q, s, n);
+  const e1 = estado(d, 0.15, 0.05), e2 = estado(w, 3000, 1000);
+  barra("q-bar", d, e1, pct(d, 1));
+  pintarEstado($("q-est"), e1, {ok: "Poca sobrecarga", lim: "Sobrecarga notable", sat: "Demasiada CPU perdida"});
+  barra("q-bar2", Math.min(1, w / 6000), e2, fmt(w / 1000, 2) + " s");
+  pintarEstado($("q-est2"), e2, {ok: "Respuesta rápida", lim: "Se empieza a notar", sat: "Respuesta lenta"});
+  $("q-cta").textContent = `desperdicio = ${fmt(s, 1)} / (${fmt(q, 0)} + ${fmt(s, 1)}) = ${pct(d, 1)}\nespera del último = (${n} − 1) × (${fmt(q, 0)} + ${fmt(s, 1)}) = ${fmt(w, 0)} ms`;
+}
+$("q-ej1").onclick = () => { qQ.set(4); qS.set(1); qN.set(50); qq(); };
+$("q-ej2").onclick = () => { qQ.set(100); qS.set(1); qN.set(50); qq(); };
+
+// ---- tiempo real
+let trFilas = [[100, 50], [200, 30], [500, 100]];
+const trNp = par("tr-np", tr);
+function trTabla(){
+  $("tr-filas").innerHTML = trFilas.map(([P, C], i) => `<tr><td>${String.fromCharCode(65 + i)}</td>
+    <td><input type="number" min="1" value="${P}" data-i="${i}" data-c="0"></td><td><input type="number" min="0" value="${C}" data-i="${i}" data-c="1"></td>
+    <td id="tr-r${i}"></td><td>${trFilas.length > 1 ? `<button data-x="${i}" title="Quitar">✕</button>` : ""}</td></tr>`).join("");
+  document.querySelectorAll("#tr-filas input").forEach(inp => inp.oninput = () => { if (inp.value !== "") { trFilas[+inp.dataset.i][+inp.dataset.c] = +inp.value; tr(); } });
+  document.querySelectorAll("#tr-filas button").forEach(b => b.onclick = () => { trFilas.splice(+b.dataset.x, 1); trTabla(); });
+  tr();
+}
+function tr(){
+  const filas = trFilas.filter(([P]) => P > 0), U = F.planif(filas), est = estado(U, 1, 0.9);
+  filas.forEach(([P, C], i) => { const c = $("tr-r" + i); if (c) c.textContent = fmt(C / P, 3); });
+  barra("tr-bar", U / 1.5, est, pct(U, 1));
+  pintarEstado($("tr-est"), est, {ok: "Planificable", lim: "Planificable, al límite", sat: "NO planificable"});
+  $("tr-cta").textContent = "Σ = " + filas.map(([P, C]) => `${C}/${P}`).join(" + ") + " = " + fmt(U, 3) + (U <= 1 ? `   → libre ${pct(1 - U, 1)}` : "   → se pasa de 1");
+  const np = trNp.get();
+  $("tr-max").textContent = U <= 1 ? `Un evento nuevo cada ${np} ms puede usar como máximo (1 − ${fmt(U, 3)}) × ${np} = ${fmt(F.maxC(U, np), 1)} ms de CPU.` : "No entra ningún evento más: ya se pasa de 1.";
+}
+$("tr-mas").onclick = () => { if (trFilas.length < 6) { trFilas.push([1000, 50]); trTabla(); } };
+$("tr-ej1").onclick = () => { trFilas = [[100, 50], [200, 30], [500, 100]]; trNp.set(1000); trTabla(); };
+$("tr-ej2").onclick = () => { trFilas = [[50, 15], [100, 20], [200, 40]]; trNp.set(500); trTabla(); };
+
+// ---- maestro-esclavo
+const meN = par("me-n", me), meF = par("me-f", me);
+function me(){
+  const n = meN.get(), f = meF.get() / 100, c = F.maestro(n, f), est = estado(c, 1, 0.9);
+  barra("me-bar", c / 1.5, est, pct(c, 0) + " de la maestra");
+  pintarEstado($("me-est"), est, {ok: "La maestra da abasto", lim: "La maestra casi se satura", sat: "Maestra saturada: cuello de botella"});
+  $("me-cta").textContent = `n · f = ${n} × ${fmt(f)} = ${fmt(c)}\nMáximo de CPU sin saturar: n ≤ 1 / ${fmt(f)} = ${fmt(1 / f)} → ${F.nMax(f)} CPU`;
+}
+$("me-ej1").onclick = () => { meN.set(10); meF.set(10); me(); };
+$("me-ej2").onclick = () => { meN.set(8); meF.set(15); me(); };
+
+// ---- lotería
+let lot = [["A", 5, false], ["B", 15, false], ["C", 30, false]];
+function loFilas(){
+  $("lo-filas").innerHTML = lot.map(([n, b, bl], i) => `<div class="lot"><b>${n}</b><input type="number" min="0" value="${b}" data-i="${i}">
+    <div class="barra"><div class="relleno" id="lo-bar${i}"></div><div class="tx" id="lo-tx${i}"></div></div>
+    <label class="bl" style="font-size:.85rem"><input type="checkbox" data-b="${i}" ${bl ? "checked" : ""}> bloqueado</label></div>`).join("");
+  document.querySelectorAll("#lo-filas input[type=number]").forEach(inp => inp.oninput = () => { if (inp.value !== "") { lot[+inp.dataset.i][1] = +inp.value; lo(); } });
+  document.querySelectorAll("#lo-filas input[type=checkbox]").forEach(c => c.onchange = () => { lot[+c.dataset.b][2] = c.checked; lo(); });
+  lo();
+}
+function lo(){
+  const comp = lot.map(([, b, bl]) => bl ? 0 : b), fr = F.loteria(comp), tot = comp.reduce((a, b) => a + b, 0);
+  lot.forEach(([n, b, bl], i) => { barra("lo-bar" + i, fr[i], bl ? "sat" : "ok", bl ? "bloqueado: no sortea" : pct(fr[i], 1)); });
+  $("lo-cta").textContent = "Compiten " + tot + " boletos: " + lot.map(([n, b, bl], i) => bl ? `${n} no participa` : `${n} = ${b}/${tot} = ${pct(fr[i], 1)}`).join("   ·   ");
+}
+$("lo-ej1").onclick = () => { lot = [["A", 5, false], ["B", 15, false], ["C", 30, false]]; loFilas(); };
+$("lo-ej2").onclick = () => { lot = [["A", 25, false], ["B", 15, false], ["C", 10, false]]; loFilas(); };
+
+mp(); ca(); qq(); trTabla(); me(); loFilas();
+</script>
+</body>
+</html>

@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arquitecturas lado a lado</title>
+<style>
+  :root{
+    --bg:#f4f5f8; --panel:#fff; --borde:#d6dae2; --texto:#1b1f24; --suave:#5b6572; --acento:#3d63c9;
+    --us:#2563eb; --us-bg:#e8f0ff; --ke:#c2410c; --ke-bg:#fff0e8; --hw:#475569; --hw-bg:#e9edf2;
+    --vm:#0f766e; --vm-bg:#e6f6f4; --ok:#15803d; --ok-bg:#e9f8ee; --mal:#dc2626; --mal-bg:#fdecec; --cer:#7c3aed; --cer-bg:#f3edff;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+      --us:#60a5fa; --us-bg:#15233d; --ke:#fb923c; --ke-bg:#2c1b12; --hw:#94a3b8; --hw-bg:#1e242d;
+      --vm:#2dd4bf; --vm-bg:#0f2a27; --ok:#4ade80; --ok-bg:#13291b; --mal:#f87171; --mal-bg:#2d1515; --cer:#a78bfa; --cer-bg:#221a38;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+    --us:#60a5fa; --us-bg:#15233d; --ke:#fb923c; --ke-bg:#2c1b12; --hw:#94a3b8; --hw-bg:#1e242d;
+    --vm:#2dd4bf; --vm-bg:#0f2a27; --ok:#4ade80; --ok-bg:#13291b; --mal:#f87171; --mal-bg:#2d1515; --cer:#a78bfa; --cer-bg:#221a38;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--texto); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .envoltura{max-width:1180px; margin:0 auto; padding:18px 16px 48px}
+  h1{font-size:1.35rem; margin:0 0 4px}
+  .sub{color:var(--suave); margin:0 0 12px; font-size:.92rem}
+  .tabs{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px}
+  .tabs button,button{font:inherit; font-size:.9rem; padding:7px 12px; border-radius:8px; border:1px solid var(--borde); background:var(--panel); color:var(--texto); cursor:pointer}
+  .tabs button.on{background:var(--acento); color:#fff; border-color:var(--acento); font-weight:650}
+  button:hover{border-color:var(--acento)}
+  button.accion{background:var(--acento); color:#fff; border-color:var(--acento); font-weight:650}
+  .tarjeta{background:var(--panel); border:1px solid var(--borde); border-radius:12px; padding:14px 16px; margin-bottom:12px}
+  .seccion{display:none} .seccion.on{display:block}
+  .acciones{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px}
+  .resultado{font-size:.9rem; color:var(--suave)}
+  .paneles{display:grid; gap:12px; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr))}
+  .p{border:1px solid var(--borde); border-radius:11px; padding:11px; display:flex; flex-direction:column}
+  .p h3{margin:0 0 8px; font-size:1rem}
+  .capa{border:1.5px solid; border-radius:8px; padding:6px 8px; margin-bottom:6px; font-size:.84rem; text-align:center; position:relative; transition:all .25s}
+  .capa.us{border-color:var(--us); background:var(--us-bg)} .capa.ke{border-color:var(--ke); background:var(--ke-bg)}
+  .capa.hw{border-color:var(--hw); background:var(--hw-bg)} .capa.vm{border-color:var(--vm); background:var(--vm-bg)}
+  .capa .et{font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; display:block; margin-bottom:4px; opacity:.85}
+  .fila{display:flex; gap:6px; justify-content:center; flex-wrap:wrap}
+  .caja{border:1.5px solid var(--borde); background:var(--panel); border-radius:7px; padding:4px 8px; font-size:.8rem; transition:all .25s}
+  .hilo{display:inline-grid; place-items:center; width:34px; height:34px; border-radius:50%; border:2px solid var(--us); background:var(--panel); font:700 .75rem system-ui; transition:all .25s}
+  .hilo.kt{border-color:var(--ke)}
+  .bloq{background:var(--mal) !important; color:#fff !important; border-color:var(--mal) !important}
+  .corre{background:var(--ok) !important; color:#fff !important; border-color:var(--ok) !important}
+  .caida{background:var(--mal-bg) !important; border-color:var(--mal) !important; text-decoration:line-through}
+  .pared{border-left:4px dashed var(--ke); margin:0 2px}
+  .orden{position:absolute; left:-8px; top:-9px; width:22px; height:22px; border-radius:50%; background:var(--acento); color:#fff; font:700 .75rem/22px system-ui; display:none}
+  .mostrar-orden .orden{display:block}
+  .pros{margin:8px 0 0; padding:0; list-style:none; font-size:.85rem; flex:1}
+  .pros li{padding:3px 0 3px 22px; position:relative}
+  .pros li::before{position:absolute; left:2px; font-weight:800}
+  .pros li.mas::before{content:"+"; color:var(--ok)} .pros li.menos::before{content:"−"; color:var(--mal)}
+  .ideas ul{margin:6px 0 0; padding-left:20px} .ideas li{margin:4px 0}
+  h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave); margin:0 0 6px}
+  .ref{font-size:.8rem; color:var(--suave); margin-top:8px}
+  code{font-family:ui-monospace,Consolas,monospace; font-size:.9em}
+  .flecha{font-size:.8rem; color:var(--suave); text-align:center; margin:-2px 0 4px}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <h1>Arquitecturas lado a lado</h1>
+  <p class="sub">Cada pestaña compara estructuras en paneles con los mismos colores:
+    <b style="color:var(--us)">azul = espacio de usuario</b>, <b style="color:var(--ke)">naranja = kernel</b>,
+    <b style="color:var(--hw)">gris = hardware</b>, <b style="color:var(--vm)">verde = máquinas virtuales</b>.
+    Los botones de arriba de cada pestaña simulan una situación y muestran qué pasa en cada panel.</p>
+
+  <div class="tabs" id="tabs">
+    <button data-t="hilos" class="on">🧵 Hilos: usuario / kernel / híbrido</button>
+    <button data-t="chrome">🌐 Procesos contra hilos (Chrome)</button>
+    <button data-t="hiper">🖥 Hipervisor tipo 1 / tipo 2</button>
+    <button data-t="bufer">🪣 Búfer contra caché</button>
+    <button data-t="mp">🔀 SO de multiprocesadores</button>
+  </div>
+
+  <!-- ============ HILOS ============ -->
+  <section class="seccion on" id="s-hilos">
+    <div class="tarjeta">
+      <div class="acciones">
+        <button class="accion" id="h-read">Simular: el hilo T2 hace un <code>read()</code> bloqueante</button>
+        <button id="h-rei">↺ Reiniciar</button>
+        <span class="resultado" id="h-res">Verde = puede correr · rojo = bloqueado.</span>
+      </div>
+      <div class="paneles">
+        <div class="p">
+          <h3>A · Hilos de usuario</h3>
+          <div class="capa us"><span class="et">Espacio de usuario · proceso P</span>
+            <div class="fila"><span class="hilo" data-h="u">T1</span><span class="hilo" data-h="u2">T2</span><span class="hilo" data-h="u">T3</span></div>
+            <div class="caja" style="margin-top:6px">Sistema en tiempo de ejecución + tabla de hilos</div></div>
+          <div class="capa ke"><span class="et">Kernel</span><div class="caja" id="hu-k">Tabla de procesos: ve solo a <b>P</b></div></div>
+          <ul class="pros">
+            <li class="mas">Conmutar es rapidísimo: sin TRAP ni cambio de contexto.</li>
+            <li class="mas">Cada proceso puede tener su propio algoritmo de planificación.</li>
+            <li class="mas">Funciona en un SO que no tiene hilos.</li>
+            <li class="menos">Una llamada bloqueante (o un fallo de página) bloquea <b>todo</b> el proceso.</li>
+            <li class="menos">No hay reloj dentro del proceso: sin <code>thread_yield</code>, un hilo no cede nunca.</li>
+          </ul>
+        </div>
+        <div class="p">
+          <h3>B · Hilos de kernel</h3>
+          <div class="capa us"><span class="et">Espacio de usuario · proceso P</span>
+            <div class="fila"><span class="hilo kt" data-h="k">T1</span><span class="hilo kt" data-h="k2">T2</span><span class="hilo kt" data-h="k">T3</span></div></div>
+          <div class="capa ke"><span class="et">Kernel</span><div class="caja">Tabla de procesos + <b>tabla de hilos global</b>: ve a T1, T2 y T3</div></div>
+          <ul class="pros">
+            <li class="mas">Se bloquea solo el hilo que espera; los demás siguen.</li>
+            <li class="mas">Con varias CPU, los hilos corren en paralelo de verdad.</li>
+            <li class="mas">El kernel puede elegir hilos de distintos procesos (A1, B1, A2…).</li>
+            <li class="menos">Crear y conmutar cuesta una llamada al sistema.</li>
+          </ul>
+        </div>
+        <div class="p">
+          <h3>C · Híbrida (M:N)</h3>
+          <div class="capa us"><span class="et">Espacio de usuario · proceso P</span>
+            <div class="fila"><span class="caja"><span class="hilo" data-h="m1">T1</span> <span class="hilo" data-h="m2">T2</span><br><small>sobre K1</small></span>
+              <span class="caja"><span class="hilo" data-h="m">T3</span> <span class="hilo" data-h="m">T4</span><br><small>sobre K2</small></span></div></div>
+          <div class="capa ke"><span class="et">Kernel</span><div class="fila"><span class="hilo kt" data-h="K1">K1</span><span class="hilo kt" data-h="K2">K2</span></div>
+            <div class="caja" style="margin-top:6px">Ve solo los hilos de kernel (los «asientos»)</div></div>
+          <ul class="pros">
+            <li class="mas">La biblioteca reparte muchos hilos de usuario sobre pocos de kernel.</li>
+            <li class="mas">Si se bloquea un asiento, los de los otros asientos siguen.</li>
+            <li class="menos">Más complejo de implementar.</li>
+            <li class="menos">Activaciones del planificador: el <b>upcall</b> viola el modelo de capas.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="ref">(Tanenbaum, cap. 2.2.4–2.2.6, págs. 106–111)</p>
+    </div>
+    <div class="tarjeta ideas"><h2>Ideas clave y frases de examen</h2><ul>
+      <li>🧠 La pregunta que define todo: <b>¿el kernel sabe que existen los hilos?</b> El kernel solo bloquea lo que conoce.</li>
+      <li>📌 La paradoja: se quieren hilos justamente en programas con muchas llamadas bloqueantes, que es donde los hilos de usuario funcionan peor.</li>
+      <li>⚠️ Bloquear ≠ caer: un <code>read</code> <b>bloquea</b> todo el proceso con hilos de usuario. Que el proceso <b>se caiga</b> (crash) pasa con cualquier tipo de hilo, porque comparten memoria.</li>
+      <li>❓ Los hilos de usuario sí tienen planificador (el de la biblioteca). Lo que no tienen es un reloj que lo dispare.</li>
+    </ul></div>
+  </section>
+
+  <!-- ============ CHROME ============ -->
+  <section class="seccion" id="s-chrome">
+    <div class="tarjeta">
+      <div class="acciones">
+        <button class="accion" id="c-crash">Simular: la pestaña 2 corrompe memoria y muere</button>
+        <button class="accion" id="c-espia">Simular: la pestaña 2 (sitio malicioso) intenta leer la del banco</button>
+        <button id="c-rei">↺ Reiniciar</button>
+      </div>
+      <div class="resultado" id="c-res" style="margin-bottom:10px">Elegí una situación.</div>
+      <div class="paneles">
+        <div class="p">
+          <h3>Un proceso con un hilo por pestaña</h3>
+          <div class="capa us"><span class="et">Un solo espacio de direcciones</span>
+            <div class="fila"><span class="caja" data-c="h1">Pestaña 1<br><small>🏦 banco</small></span><span class="caja" data-c="h2">Pestaña 2<br><small>☠️ sitio</small></span><span class="caja" data-c="h3">Pestaña 3<br><small>📺 video</small></span></div></div>
+          <div class="capa hw"><span class="et">MMU</span>No hay pared: todos ven toda la memoria</div>
+          <ul class="pros">
+            <li class="mas">Menos memoria; compartir datos es directo.</li>
+            <li class="menos">Si una pestaña corrompe memoria, cae todo el navegador.</li>
+            <li class="menos">Una pestaña puede leer la memoria de las otras.</li>
+          </ul>
+        </div>
+        <div class="p">
+          <h3>Un proceso por pestaña (Chrome)</h3>
+          <div class="capa us"><span class="et">Un espacio de direcciones por proceso</span>
+            <div class="fila"><span class="caja" data-c="p1">Proceso 1<br><small>🏦 banco</small></span><span class="pared"></span><span class="caja" data-c="p2">Proceso 2<br><small>☠️ sitio</small></span><span class="pared"></span><span class="caja" data-c="p3">Proceso 3<br><small>📺 video</small></span></div></div>
+          <div class="capa hw"><span class="et">MMU</span>Pared de hardware entre procesos</div>
+          <ul class="pros">
+            <li class="mas"><b>Aislamiento de fallas</b>: si muere una pestaña, el resto sigue.</li>
+            <li class="mas"><b>Protección de memoria</b>: la MMU no deja leer otro proceso.</li>
+            <li class="menos">Paga más memoria, a propósito.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="tarjeta ideas"><h2>Ideas clave y frases de examen</h2><ul>
+      <li>🧠 La diferencia técnica entre hilos y procesos es la <b>pared de hardware</b>: cada proceso tiene su propio espacio de direcciones y la MMU lo hace cumplir.</li>
+      <li>Chrome elige procesos por dos razones: <b>aislamiento de fallas</b> y <b>protección de memoria</b>.</li>
+      <li>📌 Entre hilos no hay protección, y es intencional: son del mismo usuario y cooperan.</li>
+      <li>La MMU es el tema central de la U3.</li>
+    </ul></div>
+  </section>
+
+  <!-- ============ HIPERVISORES ============ -->
+  <section class="seccion" id="s-hiper">
+    <div class="tarjeta">
+      <div class="acciones">
+        <button class="accion" id="v-orden">Mostrar: ¿qué arranca primero al prender la máquina?</button>
+        <button id="v-rei">↺ Ocultar</button>
+      </div>
+      <div class="paneles" id="v-paneles">
+        <div class="p">
+          <h3>Hipervisor tipo 1</h3>
+          <div class="fila" style="align-items:stretch">
+            <div class="capa vm" style="flex:1"><span class="orden">3</span><span class="et">VM 1</span>Linux<br><small>con sus programas</small></div>
+            <div class="capa vm" style="flex:1"><span class="orden">3</span><span class="et">VM 2</span>Windows<br><small>con sus programas</small></div>
+          </div>
+          <div class="capa ke"><span class="orden">2</span><span class="et">Hipervisor (monitor)</span>VM/370 (hoy, por ejemplo, VMware ESXi o Xen: complemento)</div>
+          <div class="capa hw"><span class="orden">1</span><span class="et">Hardware</span>CPU, memoria, discos</div>
+          <ul class="pros">
+            <li class="mas">Corre <b>directamente sobre el hardware</b>: no hay un SO de por medio.</li>
+            <li class="mas">Cada VM recibe una copia exacta del hardware (modo kernel, usuario, interrupciones).</li>
+            <li class="menos">La máquina queda dedicada: lo primero que arranca es el hipervisor (uso típico: servidores).</li>
+          </ul>
+        </div>
+        <div class="p">
+          <h3>Hipervisor tipo 2</h3>
+          <div class="fila" style="align-items:stretch">
+            <div class="capa vm" style="flex:1"><span class="orden">4</span><span class="et">VM</span>Linux invitado</div>
+            <div class="capa us" style="flex:1"><span class="orden">3</span><span class="et">Otros programas</span>Word, Chrome…</div>
+          </div>
+          <div class="capa us"><span class="orden">3</span><span class="et">Hipervisor = programa de aplicación</span>VMware Workstation, VirtualBox</div>
+          <div class="capa ke"><span class="orden">2</span><span class="et">SO anfitrión</span>Windows</div>
+          <div class="capa hw"><span class="orden">1</span><span class="et">Hardware</span>Tu PC</div>
+          <ul class="pros">
+            <li class="mas">Se instala como cualquier programa en tu PC de siempre.</li>
+            <li class="menos">Hay una capa más (el SO anfitrión) entre la VM y el hardware: suele ser más lento (complemento).</li>
+          </ul>
+        </div>
+      </div>
+      <p class="ref">(Tanenbaum, cap. 1.7.5, págs. 68–71, fig. 1-29)</p>
+    </div>
+    <div class="tarjeta ideas"><h2>Ideas clave y frases de examen</h2><ul>
+      <li>🧠 Truco: <b>¿qué arranca primero al prender?</b> En el tipo 1, el hipervisor. En el tipo 2, el SO anfitrión, y después el hipervisor como un programa más.</li>
+      <li>El monitor de máquinas virtuales separa las dos funciones del SO: la multiprogramación (el hipervisor) y la máquina extendida (cada SO invitado).</li>
+      <li>❓ El SO de tu PC no es «tipo 1»: tipo 1 y tipo 2 clasifican <b>hipervisores</b>, no sistemas operativos.</li>
+    </ul></div>
+  </section>
+
+  <!-- ============ BÚFER / CACHÉ ============ -->
+  <section class="seccion" id="s-bufer">
+    <div class="tarjeta">
+      <div class="paneles">
+        <div class="p">
+          <h3>🪣 Búfer</h3>
+          <div class="capa us"><span class="et">Proceso</span>pide de a 1 byte</div>
+          <div class="flecha">▲ entrega de a poco</div>
+          <div class="capa us"><span class="et">Búfer en RAM</span>junta un bloque de 4096 bytes</div>
+          <div class="flecha">▲ trae de a bloques</div>
+          <div class="capa hw"><span class="et">Disco</span>lento</div>
+          <ul class="pros">
+            <li class="mas">Objetivo: <b>mover de a bloques</b> y amortiguar diferencias de velocidad y tamaño.</li>
+            <li class="mas">Un búfer más grande ahorra <b>llamadas al sistema</b> (TRAP).</li>
+            <li class="menos">No sirve para reutilizar: los datos pasan y se van.</li>
+          </ul>
+        </div>
+        <div class="p">
+          <h3>⚡ Caché</h3>
+          <div class="capa us"><span class="et">CPU</span>vuelve a pedir lo mismo</div>
+          <div class="flecha">▲ acierto: 1 ns</div>
+          <div class="capa ke"><span class="et">Caché</span>guarda copias de lo usado hace poco (líneas de 64 bytes)</div>
+          <div class="flecha">▲ fallo: además 10 ns</div>
+          <div class="capa hw"><span class="et">RAM</span>más lenta</div>
+          <ul class="pros">
+            <li class="mas">Objetivo: <b>no volver a buscar</b> lo que se va a reutilizar.</li>
+            <li class="mas">Funciona por la <b>localidad</b> de los programas.</li>
+            <li class="menos">Con mala localidad casi no ayuda (Tm 6,00 ns contra 1,50 ns).</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="tarjeta ideas"><h2>Ideas clave y frases de examen</h2><ul>
+      <li>🧠 <b>Búfer = juntar para mover de a bloques. Caché = guardar para reutilizar.</b> Los dos están en memoria rápida; cambia el propósito.</li>
+      <li>⚠️ Un búfer más grande ahorra <b>llamadas al sistema</b>, <b>no</b> lecturas de disco: el disco se lee de a bloques igual (error del cuestionario de la U1).</li>
+      <li>Cada nivel de la jerarquía de memoria funciona como caché del de abajo.</li>
+    </ul></div>
+  </section>
+
+  <!-- ============ MULTIPROCESADORES ============ -->
+  <section class="seccion" id="s-mp">
+    <div class="tarjeta">
+      <div class="acciones">
+        <button class="accion" id="m-carga">Simular: muchas llamadas al sistema a la vez</button>
+        <button id="m-rei">↺ Reiniciar</button>
+        <span class="resultado" id="m-res"></span>
+      </div>
+      <div class="paneles">
+        <div class="p">
+          <h3>① Cada CPU con su propio SO</h3>
+          <div class="fila"><span class="caja" data-m="a">CPU 1<br><small>SO 1</small></span><span class="caja" data-m="a">CPU 2<br><small>SO 2</small></span><span class="caja" data-m="a">CPU 3<br><small>SO 3</small></span></div>
+          <div class="capa hw" style="margin-top:8px"><span class="et">Memoria dividida en partes · disco compartido</span></div>
+          <ul class="pros">
+            <li class="mas">Cada llamada se atiende en su propia CPU.</li>
+            <li class="menos">No comparte procesos ni páginas (desperdicio).</li>
+            <li class="menos">Cada SO con su caché de búfer: el mismo bloque sucio en varias → <b>corrupción</b>.</li>
+          </ul>
+        </div>
+        <div class="p">
+          <h3>② Maestro-esclavo</h3>
+          <div class="fila"><span class="caja" data-m="maestro">CPU 1<br><small><b>maestra</b>: el SO</small></span><span class="caja" data-m="b">CPU 2<br><small>esclava</small></span><span class="caja" data-m="b">CPU 3<br><small>esclava</small></span></div>
+          <div class="capa hw" style="margin-top:8px"><span class="et">Memoria compartida</span>una lista de listos, una reserva de páginas</div>
+          <ul class="pros">
+            <li class="mas">Una sola copia de las estructuras: resuelve los 4 problemas del ①.</li>
+            <li class="menos"><b>Cuello de botella</b>: todas las llamadas van a la maestra. Condición: n · f ≤ 1.</li>
+          </ul>
+        </div>
+        <div class="p">
+          <h3>③ SMP (simétrico) ★</h3>
+          <div class="fila"><span class="caja" data-m="c">CPU 1<br><small>ejecuta el SO</small></span><span class="caja" data-m="c">CPU 2<br><small>ejecuta el SO</small></span><span class="caja" data-m="c">CPU 3<br><small>ejecuta el SO</small></span></div>
+          <div class="capa hw" style="margin-top:8px"><span class="et">Memoria compartida</span>una copia del SO, protegida con candados</div>
+          <ul class="pros">
+            <li class="mas">Cualquier CPU atiende su propia llamada: no hay maestra.</li>
+            <li class="menos">Necesita candados. Con un solo candado global es casi tan malo como maestro-esclavo; lo que importa es la <b>granularidad</b>.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="ref">(Tanenbaum, cap. 8.1.2, págs. 534–538)</p>
+    </div>
+    <div class="tarjeta ideas"><h2>Ideas clave y frases de examen</h2><ul>
+      <li>🧠 En el ①, el 2.º y el 3.º problema son desperdicio; el 4.º es <b>corrupción</b>, porque la memoria está dividida pero el disco es compartido.</li>
+      <li>📌 Maestro-esclavo: <i>«si el 10 % del tiempo está manejando llamadas, con 10 CPU la maestra casi se satura»</i>. Probalo en la calculadora.</li>
+      <li>📌 «SMP resuelve el cuello de botella» es <b>falso</b> si el SO tiene un solo candado global.</li>
+    </ul></div>
+  </section>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("on", x === b));
+  document.querySelectorAll(".seccion").forEach(s => s.classList.toggle("on", s.id === "s-" + b.dataset.t));
+  try { localStorage.setItem("comparaciones_tab", b.dataset.t); } catch (e) {}
+});
+try { const t = localStorage.getItem("comparaciones_tab"); const b = t && document.querySelector(`#tabs button[data-t="${t}"]`); if (b) b.click(); } catch (e) {}
+const marcar = (sel, cls, on) => document.querySelectorAll(sel).forEach(e => e.classList.toggle(cls, on));
+
+// hilos: qué se bloquea con un read() de T2
+function hilosRei(){ marcar("[data-h]", "bloq", false); marcar("[data-h]", "corre", false); $("hu-k").innerHTML = "Tabla de procesos: ve solo a <b>P</b>"; $("h-res").textContent = "Verde = puede correr · rojo = bloqueado."; }
+$("h-read").onclick = () => {
+  hilosRei();
+  marcar('[data-h="u"],[data-h="u2"]', "bloq", true);                     // A: todo el proceso
+  marcar('[data-h="k2"]', "bloq", true); marcar('[data-h="k"]', "corre", true);   // B: solo T2
+  marcar('[data-h="m2"],[data-h="K1"],[data-h="m1"]', "bloq", true); marcar('[data-h="m"],[data-h="K2"]', "corre", true);  // C: el asiento K1
+  $("hu-k").innerHTML = "Ve que <b>P</b> hizo un read → bloquea a <b>P entero</b>";
+  $("h-res").innerHTML = "<b>A:</b> se frena todo el proceso · <b>B:</b> solo T2 · <b>C:</b> se bloquea el asiento K1 (T1 espera con él); T3 y T4 siguen.";
+};
+$("h-rei").onclick = hilosRei;
+
+// chrome
+function chromeRei(){ marcar("[data-c]", "caida", false); marcar("[data-c]", "bloq", false); marcar("[data-c]", "corre", false); $("c-res").textContent = "Elegí una situación."; }
+$("c-crash").onclick = () => {
+  chromeRei(); marcar('[data-c^="h"]', "caida", true); marcar('[data-c="p2"]', "caida", true); marcar('[data-c="p1"],[data-c="p3"]', "corre", true);
+  $("c-res").innerHTML = "<b>Con hilos</b> cae el proceso entero: se cierran las tres pestañas. <b>Con procesos</b> muere solo el proceso 2.";
+};
+$("c-espia").onclick = () => {
+  chromeRei(); marcar('[data-c="h1"]', "bloq", true); marcar('[data-c="p1"]', "corre", true);
+  $("c-res").innerHTML = "<b>Con hilos</b>, la pestaña 2 lee la memoria del banco (rojo): están en el mismo espacio. <b>Con procesos</b>, la MMU traduce sus direcciones solo dentro de su propio espacio: no puede.";
+};
+$("c-rei").onclick = chromeRei;
+
+// hipervisores
+$("v-orden").onclick = () => $("v-paneles").classList.add("mostrar-orden");
+$("v-rei").onclick = () => $("v-paneles").classList.remove("mostrar-orden");
+
+// multiprocesadores
+function mpRei(){ marcar("[data-m]", "bloq", false); marcar("[data-m]", "corre", false); $("m-res").textContent = ""; }
+$("m-carga").onclick = () => {
+  mpRei(); marcar('[data-m="a"],[data-m="c"]', "corre", true); marcar('[data-m="maestro"]', "bloq", true);
+  $("m-res").innerHTML = "En ② todas las llamadas hacen cola en la CPU maestra (rojo). En ① y ③ cada CPU atiende la suya (en ③, mientras los candados sean finos).";
+};
+$("m-rei").onclick = mpRei;
+</script>
+</body>
+</html>
