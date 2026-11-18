@@ -1,6 +1,6 @@
 # Progreso — Sistemas Operativos
 
-Última actualización: 2026-11-09
+Última actualización: 2026-11-18
 
 ## Estado de las fases
 
@@ -21,10 +21,10 @@
 | 1 | Introducción, hardware y estructura de los SO | ✅ | ✅ | ⏸ 23/28 (A y B) | — | capas ≠ tolerancia a fallas, buffer ≠ menos disco, CMOS vs sector 0 |
 | 2 | Procesos, hilos, concurrencia y planificación | ✅ | ✅ 10/10 + cierre | ⏸ generado, sin tomar | — | fin de quantum → LISTO, asimetría `up`/`signal`, boletos ≠ porcentajes, alcance del paso de mensajes |
 
-**Material de repaso:** `repaso_u01.pdf` (56 págs., clase completa + resumen condensado), `repaso_u02.pdf` (168 págs.) y el **mapa conceptual acumulativo** de las U1 y U2 (`plan/mapa_conceptual.md`, `.pdf` de 52 págs. y `visuales/mapa_conceptual.html`).
-| 3 | Administración de memoria | — | — | — | — | — |
-| 4 | Sistemas de archivos | — | — | — | — | — |
-| 5 | Entrada/salida | — | — | — | — | — |
+**Material de repaso:** `repaso_u01.pdf` (56 págs., clase completa + resumen condensado), `repaso_u02.pdf` (168 págs.) `repaso_u03.pdf` (47 págs.), `repaso_u04.pdf` (35 págs.) y el **mapa conceptual acumulativo** de las U1 a U4 (`plan/mapa_conceptual.md`, `.pdf` de 89 págs. y `visuales/mapa_conceptual.html`).
+| 3 | Administración de memoria | ✅ | ✅ 11/11 + cierre | ⏸ generado, sin tomar | — | traducción a física (0x333A) y cola final de segunda oportunidad, WSClock con la sucia, sobrepaginación → control de carga, DLL → código independiente de la posición, vocabulario (marcos = RAM, descriptor sin dirección en disco) |
+| 4 | Sistemas de archivos | ✅ | ✅ 11/11 + cierre | ⏸ pendiente (por pedido, junto con U1–U3) | — | duro vs. simbólico (quién mantiene vivo y quién paga), idempotencia ≠ «correcto», nodo-i reasignado, fragmentación contra el cluster (no el sector), fsck: copiar y avisar / sacar de libres, Bell-La Padula = fuga hacia abajo |
+| 5 | Entrada/salida | ✅ | — | — | — | — |
 | 6 | Interbloqueos | — | — | — | — | — |
 | 7 | Virtualización | — | — | — | — | — |
 | 8 | Sistemas distribuidos y tiempo real | — | — | — | — | — |
@@ -59,6 +59,18 @@
 - **2026-11-06** — Nueva visualización **`visuales/explorador_so.html`**: el recorrido paso a paso de cada operación por usuario → kernel → hardware (23 temas y 120 pasos de las U1 y U2), probada con `_trabajo/verificar_explorador_so.js`, 0 fallos.
 
 - **2026-11-09** — Repaso de U1 y U2: **57 comentarios 💬** con las dudas de `preguntasrepaso.md` agregados al mapa gráfico (sin tocar lo existente; se marcaron 2 errores de la otra IA: inversión de prioridades ≠ interbloqueo, y el planificador no es un proceso). Cuatro gráficos nuevos con el **formato de explicación por tipo** (pedido para todas las unidades): simuladores de exclusión mutua y de cambio de contexto, comparaciones de arquitecturas y calculadoras. Verificados con scripts y 56 pruebas de navegador.
+
+- **2026-11-09** — **Preparada la Unidad 3** (Fase 2): recorte del libro en `fuentes/tanenbaum_u03.pdf` (108 págs.: 1.3.2, 2.1.7, cap. 3 completo, 10.4.2–10.4.3 con el algoritmo de colegas, y 11.5 Windows), apuntes (resumen de la cátedra págs. 41–67, comandos de memoria págs. 8–12, práctica resuelta con los ejercicios de traducción y segunda oportunidad), `notebooklm_u03.md` (25.000 palabras) y `prompt_video.txt` (238 palabras). Ejemplos verificados con `_trabajo/verificar_u03.py`. Se encontraron **dos erratas de la edición en español** (TP2 en el ejemplo 0x00403004; la página 2 de la fig. 3-18).
+
+- **2026-11-09 a 2026-11-12** — **Clase de la Unidad 3 completa**: 11 temas (jerarquía; espacio de direcciones y base/límite; intercambio y memoria libre; paginación; tabla de páginas y TLB; multinivel e invertida; reemplazo A y B; diseño A y B; los 10 pasos del fallo; segmentación A y B con MULTICS y Pentium; casos de estudio: caché, Linux y Windows) y cierre. **14 visualizaciones** nuevas en `unidades/u03-memoria/visuales/`, todas verificadas con scripts de motor y pruebas en Chrome (escritorio y celular), en el índice y en la pestaña 🎛 del mapa gráfico. Errores marcados: 0x3CEE en vez de 0x333A y no conocer la «cola final»; el bit M que sale del TLB va a la tabla (no al disco); la dirección en disco no está en la tabla de páginas; WSClock planifica la escritura de la sucia; sobrepaginación sin control de carga; DLL sin «código independiente de la posición»; «marcos en el disco»; `id` bajo ≠ CPU ociosa. Huecos del material avisados: particiones fijas y free/calloc/realloc.
+
+- **2026-11-12** — Cierre de la U3 (Fase 4, por pedido del estudiante): **`repaso_u03.pdf`** (47 págs., armado desde el chat con `_trabajo/extraer_chat.py` + `_trabajo/armar_repaso_u03.py`; índice `_trabajo/indice_repaso_u03.md`, 145 títulos, 0 sin ubicar); **mapa conceptual ampliado con la U3** (53 nodos con id, secuencias 🔢, ⚠️, 📌 y cruces con U1/U2; 1301 nodos en total; PDF de 72 págs.; `verificar_mapa_conceptual.js` 0 fallos); **mapa gráfico** con 60 cajas y 21 cruces de la U3 agregados sin tocar lo existente (diff: 0 líneas borradas; copia previa en `_trabajo/mapa_grafico_antes_u03.html`; el subtítulo «Unidades 1 y 2 conectadas» quedó como estaba); **cuestionario de la U3** (21 preguntas, 100 p) con `respuestas.md` aparte, numéricos verificados con `_trabajo/verificar_cuestionario_u03.py`. **Queda pendiente, junto con los de la U1 y la U2**, por pedido del estudiante.
+
+- **2026-11-18** — **Clase de la Unidad 4 terminada** (11 temas + cierre). Simuladores nuevos en `unidades/u04-archivos/visuales/`: `fat.html`, `inodos.html`, `vinculos_rutas.html`, `bitacora.html`, `espacio_disco.html`, `fsck.html`, `ejemplos_fs.html`, `proteccion.html`, `tres_tablas.html` (cada uno con su script de verificación en `_trabajo/`, todos 0 fallos). Cierre (Fase 4, sin el cuestionario): **`repaso_u04.pdf`** (35 págs., `_trabajo/extraer_chat.py` + `_trabajo/armar_repaso_u04.py`; índice `_trabajo/indice_repaso_u04.md`, 116 títulos, 0 sin ubicar); **mapa conceptual ampliado con la U4** (rama `_trabajo/mapa_rama_u04.md` agregada con `_trabajo/agregar_u04_mapa_conceptual.py`; 1609 nodos; PDF de 89 págs.; `verificar_mapa_conceptual.js` 0 fallos; copia previa `_trabajo/mapa_conceptual_antes_u04.md`); **mapa gráfico** con 60 cajas y 21 cruces de la U4 (`_trabajo/agregar_u04_mapa_grafico.py`, 0 líneas borradas, copia previa `_trabajo/mapa_grafico_antes_u04.html`, `verificar_mapa_grafico_u04.js` 0 fallos). **El cuestionario de la U4 queda pendiente junto con los de la U1, U2 y U3, por pedido del estudiante.**
+
+- **2026-11-18** — **Fase 2 de la Unidad 5.** Recorte del libro (PDF 359–462 cap. 5, 761–764 shell, 801–809 E/S en Linux, 926–936 E/S en Windows; 128 págs., verificado en los extremos), resumen de la cátedra (págs. 86–101) y ejercicio de disco de la práctica copiados a `fuentes/`, textos en `_trabajo/u05_*.txt`. Generados `notebooklm_u05.md` (≈33.500 palabras, 12 secciones, 18 ejemplos resueltos) y `prompt_video.txt` (menos de 250 palabras). Los ejemplos numéricos se verificaron con `_trabajo/verificar_u05.py` (51 OK, 0 fallos). Huecos y erratas anotados en `plan/mapa_unidades.md`.
+
+- **2026-11-13** — **Preparada la Unidad 4** (Fase 2): recorte del libro en `unidades/u04-archivos/fuentes/tanenbaum_u04.pdf` (138 págs.: cap. 4, 8.4.4, 9.3, 10.6 y 11.8, bordes comprobados), apuntes (resumen de la cátedra págs. 67–86, comandos de sistemas de archivos págs. 12–19, práctica de FAT e i-nodos págs. 3–5, 8–9 y 11–12), `notebooklm_u04.md` (20 secciones en el orden del programa, 10 ejemplos resueltos) y `prompt_video.txt` (242 palabras). Ejemplos verificados con `_trabajo/verificar_u04.py` (24 OK). Detalles de figuras cotejados con las imágenes del libro. Se marcaron dos errores de la práctica (4,27 TB → ≈ 4 TiB; 2580,48 → 2554 B) y los huecos del material (ext4/xfs/btrfs/zfs, tamaño de bloque desde fstab).
 
 ## Cronograma
 

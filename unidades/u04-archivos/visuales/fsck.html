@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verificador fsck</title>
+<style>
+  :root{
+    --bg:#f4f5f8; --panel:#fff; --borde:#d6dae2; --texto:#1b1f24; --suave:#5b6572; --acento:#3d63c9;
+    --ok:#15803d; --ok-bg:#e9f8ee; --fal:#dc2626; --fal-bg:#fdecec; --lim:#b45309; --lim-bg:#fff6e0;
+    --cer:#7c3aed; --cer-bg:#f3edff; --hl:#facc15;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+      --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+      --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+    --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+    --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--texto); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .envoltura{max-width:1150px; margin:0 auto; padding:18px 16px 48px}
+  h1{font-size:1.35rem; margin:0 0 4px}
+  h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave); margin:0 0 8px}
+  .sub{color:var(--suave); margin:0 0 14px; font-size:.92rem}
+  .tarjeta{background:var(--panel); border:1px solid var(--borde); border-radius:12px; padding:14px 16px; margin-bottom:12px; min-width:0}
+  button,select,input{font:inherit; font-size:.86rem; padding:7px 11px; border-radius:8px; border:1px solid var(--borde); background:var(--panel); color:var(--texto); max-width:100%; min-width:0}
+  button{cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--acento)}
+  button:disabled{opacity:.4; cursor:not-allowed}
+  button.prim{background:var(--acento); color:#fff; border-color:var(--acento); font-weight:650}
+  input{font-family:ui-monospace,Consolas,monospace; width:100%}
+  label{font-size:.82rem; color:var(--suave); display:flex; flex-direction:column; gap:3px; min-width:0; max-width:100%}
+  .datos{display:grid; grid-template-columns:1fr 1.4fr 1.4fr; gap:10px}
+  @media (max-width:760px){ .datos{grid-template-columns:1fr} }
+  .barra{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:10px}
+  .contador{margin-left:auto; color:var(--suave); font-size:.88rem}
+  .pest{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px}
+  .pest button.on{background:var(--acento); color:#fff; border-color:var(--acento)}
+  .grilla{display:grid; grid-template-columns:1.3fr 1fr; gap:12px}
+  @media (max-width:880px){ .grilla{grid-template-columns:1fr} }
+  .tablas{overflow-x:auto}
+  table{border-collapse:collapse; font:13px ui-monospace,Consolas,monospace}
+  td,th{border:1px solid var(--borde); padding:4px 7px; text-align:center; min-width:30px}
+  th{font:600 .72rem system-ui,sans-serif; color:var(--suave)}
+  th.fila{text-align:left; white-space:nowrap}
+  td.ahora{outline:3px solid var(--hl); outline-offset:-3px}
+  td.ok{background:var(--ok-bg)} td.mal{background:var(--fal-bg)} td.lim{background:var(--lim-bg)}
+  td.arreglo{background:var(--cer-bg); font-weight:700}
+  .codigo{font:13px/1.5 ui-monospace,Consolas,monospace; margin:8px 0 0; padding:0; list-style:none}
+  .codigo li{padding:2px 6px; border-radius:6px}
+  .codigo li.ahora{background:var(--hl); color:#000}
+  .actor{display:inline-block; padding:2px 10px; border-radius:99px; font-weight:800; font-size:.8rem; color:#fff; background:var(--acento)}
+  .porque{border:1px solid var(--borde); border-left:5px solid var(--acento); border-radius:10px; padding:12px 14px; margin-top:10px}
+  .porque .tit{font-weight:700; font-size:1.02rem; margin:0 0 4px}
+  .marca{display:block; margin-top:8px; border-radius:8px; padding:7px 10px; font-size:.88rem}
+  .marca.ojo{background:var(--fal-bg); border:1px solid var(--fal)}
+  .marca.cer{background:var(--cer-bg); border:1px solid var(--cer)}
+  .estado{margin-top:10px; padding:8px 12px; border-radius:8px; font-weight:600}
+  .estado.ok{background:var(--ok-bg); border:1px solid var(--ok)}
+  .estado.mal{background:var(--fal-bg); border:1px solid var(--fal)}
+  .estado ul{margin:4px 0 0; padding-left:18px; font-weight:400}
+  .paneles{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  @media (max-width:760px){ .paneles{grid-template-columns:1fr} }
+  .paneles ul{margin:6px 0 0; padding-left:20px; font-size:.9rem}
+  .mas{color:var(--ok)} .menos{color:var(--fal)}
+  .ideas li{margin-bottom:5px}
+  .oculto{display:none}
+  .dirs{font:13px/1.6 ui-monospace,Consolas,monospace}
+  .dirs .ent{display:inline-block; padding:0 7px; margin:2px; border:1px solid var(--borde); border-radius:6px}
+  .dirs .ent.ahora{background:var(--hl); color:#000}
+  .dirs .ent.hecho{opacity:.6}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <h1>Verificador de consistencia (fsck)</h1>
+  <p class="sub">Después de una caída, <b>fsck</b> (UNIX) o <b>scandisk</b> (Windows) arma tablas de contadores con la redundancia del sistema de archivos y repara lo que no cierra. Elegí un escenario o escribí tus propios números, y avanzá con «Siguiente paso». Tanenbaum 4.4.3, págs. 304–307.</p>
+
+  <div class="pest">
+    <button id="tabB" class="on">1 · Consistencia de bloques</button>
+    <button id="tabD">2 · Consistencia de directorios</button>
+    <button id="tabC">3 · Respaldos y caché: comparaciones</button>
+  </div>
+
+  <!-- ============ BLOQUES ============ -->
+  <section id="secB">
+    <div class="tarjeta">
+      <div class="datos">
+        <label>Escenario
+          <select id="bEsc"></select>
+        </label>
+        <label>En uso (cuántas veces aparece cada bloque en algún nodo-i)
+          <input id="bUso">
+        </label>
+        <label>Libres (cuántas veces aparece en la lista o el mapa de libres)
+          <input id="bLib">
+        </label>
+      </div>
+      <div class="barra">
+        <button class="prim" id="bSig">Siguiente paso ▶</button>
+        <button id="bFin">Ir al final</button>
+        <button id="bRei">Reiniciar</button>
+        <span class="contador" id="bCont"></span>
+      </div>
+    </div>
+    <div class="grilla">
+      <div class="tarjeta">
+        <h2>Tablas de contadores</h2>
+        <div class="tablas" id="bTabla"></div>
+        <div id="bEstado"></div>
+      </div>
+      <div class="tarjeta">
+        <h2>Qué hace fsck</h2>
+        <span class="actor">fsck</span>
+        <ol class="codigo" id="bCod"></ol>
+        <div class="porque" id="bPq"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DIRECTORIOS ============ -->
+  <section id="secD" class="oculto">
+    <div class="tarjeta">
+      <div class="datos">
+        <label>Escenario
+          <select id="dEsc"></select>
+        </label>
+        <label>Directorios (una línea por directorio: <code>/dir: nombre=nodoi, …</code>)
+          <input id="dDirs">
+        </label>
+        <label>Cuenta de vínculos guardada en cada nodo-i (<code>nodoi:cuenta</code>)
+          <input id="dCuen">
+        </label>
+      </div>
+      <div class="barra">
+        <button class="prim" id="dSig">Siguiente paso ▶</button>
+        <button id="dFin">Ir al final</button>
+        <button id="dRei">Reiniciar</button>
+        <span class="contador" id="dCont"></span>
+      </div>
+      <p class="sub" style="margin:8px 0 0">Separá los directorios con <code>;</code>. Ejemplo: <code>/: a=5, b=7; /d: c=5</code>. Los vínculos simbólicos no cuentan: no tienen entrada al nodo-i.</p>
+    </div>
+    <div class="grilla">
+      <div class="tarjeta">
+        <h2>Recorrido de directorios desde la raíz</h2>
+        <div class="dirs" id="dArbol"></div>
+        <h2 style="margin-top:12px">Contador real vs. cuenta del nodo-i</h2>
+        <div class="tablas" id="dTabla"></div>
+        <div id="dEstado"></div>
+      </div>
+      <div class="tarjeta">
+        <h2>Qué hace fsck</h2>
+        <span class="actor">fsck</span>
+        <ol class="codigo" id="dCod"></ol>
+        <div class="porque" id="dPq"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ COMPARACIONES ============ -->
+  <section id="secC" class="oculto">
+    <div class="tarjeta">
+      <h2>Respaldos: vaciado físico vs. vaciado lógico</h2>
+      <div class="paneles">
+        <div>
+          <b>Vaciado físico</b><br><small>copia los bloques del 0 al último, en orden</small>
+          <ul>
+            <li class="mas">+ simple, casi sin errores y rápido (a la velocidad del disco)</li>
+            <li class="mas">+ puede saltear los bloques libres y los defectuosos</li>
+            <li class="menos">− no puede saltear directorios</li>
+            <li class="menos">− no permite vaciados incrementales</li>
+            <li class="menos">− no puede restaurar un archivo individual</li>
+          </ul>
+        </div>
+        <div>
+          <b>Vaciado lógico</b><br><small>recorre el árbol desde un directorio y copia lo modificado desde una fecha base</small>
+          <ul>
+            <li class="mas">+ incremental: solo lo que cambió</li>
+            <li class="mas">+ restaura un archivo o directorio concreto</li>
+            <li class="menos">− más complejo: también vacía los directorios del camino a lo modificado</li>
+            <li class="menos">− la lista de libres no se vacía, hay que reconstruirla; ojo con vínculos, huecos y archivos especiales</li>
+          </ul>
+        </div>
+      </div>
+      <span class="marca cer">🧠 <b>Algoritmo de UNIX en 4 fases</b> (mapa de bits por nodo-i): 1) marcar archivos modificados y <b>todos</b> los directorios · 2) desmarcar directorios sin nada modificado abajo · 3) vaciar los directorios marcados · 4) vaciar los archivos marcados.</span>
+    </div>
+    <div class="tarjeta">
+      <h2>Caché de bloques: UNIX (sync cada 30 s) vs. escritura inmediata (write-through)</h2>
+      <div class="paneles">
+        <div>
+          <b>UNIX: escritura diferida + <code>sync</code></b><br><small>el programa <i>update</i> llama a sync cada 30 s</small>
+          <ul>
+            <li class="mas">+ junta muchas escrituras chicas en una sola (1 KB carácter a carácter → 1 escritura)</li>
+            <li class="mas">+ menos E/S: se impuso con los discos rígidos</li>
+            <li class="menos">− si se cae, se pierden hasta 30 s de trabajo</li>
+            <li class="menos">− sacar un medio removible sin sync → datos perdidos y FS corrupto</li>
+          </ul>
+        </div>
+        <div>
+          <b>Windows histórico: write-through</b><br><small>cada bloque modificado va al disco apenas se escribe en la caché</small>
+          <ul>
+            <li class="mas">+ confiable: sacar el disquete no rompe nada</li>
+            <li class="menos">− muchísima más E/S (un acceso por carácter en el ejemplo)</li>
+            <li class="menos">− hoy Windows tiene <code>FlushFileBuffers</code> (≈ sync) y NTFS compensa con la bitácora</li>
+          </ul>
+        </div>
+      </div>
+      <span class="marca ojo">⚠️ <b>LRU modificado:</b> el LRU exacto es posible (hay pocas referencias), pero <b>no conviene</b>: un bloque de nodos-i modificado podría quedar mucho tiempo en la caché. Regla: los bloques <b>esenciales para la consistencia</b> (todos salvo los de datos) se escriben al disco <b>en cuanto se modifican</b>; los que no se van a volver a usar pronto van <b>al frente</b> de la lista.</span>
+    </div>
+  </section>
+
+  <div class="tarjeta">
+    <h2>Ideas clave</h2>
+    <ul class="ideas">
+      <li>🧠 <b>Bloques:</b> en cada posición, <b>uso + libres = 1</b>. 0+0 → <b>faltante</b> (se agrega a libres) · 0+2 → <b>duplicado en libres</b> (se reconstruye la lista; con mapa de bits es imposible) · 2 en uso → <b>duplicado de datos</b>, el peor (se copia a un bloque libre y se avisa).</li>
+      <li>⚠️ <b>Duplicado de datos:</b> la estructura queda consistente, pero <b>probablemente uno de los dos archivos tenga basura</b>. fsck no puede saber cuál es el bueno.</li>
+      <li>🧠 <b>Directorios:</b> cuenta del nodo-i <b>&gt;</b> entradas → desperdicio (nunca se libera) · cuenta <b>&lt;</b> entradas → <b>catastrófico</b> (al borrar un nombre se libera el nodo-i y el otro queda colgado). En los dos casos: cuenta = entradas reales.</li>
+      <li>⚠️ Por eso el contador del nodo-i del <b>tema 5</b> importa tanto: es lo que fsck compara. Y la <b>bitácora</b> del tema 6 existe para no tener que correr fsck sobre todo el disco después de cada caída.</li>
+    </ul>
+  </div>
+</div>
+
+<script id="motor">
+// ---------- motor puro (verificable en Node) ----------
+const ESC_BLOQUES = {
+  a:  {nombre:"Fig. 4-27 (a) · consistente",            uso:"1 1 0 1 0 1 1 1 1 0 0 1 1 1 0 0", lib:"0 0 1 0 1 0 0 0 0 1 1 0 0 0 1 1"},
+  b:  {nombre:"Fig. 4-27 (b) · bloque faltante (2)",     uso:"1 1 0 1 0 1 1 1 1 0 0 1 1 1 0 0", lib:"0 0 0 0 1 0 0 0 0 1 1 0 0 0 1 1"},
+  c:  {nombre:"Fig. 4-27 (c) · duplicado en libres (4)", uso:"1 1 0 1 0 1 1 1 1 0 0 1 1 1 0 0", lib:"0 0 1 0 2 0 0 0 0 1 1 0 0 0 1 1"},
+  d:  {nombre:"Fig. 4-27 (d) · duplicado de datos (5)",  uso:"1 1 0 1 0 2 1 1 1 0 0 1 1 1 0 0", lib:"0 0 1 0 1 0 0 0 0 1 1 0 0 0 1 1"},
+  e8: {nombre:"Ejemplo resuelto · 8 bloques",           uso:"1 1 0 2 0 1 0 1",                 lib:"0 0 0 0 1 0 1 0"},
+  mix:{nombre:"Todo junto · en uso Y libre",            uso:"1 0 1 2 1 0 0 1",                 lib:"0 0 1 0 0 2 1 0"}
+};
+
+function parseFila(txt){
+  const t = String(txt).trim();
+  if(!t) return [];
+  return t.split(/[\s,;]+/).map(x => { const n = Number(x); return Number.isInteger(n) && n >= 0 ? n : NaN; });
+}
+
+// Diagnóstico de un bloque según sus dos contadores
+function diagBloque(u, l){
+  if(u === 0 && l === 1) return {tipo:"okLibre", grave:0};
+  if(u === 1 && l === 0) return {tipo:"okUso", grave:0};
+  if(u === 0 && l === 0) return {tipo:"faltante", grave:1};
+  if(u === 0 && l >= 2)  return {tipo:"dupLibre", grave:1};
+  if(u === 1 && l >= 1)  return {tipo:"usoYLibre", grave:2};
+  return {tipo:"dupDatos", grave:3};   // u >= 2 (con l cualquiera)
+}
+
+const TEXTO_DIAG = {
+  okLibre:  "libre, consistente",
+  okUso:    "en uso, consistente",
+  faltante: "bloque faltante",
+  dupLibre: "duplicado en la lista de libres",
+  usoYLibre:"en uso y libre a la vez",
+  dupDatos: "bloque de datos duplicado"
+};
+
+// Repara: devuelve tablas nuevas, acciones y copias hechas
+function repararBloques(uso, lib){
+  const n = uso.length, u = uso.slice(), l = lib.slice(), acciones = [];
+  // 1) arreglos que no necesitan bloques nuevos
+  for(let b = 0; b < n; b++){
+    const d = diagBloque(uso[b], lib[b]).tipo;
+    if(d === "faltante"){ l[b] = 1; acciones.push({b, tipo:d, txt:`bloque ${b}: se agrega a la lista de libres`}); }
+    else if(d === "dupLibre"){ l[b] = 1; acciones.push({b, tipo:d, txt:`bloque ${b}: se reconstruye la lista de libres (queda 1 vez)`}); }
+    else if(d === "usoYLibre"){ l[b] = 0; acciones.push({b, tipo:d, txt:`bloque ${b}: se saca de la lista de libres (lo usa un archivo)`}); }
+    else if(d === "dupDatos" && l[b] > 0){ l[b] = 0; }
+  }
+  // 2) duplicados de datos: una copia por cada archivo extra, en bloques libres
+  const copias = [];
+  let faltanLibres = 0;
+  for(let b = 0; b < n; b++){
+    if(diagBloque(uso[b], lib[b]).tipo !== "dupDatos") continue;
+    for(let k = 1; k < uso[b]; k++){
+      let dest = -1;
+      for(let j = 0; j < n; j++) if(u[j] === 0 && l[j] === 1){ dest = j; break; }
+      if(dest < 0){ faltanLibres++; continue; }
+      u[dest] = 1; l[dest] = 0; u[b]--;
+      copias.push({de:b, a:dest});
+      acciones.push({b, tipo:"dupDatos", txt:`bloque ${b}: se copia al bloque libre ${dest} y la copia se le da a uno de los archivos · se avisa al usuario`});
+    }
+  }
+  const consistente = u.every((x, i) => x + l[i] === 1);
+  return {uso:u, lib:l, acciones, copias, faltanLibres, consistente};
+}
+
+// Pasos del simulador de bloques
+function pasosBloques(uso, lib){
+  const p = [];
+  p.push({fase:"leer", linea:0, b:-1});
+  p.push({fase:"leerLib", linea:1, b:-1});
+  for(let b = 0; b < uso.length; b++) p.push({fase:"comp", linea:2, b, d:diagBloque(uso[b], lib[b])});
+  p.push({fase:"reparar", linea:3, b:-1});
+  return p;
+}
+
+// ---------- directorios ----------
+const ESC_DIRS = {
+  ok:   {nombre:"Consistente (vínculo duro)",           dirs:"/: home=2, etc=3; /home: notas=5, inf=5; /etc: conf=7", cuen:"5:2 7:1"},
+  alta: {nombre:"Cuenta ALTA (desperdicio)",            dirs:"/: home=2; /home: notas=5, foto=8",                    cuen:"5:2 8:1"},
+  baja: {nombre:"Cuenta BAJA (catastrófico)",           dirs:"/: home=2, tmp=4; /home: notas=5; /tmp: copia=5",     cuen:"5:1"},
+  huer: {nombre:"Nodo-i huérfano (en ningún directorio)",dirs:"/: home=2; /home: a=5",                                cuen:"5:1 9:1"}
+};
+
+function parseDirs(txt){
+  const dirs = [];
+  for(const parte of String(txt).split(";")){
+    const s = parte.trim(); if(!s) continue;
+    const i = s.indexOf(":"); if(i < 0) return null;
+    const nombre = s.slice(0, i).trim();
+    const ents = [];
+    for(const e of s.slice(i + 1).split(",")){
+      const t = e.trim(); if(!t) continue;
+      const m = t.match(/^([^=\s]+)\s*=\s*(\d+)$/); if(!m) return null;
+      ents.push({nombre:m[1], nodo:Number(m[2])});
+    }
+    dirs.push({nombre, ents});
+  }
+  return dirs;
+}
+function parseCuentas(txt){
+  const c = {};
+  for(const t of String(txt).trim().split(/[\s,;]+/)){
+    if(!t) continue;
+    const m = t.match(/^(\d+):(\d+)$/); if(!m) return null;
+    c[Number(m[1])] = Number(m[2]);
+  }
+  return c;
+}
+// Los nodos-i de directorios (los que aparecen como nombre de un directorio listado) no se verifican acá
+function nodosDeDirectorio(dirs){
+  const nombres = new Set(dirs.map(d => d.nombre));
+  const s = new Set();
+  for(const d of dirs) for(const e of d.ents){
+    const ruta = (d.nombre === "/" ? "" : d.nombre) + "/" + e.nombre;
+    if(nombres.has(ruta)) s.add(e.nodo);
+  }
+  return s;
+}
+function verificarDirs(dirs, cuentas){
+  const esDir = nodosDeDirectorio(dirs);
+  const real = {};
+  for(const d of dirs) for(const e of d.ents) if(!esDir.has(e.nodo)) real[e.nodo] = (real[e.nodo] || 0) + 1;
+  const todos = [...new Set([...Object.keys(real), ...Object.keys(cuentas)].map(Number))].sort((a, b) => a - b);
+  return todos.map(n => {
+    const r = real[n] || 0, c = cuentas[n] !== undefined ? cuentas[n] : null;
+    let tipo;
+    if(c === null) tipo = "sinCuenta";
+    else if(c === r) tipo = "ok";
+    else if(c > r) tipo = "alta";
+    else tipo = "baja";
+    return {nodo:n, real:r, cuenta:c, tipo, arreglo: c === null ? null : r};
+  });
+}
+function pasosDirs(dirs){
+  const p = [{fase:"raiz", linea:0}];
+  const esDir = nodosDeDirectorio(dirs);
+  dirs.forEach((d, i) => d.ents.forEach((e, j) => p.push({fase:"ent", linea: esDir.has(e.nodo) ? 1 : 2, i, j, esDir: esDir.has(e.nodo)})));
+  p.push({fase:"comp", linea:3});
+  p.push({fase:"reparar", linea:4});
+  return p;
+}
+
+if(typeof module !== "undefined") module.exports = {ESC_BLOQUES, ESC_DIRS, parseFila, diagBloque, repararBloques, pasosBloques, parseDirs, parseCuentas, verificarDirs, pasosDirs, nodosDeDirectorio};
+</script>
+
+<script>
+// ---------- interfaz ----------
+const $ = id => document.getElementById(id);
+for(const [k, nom] of [["B","secB"],["D","secD"],["C","secC"]]){
+  $("tab" + k).onclick = () => {
+    for(const x of ["B","D","C"]){ $("tab" + x).classList.toggle("on", x === k); $("sec" + x).classList.toggle("oculto", x !== k); }
+  };
+}
+
+// ===== bloques =====
+const COD_B = [
+  "para cada nodo-i: para cada bloque b que lista → uso[b]++",
+  "para cada bloque b en la lista/mapa de libres → libres[b]++",
+  "para cada b: comparar uso[b] y libres[b]",
+  "reparar lo que no da 1 y avisar al usuario"
+];
+let bU = [], bL = [], bP = [], bI = 0;
+for(const [k, e] of Object.entries(ESC_BLOQUES)) $("bEsc").add(new Option(e.nombre, k));
+$("bEsc").onchange = () => { const e = ESC_BLOQUES[$("bEsc").value]; $("bUso").value = e.uso; $("bLib").value = e.lib; bIni(); };
+$("bUso").oninput = $("bLib").oninput = () => bIni();
+$("bSig").onclick = () => { if(bI < bP.length - 1){ bI++; bDib(); } };
+$("bFin").onclick = () => { bI = bP.length - 1; bDib(); };
+$("bRei").onclick = () => { bI = 0; bDib(); };
+
+function bIni(){
+  bU = parseFila($("bUso").value); bL = parseFila($("bLib").value);
+  const err = bU.some(isNaN) || bL.some(isNaN) || !bU.length || bU.length !== bL.length || bU.length > 32;
+  if(err){
+    bP = [];
+    $("bTabla").innerHTML = ""; $("bCod").innerHTML = "";
+    $("bEstado").innerHTML = `<div class="estado mal">Las dos filas tienen que tener la misma cantidad de enteros ≥ 0 (máximo 32 bloques).</div>`;
+    $("bPq").innerHTML = ""; $("bCont").textContent = "";
+    $("bSig").disabled = $("bFin").disabled = true;
+    return;
+  }
+  bP = pasosBloques(bU, bL); bI = 0; bDib();
+}
+
+function bDib(){
+  const paso = bP[bI], n = bU.length;
+  const rep = paso.fase === "reparar" ? repararBloques(bU, bL) : null;
+  const visto = b => paso.fase === "reparar" || (paso.fase === "comp" && b <= paso.b);
+  let h = "<table><tr><th class='fila'>Bloque</th>";
+  for(let b = 0; b < n; b++) h += `<th>${b}</th>`;
+  h += "</tr>";
+  const fila = (nombre, arr, mostrar) => {
+    let s = `<tr><th class="fila">${nombre}</th>`;
+    for(let b = 0; b < n; b++){
+      let cls = "";
+      if(visto(b)){ const g = diagBloque(bU[b], bL[b]).grave; cls = g === 0 ? "ok" : g >= 2 ? "mal" : "lim"; }
+      if(paso.fase === "comp" && b === paso.b) cls += " ahora";
+      s += `<td class="${cls}">${mostrar ? arr[b] : "·"}</td>`;
+    }
+    return s + "</tr>";
+  };
+  h += fila("En uso", bU, true);
+  h += fila("Libres", bL, paso.fase !== "leer");
+  if(rep){
+    h += `<tr><th class="fila">Uso reparado</th>` + rep.uso.map((x, b) => `<td class="${x !== bU[b] ? "arreglo" : ""}">${x}</td>`).join("") + "</tr>";
+    h += `<tr><th class="fila">Libres reparado</th>` + rep.lib.map((x, b) => `<td class="${x !== bL[b] ? "arreglo" : ""}">${x}</td>`).join("") + "</tr>";
+  }
+  h += "</table>";
+  $("bTabla").innerHTML = h;
+
+  $("bCod").innerHTML = COD_B.map((t, i) => `<li class="${i === paso.linea ? "ahora" : ""}">${i + 1}. ${t}</li>`).join("");
+  $("bCont").textContent = `Paso ${bI + 1} de ${bP.length}`;
+  $("bSig").disabled = bI >= bP.length - 1; $("bFin").disabled = bI >= bP.length - 1;
+
+  let tit = "", txt = "", marca = "";
+  if(paso.fase === "leer"){
+    tit = "Fase 1: leer todos los nodos-i";
+    txt = "fsck lee los nodos-i con un <b>dispositivo crudo</b> (ignora la estructura de archivos) y, por cada bloque que lista cada nodo-i, suma 1 en la tabla «En uso». Los bloques indirectos también cuentan.";
+  } else if(paso.fase === "leerLib"){
+    tit = "Fase 2: leer la lista (o el mapa) de libres";
+    txt = "Por cada bloque que aparece en la lista de libres suma 1 en «Libres». Ahora hay dos contadores por bloque, y en un disco sano <b>cada columna suma exactamente 1</b>.";
+  } else if(paso.fase === "comp"){
+    const b = paso.b, u = bU[b], l = bL[b], d = paso.d.tipo;
+    tit = `Bloque ${b}: uso = ${u}, libres = ${l} → ${TEXTO_DIAG[d]}`;
+    const T = {
+      okLibre:  "Está en la lista de libres y en ningún archivo. Bien.",
+      okUso:    "Lo usa exactamente un archivo y no figura como libre. Bien.",
+      faltante: "No está en ningún archivo <b>ni</b> en la lista de libres: se «perdió». No hace daño real, pero desperdicia espacio. <b>Arreglo:</b> agregarlo a la lista de libres.",
+      dupLibre: "Aparece dos (o más) veces en la lista de libres. Solo puede pasar con <b>lista</b>; con mapa de bits es imposible (un bit no vale 2). <b>Arreglo:</b> reconstruir la lista de libres.",
+      usoYLibre:"Un archivo lo usa y además figura como libre. Peligroso: el próximo archivo que se cree podría recibirlo y pisar los datos. <b>Arreglo:</b> sacarlo de la lista de libres.",
+      dupDatos: `Aparece en <b>${u} archivos</b>. Es lo peor: si se borra uno, el bloque queda a la vez libre y en uso. <b>Arreglo:</b> asignar un bloque libre, copiar el contenido del bloque ${b} e insertar la copia en uno de los archivos, y avisar al usuario.`
+    };
+    txt = T[d];
+    if(d === "dupDatos") marca = `<span class="marca ojo">⚠️ La estructura queda consistente, pero <b>probablemente uno de los dos archivos tenga basura</b>. fsck no puede saber de quién era el bloque.</span>`;
+    if(d === "dupLibre") marca = `<span class="marca cer">🧠 Con mapa de bits este caso <b>no puede ocurrir</b>. Pregunta típica de final.</span>`;
+    if(d === "usoYLibre") marca = `<span class="marca cer">🧠 Es lo que pasa después de borrar uno de dos archivos que compartían un bloque, o cuando se cae a mitad de una asignación.</span>`;
+  } else {
+    tit = rep.consistente ? "Reparación: el sistema de archivos quedó consistente" : "Reparación incompleta";
+    txt = rep.acciones.length ? "<ul>" + rep.acciones.map(a => `<li>${a.txt}</li>`).join("") + "</ul>" : "No había nada que reparar.";
+    if(rep.faltanLibres) txt += `<p>Faltaron ${rep.faltanLibres} bloque(s) libre(s) para copiar duplicados.</p>`;
+  }
+  $("bPq").innerHTML = `<p class="tit">${tit}</p>${txt}${marca}`;
+
+  // estado global
+  if(paso.fase === "reparar"){
+    const malos = bU.map((u, b) => ({b, d:diagBloque(u, bL[b])})).filter(x => x.d.grave > 0);
+    $("bEstado").innerHTML = malos.length
+      ? `<div class="estado mal">Se encontraron ${malos.length} problema(s):<ul>${malos.map(x => `<li>bloque ${x.b}: ${TEXTO_DIAG[x.d.tipo]}</li>`).join("")}</ul></div>`
+      : `<div class="estado ok">Consistente: cada bloque está en uso o libre, exactamente una vez.</div>`;
+  } else $("bEstado").innerHTML = "";
+}
+
+// ===== directorios =====
+const COD_D = [
+  "empezar en la raíz y descender recursivamente",
+  "entrada a un subdirectorio → bajar a recorrerlo",
+  "entrada a un archivo con nodo-i n → contador[n]++",
+  "comparar contador[n] con la cuenta de vínculos del nodo-i",
+  "cuenta ≠ contador → cuenta = contador"
+];
+let dD = null, dC = null, dP = [], dI = 0;
+for(const [k, e] of Object.entries(ESC_DIRS)) $("dEsc").add(new Option(e.nombre, k));
+$("dEsc").onchange = () => { const e = ESC_DIRS[$("dEsc").value]; $("dDirs").value = e.dirs; $("dCuen").value = e.cuen; dIni(); };
+$("dDirs").oninput = $("dCuen").oninput = () => dIni();
+$("dSig").onclick = () => { if(dI < dP.length - 1){ dI++; dDib(); } };
+$("dFin").onclick = () => { dI = dP.length - 1; dDib(); };
+$("dRei").onclick = () => { dI = 0; dDib(); };
+
+function dIni(){
+  dD = parseDirs($("dDirs").value); dC = parseCuentas($("dCuen").value);
+  if(!dD || !dC || !dD.length){
+    dP = [];
+    $("dArbol").innerHTML = ""; $("dTabla").innerHTML = ""; $("dCod").innerHTML = ""; $("dPq").innerHTML = ""; $("dCont").textContent = "";
+    $("dEstado").innerHTML = `<div class="estado mal">Formato: <code>/: a=5, b=7; /d: c=5</code> y <code>5:2 7:1</code>.</div>`;
+    $("dSig").disabled = $("dFin").disabled = true;
+    return;
+  }
+  dP = pasosDirs(dD); dI = 0; dDib();
+}
+
+function dDib(){
+  const paso = dP[dI];
+  // índice lineal de la entrada actual
+  let k = 0, actual = -1;
+  for(let s = 0; s <= dI; s++) if(dP[s].fase === "ent") actual = k++;
+  // contadores parciales
+  const esDir = nodosDeDirectorio(dD);
+  const parcial = {};
+  let idx = 0;
+  const html = dD.map((d, i) => {
+    const ents = d.ents.map((e, j) => {
+      const mio = idx++;
+      const hecho = mio <= actual || paso.fase === "comp" || paso.fase === "reparar";
+      if(hecho && !esDir.has(e.nodo)) parcial[e.nodo] = (parcial[e.nodo] || 0) + 1;
+      const cls = mio === actual && paso.fase === "ent" ? "ahora" : hecho ? "hecho" : "";
+      return `<span class="ent ${cls}">${e.nombre} → ${e.nodo}${esDir.has(e.nodo) ? " 📁" : ""}</span>`;
+    }).join("");
+    return `<div><b>${d.nombre}</b> ${ents || "<i>(vacío)</i>"}</div>`;
+  }).join("");
+  $("dArbol").innerHTML = html;
+
+  const res = verificarDirs(dD, dC);
+  const fin = paso.fase === "comp" || paso.fase === "reparar";
+  let t = "<table><tr><th class='fila'>Nodo-i</th>" + res.map(r => `<th>${r.nodo}</th>`).join("") + "</tr>";
+  t += "<tr><th class='fila'>Contador (entradas)</th>" + res.map(r => `<td>${parcial[r.nodo] || 0}</td>`).join("") + "</tr>";
+  t += "<tr><th class='fila'>Cuenta del nodo-i</th>" + res.map(r => {
+    const cls = fin ? (r.tipo === "ok" ? "ok" : r.tipo === "baja" ? "mal" : "lim") : "";
+    return `<td class="${cls}">${r.cuenta === null ? "—" : r.cuenta}</td>`;
+  }).join("") + "</tr>";
+  if(paso.fase === "reparar") t += "<tr><th class='fila'>Cuenta reparada</th>" + res.map(r => `<td class="${r.arreglo !== null && r.arreglo !== r.cuenta ? "arreglo" : ""}">${r.arreglo === null ? "—" : r.arreglo}</td>`).join("") + "</tr>";
+  t += "</table>";
+  $("dTabla").innerHTML = t;
+
+  $("dCod").innerHTML = COD_D.map((s, i) => `<li class="${i === paso.linea ? "ahora" : ""}">${i + 1}. ${s}</li>`).join("");
+  $("dCont").textContent = `Paso ${dI + 1} de ${dP.length}`;
+  $("dSig").disabled = $("dFin").disabled = dI >= dP.length - 1;
+
+  let tit = "", txt = "", marca = "";
+  if(paso.fase === "raiz"){
+    tit = "Empieza en la raíz";
+    txt = "Ahora el contador es <b>por archivo (por nodo-i)</b>, no por bloque. fsck recorre todo el árbol y cuenta en cuántos directorios aparece cada nodo-i.";
+  } else if(paso.fase === "ent"){
+    const e = dD[paso.i].ents[paso.j];
+    if(paso.esDir){ tit = `${dD[paso.i].nombre}: «${e.nombre}» es un directorio`; txt = "fsck baja a recorrerlo. (Los directorios también tienen su cuenta, pero acá seguimos solo los archivos.)"; }
+    else {
+      tit = `${dD[paso.i].nombre}: «${e.nombre}» → nodo-i ${e.nodo}`;
+      txt = `contador[${e.nodo}]++ → vale ${parcial[e.nodo]}.` + (parcial[e.nodo] > 1 ? " Aparece en más de un directorio: es un <b>vínculo duro</b>." : "");
+    }
+  } else if(paso.fase === "comp"){
+    tit = "Comparar cada contador con la cuenta guardada en el nodo-i";
+    txt = "<ul>" + res.map(r => {
+      if(r.tipo === "ok") return `<li>nodo-i ${r.nodo}: ${r.real} = ${r.cuenta} ✔</li>`;
+      if(r.tipo === "alta") return `<li>nodo-i ${r.nodo}: cuenta ${r.cuenta} &gt; ${r.real} entradas → <b>desperdicio</b>: aunque se borren todos los nombres, la cuenta nunca llega a 0 y el nodo-i no se libera.</li>`;
+      if(r.tipo === "baja") return `<li>nodo-i ${r.nodo}: cuenta ${r.cuenta} &lt; ${r.real} entradas → <b>catastrófico</b>: al borrar un nombre la cuenta llega a 0, se liberan el nodo-i y sus bloques, y el otro nombre queda apuntando a un nodo-i que se va a reasignar.</li>`;
+      return `<li>nodo-i ${r.nodo}: aparece en directorios pero no le diste cuenta.</li>`;
+    }).join("") + "</ul>";
+    if(res.some(r => r.tipo === "baja")) marca = `<span class="marca ojo">⚠️ Es el mismo desastre del tema 6: la entrada de directorio termina abriendo <b>otro archivo</b>.</span>`;
+    else if(res.some(r => r.tipo === "alta")) marca = `<span class="marca cer">🧠 Cuenta alta = no es grave, solo ocupa lugar. Cuenta baja = grave.</span>`;
+  } else {
+    const mal = res.filter(r => r.tipo === "alta" || r.tipo === "baja");
+    tit = mal.length ? "Reparación: cuenta = cantidad real de entradas" : "No había nada que reparar";
+    txt = mal.length ? "<ul>" + mal.map(r => `<li>nodo-i ${r.nodo}: cuenta ${r.cuenta} → ${r.real}${r.real === 0 ? " (queda en 0: se libera el nodo-i y sus bloques)" : ""}</li>`).join("") + "</ul>" : "Todas las cuentas coinciden.";
+    marca = `<span class="marca cer">🧠 fsck también avisa: números de nodo-i fuera de rango, modos raros como 0007, directorios gigantes y archivos del superusuario con <b>SETUID</b> en directorios de usuarios (riesgo de seguridad).</span>`;
+  }
+  $("dPq").innerHTML = `<p class="tit">${tit}</p>${txt}${marca}`;
+
+  if(fin){
+    const mal = res.filter(r => r.tipo === "alta" || r.tipo === "baja");
+    $("dEstado").innerHTML = mal.length
+      ? `<div class="estado mal">${mal.length} nodo(s)-i con la cuenta mal.</div>`
+      : `<div class="estado ok">Directorios consistentes.</div>`;
+  } else $("dEstado").innerHTML = "";
+}
+
+$("bEsc").value = "d"; $("bEsc").onchange();
+$("dEsc").value = "baja"; $("dEsc").onchange();
+</script>
+</body>
+</html>

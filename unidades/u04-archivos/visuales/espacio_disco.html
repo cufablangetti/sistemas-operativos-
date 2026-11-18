@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Espacio en disco</title>
+<style>
+  :root{
+    --bg:#f4f5f8; --panel:#fff; --borde:#d6dae2; --texto:#1b1f24; --suave:#5b6572; --acento:#3d63c9;
+    --ok:#15803d; --ok-bg:#e9f8ee; --fal:#dc2626; --fal-bg:#fdecec; --lim:#b45309; --lim-bg:#fff6e0;
+    --cer:#7c3aed; --cer-bg:#f3edff; --hl:#facc15; --vel:#2563eb; --efi:#c2410c; --usado:#2563eb; --frag:#dc2626;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+      --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+      --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308; --vel:#60a5fa; --efi:#fb923c; --usado:#60a5fa; --frag:#f87171;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+    --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+    --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308; --vel:#60a5fa; --efi:#fb923c; --usado:#60a5fa; --frag:#f87171;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--texto); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .envoltura{max-width:1100px; margin:0 auto; padding:18px 16px 48px}
+  h1{font-size:1.35rem; margin:0 0 4px}
+  h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave); margin:0 0 8px}
+  .sub{color:var(--suave); margin:0 0 14px; font-size:.92rem}
+  .tarjeta{background:var(--panel); border:1px solid var(--borde); border-radius:12px; padding:14px 16px; margin-bottom:12px; min-width:0}
+  button,input,select{font:inherit; font-size:.86rem; padding:6px 10px; border-radius:8px; border:1px solid var(--borde); background:var(--panel); color:var(--texto); max-width:100%}
+  button{cursor:pointer} button:hover{border-color:var(--acento)}
+  input[type=number]{width:150px}
+  input[type=range]{width:100%; padding:0}
+  label{font-size:.82rem; color:var(--suave); display:flex; flex-direction:column; gap:3px; min-width:0}
+  label b{color:var(--texto); font:700 .95rem ui-monospace,Consolas,monospace}
+  .controles{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:8px}
+  @media (max-width:760px){ .controles{grid-template-columns:1fr} }
+  .barra{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+  .res{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:10px}
+  @media (max-width:760px){ .res{grid-template-columns:1fr 1fr} }
+  .celda{border:1px solid var(--borde); border-radius:9px; padding:6px 9px; min-width:0}
+  .celda .k{font-size:.72rem; color:var(--suave); text-transform:uppercase; letter-spacing:.04em}
+  .celda .v{font:700 .98rem ui-monospace,Consolas,monospace; overflow-wrap:anywhere}
+  .pasos{font:13px/1.6 ui-monospace,Consolas,monospace; margin:10px 0 0; padding-left:22px}
+  .medidor{height:26px; border-radius:6px; border:1px solid var(--borde); overflow:hidden; display:flex; margin-top:10px}
+  .medidor div{height:100%; display:flex; align-items:center; justify-content:center; color:#fff; font:700 .75rem system-ui}
+  .estado{margin-top:10px; padding:8px 12px; border-radius:8px; font-weight:600}
+  .estado.ok{background:var(--ok-bg); border:1px solid var(--ok)}
+  .estado.lim{background:var(--lim-bg); border:1px solid var(--lim)}
+  .estado.mal{background:var(--fal-bg); border:1px solid var(--fal)}
+  svg{width:100%; height:auto; display:block; margin-top:8px}
+  svg text{font:11px system-ui,sans-serif; fill:var(--suave)}
+  .ideas li{margin-bottom:5px}
+  .mini{font-size:.8rem; color:var(--suave)}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <h1>Espacio en disco: fragmentación interna, tamaño de bloque y bloques libres</h1>
+  <p class="sub">Tanenbaum 4.4.1, págs. 292–298 (figs. 4-20 a 4-23) · Resumen de la cátedra, págs. 19–20 · ejercicio de FAT32 de la práctica. Tres calculadoras: mové los deslizadores o cargá el ejemplo del material.</p>
+
+  <!-- 1 -->
+  <div class="tarjeta">
+    <h2>1 · Fragmentación interna de un archivo</h2>
+    <div class="barra"><button id="preFrag">Cargar el ejercicio de la práctica (FAT32, 4 KB, sector de 512 B, 3.712.518 B)</button></div>
+    <div class="controles">
+      <label>Tamaño del archivo (bytes)<input type="number" id="fTam" min="0"></label>
+      <label>Tamaño de bloque / cluster: <b id="vfB"></b><input type="range" id="fB" min="0" max="7" step="1"></label>
+      <label>Tamaño de sector: <b id="vfS"></b><input type="range" id="fS" min="0" max="1" step="1"></label>
+    </div>
+    <div class="res" id="fRes"></div>
+    <ol class="pasos" id="fPasos"></ol>
+    <div class="medidor" id="fMed"></div>
+    <div class="mini">Barra = el último bloque: azul lo ocupado, rojo la fragmentación interna.</div>
+    <div id="fEst"></div>
+  </div>
+
+  <!-- 2 -->
+  <div class="tarjeta">
+    <h2>2 · Tamaño de bloque: velocidad contra espacio (fig. 4-21)</h2>
+    <div class="barra"><button id="preBlo">Cargar el ejemplo del libro (archivos de 4 KB, búsqueda 5 ms, rotación 8,33 ms, 1 MB por pista)</button></div>
+    <div class="controles">
+      <label>Tamaño de bloque: <b id="vbB"></b><input type="range" id="bB" min="0" max="7" step="1"></label>
+      <label>Tamaño típico de archivo: <b id="vbF"></b><input type="range" id="bF" min="0" max="7" step="1"></label>
+      <label>Búsqueda promedio: <b id="vbS"></b><input type="range" id="bS" min="1" max="15" step="1"></label>
+    </div>
+    <svg id="graf" viewBox="0 0 640 230"></svg>
+    <div class="mini"><span style="color:var(--vel)">━ velocidad de datos (MB/s)</span> · <span style="color:var(--efi)">┅ eficiencia de espacio (%)</span> · la línea vertical marca el bloque elegido.</div>
+    <div class="res" id="bRes"></div>
+    <div id="bEst"></div>
+  </div>
+
+  <!-- 3 -->
+  <div class="tarjeta">
+    <h2>3 · Registro de bloques libres: lista enlazada contra mapa de bits (fig. 4-22)</h2>
+    <div class="barra"><button id="preLib">Cargar el ejemplo del libro (500 GB, bloques de 1 KB, números de 32 bits)</button></div>
+    <div class="controles">
+      <label>Disco: <b id="vlD"></b><input type="range" id="lD" min="1" max="4000" step="1"></label>
+      <label>Tamaño de bloque: <b id="vlB"></b><input type="range" id="lB" min="0" max="4" step="1"></label>
+      <label>Porcentaje de bloques LIBRES: <b id="vlL"></b><input type="range" id="lL" min="0" max="100" step="0.5"></label>
+    </div>
+    <div class="res" id="lRes"></div>
+    <div id="lEst"></div>
+  </div>
+
+  <div class="tarjeta">
+    <h2>Ideas clave y frases de examen</h2>
+    <ul class="ideas">
+      <li><b>Fragmentación interna = tamaño de bloque − (tamaño mod bloque)</b>, si el resto no es 0. Se usa el <b>resto exacto</b> de la división entera, nunca el decimal redondeado.</li>
+      <li>⚠️ Errata de la práctica: el FAT32 de 3.712.518 B con bloques de 4 KB <b>no</b> da 2580,48 B (sale de multiplicar 0,37 × 4096). Da <b>906 bloques llenos + 1542 B → 2554 B</b> de fragmentación, en 907 bloques.</li>
+      <li>⚠️ Bloque grande = <b>más velocidad y más desperdicio</b>; bloque chico = lo contrario. Velocidad y espacio están en conflicto: no hay tamaño ideal. Históricamente se usaron 1 a 4 KB.</li>
+      <li>🧠 El mapa de bits gasta <b>1 bit por bloque</b>; la lista, <b>32 bits por bloque libre</b>. La lista solo gana con el disco <b>casi lleno</b>. Además, el mapa ayuda a asignar bloques cercanos (menos movimiento del brazo).</li>
+    </ul>
+  </div>
+</div>
+
+<script id="motor">
+// ---------- Motor (sin DOM) ----------
+var BLOQ = [512,1024,2048,4096,8192,16384,32768,65536];
+var SECT = [512,4096];
+
+function fragmentacion(tam, B, sector){
+  var llenos = Math.floor(tam/B), resto = tam % B;
+  var bloques = llenos + (resto>0?1:0);
+  var frag = resto>0 ? B-resto : 0;
+  return {sectoresPorBloque: B/sector, llenos:llenos, resto:resto, bloques:bloques, ocupa:bloques*B, frag:frag,
+          bpb: bpbBytesPorSector(sector)};
+}
+// Bytes por sector en el BPB de FAT (desplazamientos 0x0B y 0x0C, little-endian)
+function bpbBytesPorSector(sector){
+  var h=function(n){var s=n.toString(16).toUpperCase(); return (s.length<2?"0":"")+s;};
+  return {x0B:h(sector & 0xFF), x0C:h((sector>>8) & 0xFF)};
+}
+
+// Fig. 4-21: tiempo = búsqueda + media rotación + transferencia
+function velocidad(B, busq, rot, pista){
+  var t = busq + rot/2 + (B/pista)*rot;           // ms
+  return {ms:t, mbs:(B/1e6)/(t/1000)};
+}
+function eficiencia(F, B){ return F / (Math.ceil(F/B)*B); }
+
+// Bloques libres
+function registroLibres(discoBytes, B, fracLibre){
+  var n = Math.floor(discoBytes/B), libres = Math.round(n*fracLibre);
+  var porBloque = B/4 - 1;                         // números de 32 bits, uno es el puntero al siguiente
+  var lista = Math.ceil(libres/porBloque);
+  var mapa = Math.ceil(n/(8*B));
+  var umbral = mapa*porBloque/n;                   // fracción libre debajo de la cual la lista ocupa menos
+  return {n:n, libres:libres, porBloque:porBloque, lista:lista, mapa:mapa, umbral:umbral};
+}
+</script>
+
+<script>
+var $=function(id){return document.getElementById(id);};
+var fmt=function(x){return Math.round(x).toString().replace(/\B(?=(\d{3})+(?!\d))/g,".");};
+var dec=function(x,d){return x.toFixed(d).replace(".",",");};
+var kb=function(b){return b>=1024?(b/1024)+" KB":b+" B";};
+
+// 1
+function calcFrag(){
+  var tam=Math.max(0,Math.floor(+$("fTam").value||0)), B=BLOQ[+$("fB").value], S=SECT[+$("fS").value];
+  if (S>B){ S=B; }
+  $("vfB").textContent=kb(B); $("vfS").textContent=S+" B";
+  var r=fragmentacion(tam,B,S);
+  $("fRes").innerHTML=[["sectores por bloque",r.sectoresPorBloque],["bloques que ocupa",fmt(r.bloques)],["espacio en disco",fmt(r.ocupa)+" B"],["fragmentación interna",fmt(r.frag)+" B"]]
+    .map(function(c){return '<div class="celda"><div class="k">'+c[0]+'</div><div class="v">'+c[1]+'</div></div>';}).join("");
+  $("fPasos").innerHTML=
+    '<li>Sectores por bloque = '+B+' / '+S+' = '+r.sectoresPorBloque+'</li>'+
+    '<li>BPB, bytes por sector ('+S+' = 0x'+r.bpb.x0C+r.bpb.x0B+'): en 0x0B va '+r.bpb.x0B+' y en 0x0C va '+r.bpb.x0C+' (little-endian)</li>'+
+    '<li>'+fmt(tam)+' div '+B+' = '+fmt(r.llenos)+' bloques llenos; resto = '+fmt(tam)+' − '+fmt(r.llenos)+' × '+B+' = <b>'+fmt(r.resto)+' B</b></li>'+
+    (r.resto>0 ? '<li>Último bloque: '+B+' − '+fmt(r.resto)+' = <b>'+fmt(r.frag)+' B</b> de fragmentación interna</li><li>Total: '+fmt(r.llenos)+' + 1 = '+fmt(r.bloques)+' bloques = '+fmt(r.ocupa)+' B en disco</li>'
+               : '<li>El resto es 0: el archivo llena justo sus bloques, no hay fragmentación interna</li>');
+  var pu=r.resto>0? r.resto/B*100 : 100;
+  $("fMed").innerHTML='<div style="width:'+pu+'%;background:var(--usado)">'+(pu>12?fmt(r.resto||B)+' B':'')+'</div><div style="width:'+(100-pu)+'%;background:var(--frag)">'+((100-pu)>12?fmt(r.frag)+' B':'')+'</div>';
+  var p=r.frag/B;
+  $("fEst").innerHTML = p<0.25 ? '<div class="estado ok">✔ Poco desperdicio: el último bloque está casi lleno ('+dec(100-p*100,1)+' % usado).</div>'
+                     : p<0.75 ? '<div class="estado lim">⚠ Al límite: el último bloque desperdicia el '+dec(p*100,1)+' %.</div>'
+                     : '<div class="estado mal">✘ Saturado de desperdicio: el último bloque está casi vacío (se pierde el '+dec(p*100,1)+' %). Con un bloque más chico se perdería menos.</div>';
+}
+$("preFrag").onclick=function(){$("fTam").value=3712518;$("fB").value=3;$("fS").value=0;calcFrag();};
+["fTam","fB","fS"].forEach(function(id){$(id).addEventListener("input",calcFrag);});
+
+// 2
+function calcBlo(){
+  var B=BLOQ[+$("bB").value], F=BLOQ[+$("bF").value], s=+$("bS").value, ROT=8.33, PISTA=1e6;
+  $("vbB").textContent=kb(B); $("vbF").textContent=kb(F); $("vbS").textContent=s+" ms";
+  var v=velocidad(B,s,ROT,PISTA), e=eficiencia(F,B);
+  var W=640,H=230,L=40,R=40,T=12,Bt=40, maxV=velocidad(65536,s,ROT,PISTA).mbs*1.1;
+  var x=function(i){return L+i*(W-L-R)/7;}, yv=function(m){return T+(H-T-Bt)*(1-m/maxV);}, ye=function(f){return T+(H-T-Bt)*(1-f);};
+  var pv="",pe="",h="";
+  BLOQ.forEach(function(b,i){ pv+=(i?"L":"M")+x(i)+" "+yv(velocidad(b,s,ROT,PISTA).mbs); pe+=(i?"L":"M")+x(i)+" "+ye(eficiencia(F,b)); h+='<text x="'+x(i)+'" y="'+(H-22)+'" text-anchor="middle">'+kb(b)+'</text>'; });
+  h+='<line x1="'+L+'" y1="'+(H-Bt)+'" x2="'+(W-R)+'" y2="'+(H-Bt)+'" stroke="var(--borde)"/>';
+  h+='<path d="'+pv+'" fill="none" stroke="var(--vel)" stroke-width="2.5"/><path d="'+pe+'" fill="none" stroke="var(--efi)" stroke-width="2.5" stroke-dasharray="6 4"/>';
+  var ix=+$("bB").value; h+='<line x1="'+x(ix)+'" y1="'+T+'" x2="'+x(ix)+'" y2="'+(H-Bt)+'" stroke="var(--hl)" stroke-width="3"/>';
+  h+='<text x="'+(L-6)+'" y="'+(T+8)+'" text-anchor="end">'+dec(maxV,1)+'</text><text x="'+(W-R+6)+'" y="'+(T+8)+'">100%</text><text x="'+(W/2)+'" y="'+(H-4)+'" text-anchor="middle">tamaño de bloque</text>';
+  $("graf").innerHTML=h;
+  $("bRes").innerHTML=[["tiempo por bloque",dec(v.ms,3)+" ms"],["velocidad de datos",dec(v.mbs,2)+" MB/s"],["eficiencia de espacio",dec(e*100,1)+" %"],["bloques por archivo",Math.ceil(F/B)]]
+    .map(function(c){return '<div class="celda"><div class="k">'+c[0]+'</div><div class="v">'+c[1]+'</div></div>';}).join("");
+  var est = e>=0.75 && v.mbs>=2 ? ["ok","✔ Buen equilibrio para estos archivos."] :
+            e<0.25 ? ["mal","✘ Saturado de desperdicio: cada archivo de "+kb(F)+" deja vacío el "+dec(100-e*100,0)+" % de lo que ocupa."] :
+            ["lim","⚠ Al límite: "+(e<0.75?"ya se desperdicia espacio":"el espacio se aprovecha, pero la velocidad es baja (mandan la búsqueda y la rotación, ~"+dec(s+ROT/2,1)+" ms por acceso)")+"."];
+  $("bEst").innerHTML='<div class="estado '+est[0]+'">'+est[1]+'</div>';
+}
+$("preBlo").onclick=function(){$("bB").value=3;$("bF").value=3;$("bS").value=5;calcBlo();};
+["bB","bF","bS"].forEach(function(id){$(id).addEventListener("input",calcBlo);});
+
+// 3
+var LB=[512,1024,2048,4096,8192];
+function calcLib(){
+  var D=+$("lD").value, B=LB[+$("lB").value], f=+$("lL").value/100;
+  $("vlD").textContent=D+" GB"; $("vlB").textContent=kb(B); $("vlL").textContent=dec(f*100,1)+" %";
+  var r=registroLibres(D*1e9,B,f);
+  $("lRes").innerHTML=[["bloques del disco",fmt(r.n)],["bloques libres",fmt(r.libres)],["lista enlazada ("+r.porBloque+" por bloque)",fmt(r.lista)+" bloques"],["mapa de bits (1 bit por bloque)",fmt(r.mapa)+" bloques"]]
+    .map(function(c){return '<div class="celda"><div class="k">'+c[0]+'</div><div class="v">'+c[1]+'</div></div>';}).join("");
+  var gana = r.lista<r.mapa ? "la LISTA ocupa menos" : "el MAPA DE BITS ocupa menos";
+  var cls = f < r.umbral ? "lim" : "ok";
+  $("lEst").innerHTML='<div class="estado '+cls+'">'+(cls==="ok"?"✔ ":"⚠ ")+'Con '+dec(f*100,1)+' % libre, '+gana+'. La lista recién gana con menos del '+dec(r.umbral*100,2)+' % de bloques libres (disco casi lleno). '+
+    '<span class="mini">Ojo: los bloques de la lista son bloques libres, así que en la práctica «no cuestan»; el mapa sí ocupa espacio fijo.</span></div>';
+}
+$("preLib").onclick=function(){$("lD").value=500;$("lB").value=1;$("lL").value=100;calcLib();};
+["lD","lB","lL"].forEach(function(id){$(id).addEventListener("input",calcLib);});
+
+$("preFrag").onclick(); $("preBlo").onclick(); $("preLib").onclick();
+</script>
+</body>
+</html>

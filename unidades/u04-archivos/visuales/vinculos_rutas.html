@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vínculos y búsqueda de rutas</title>
+<style>
+  :root{
+    --bg:#f4f5f8; --panel:#fff; --borde:#d6dae2; --texto:#1b1f24; --suave:#5b6572; --acento:#3d63c9;
+    --ok:#15803d; --ok-bg:#e9f8ee; --fal:#dc2626; --fal-bg:#fdecec; --lim:#b45309; --lim-bg:#fff6e0;
+    --cer:#7c3aed; --cer-bg:#f3edff; --hl:#facc15; --C:#0e7490; --B:#c2410c;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+      --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+      --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308; --C:#22d3ee; --B:#fb923c;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+    --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+    --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308; --C:#22d3ee; --B:#fb923c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--texto); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .envoltura{max-width:1150px; margin:0 auto; padding:18px 16px 48px}
+  h1{font-size:1.35rem; margin:0 0 4px}
+  h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave); margin:0 0 8px}
+  .sub{color:var(--suave); margin:0 0 14px; font-size:.92rem}
+  .tarjeta{background:var(--panel); border:1px solid var(--borde); border-radius:12px; padding:14px 16px; margin-bottom:12px; min-width:0}
+  button,select{font:inherit; font-size:.86rem; padding:7px 11px; border-radius:8px; border:1px solid var(--borde); background:var(--panel); color:var(--texto); cursor:pointer; max-width:100%}
+  button:hover:not(:disabled){border-color:var(--acento)}
+  button:disabled{opacity:.4; cursor:not-allowed}
+  button.prim{background:var(--acento); color:#fff; border-color:var(--acento); font-weight:650}
+  .pest{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px}
+  .pest button.act{background:var(--acento); color:#fff; border-color:var(--acento)}
+  .barra{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+  .contador{margin-left:auto; color:var(--suave); font-size:.88rem}
+  .grilla{display:grid; grid-template-columns:1.3fr 1fr; gap:12px}
+  @media (max-width:880px){ .grilla{grid-template-columns:1fr} }
+  .cajas{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px}
+  @media (max-width:640px){ .cajas{grid-template-columns:1fr} }
+  .caja{border:2px solid var(--borde); border-radius:10px; padding:8px 10px; min-width:0}
+  .caja .t{font-weight:700; font-size:.9rem; margin-bottom:4px}
+  .caja.C{border-color:var(--C)} .caja.B{border-color:var(--B)}
+  .caja.cambio{outline:3px solid var(--hl); outline-offset:1px}
+  table{border-collapse:collapse; width:100%; font:13px ui-monospace,Consolas,monospace}
+  td,th{border-bottom:1px solid var(--borde); padding:3px 6px; text-align:left}
+  th{font:600 .7rem system-ui,sans-serif; color:var(--suave); text-transform:uppercase}
+  tr.nuevo td{background:var(--cer-bg)}
+  tr.muerto td{color:var(--suave); text-decoration:line-through}
+  tr.hl td{background:var(--hl); color:#000}
+  .vacio{color:var(--suave); font-size:.85rem}
+  .codigo{font:13px/1.5 ui-monospace,Consolas,monospace; margin:8px 0 0; padding:0; list-style:none}
+  .codigo li{padding:2px 6px; border-radius:6px; display:flex; gap:8px}
+  .codigo li.ahora{background:var(--hl); color:#000}
+  .codigo li.hecho{color:var(--suave)}
+  .quien{font:700 .7rem system-ui,sans-serif; border-radius:99px; padding:1px 7px; color:#fff; align-self:center; white-space:nowrap}
+  .quien.C{background:var(--C)} .quien.B{background:var(--B)} .quien.K{background:var(--acento)}
+  .actor{display:inline-block; padding:2px 10px; border-radius:99px; font-weight:800; font-size:.8rem; color:#fff; background:var(--acento)}
+  .porque{border:1px solid var(--borde); border-left:5px solid var(--acento); border-radius:10px; padding:12px 14px; margin-top:10px}
+  .porque .tit{font-weight:700; font-size:1.02rem; margin:0 0 4px}
+  .marca{display:block; margin-top:8px; border-radius:8px; padding:7px 10px; font-size:.88rem}
+  .marca.ojo{background:var(--fal-bg); border:1px solid var(--fal)}
+  .marca.cer{background:var(--cer-bg); border:1px solid var(--cer)}
+  .salida{font:13px ui-monospace,Consolas,monospace; background:#0f172a; color:#e2e8f0; border-radius:8px; padding:8px 10px; margin-top:10px; min-height:40px; white-space:pre-wrap; overflow-wrap:anywhere}
+  .celdas{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:10px}
+  .celda{border:1px solid var(--borde); border-radius:9px; padding:6px 9px; min-width:0}
+  .celda .k{font-size:.72rem; color:var(--suave); text-transform:uppercase; letter-spacing:.04em}
+  .celda .v{font:700 .92rem ui-monospace,Consolas,monospace; overflow-wrap:anywhere}
+  .celda.cambio{outline:2px solid var(--cer); background:var(--cer-bg)}
+  .paneles{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  @media (max-width:760px){ .paneles{grid-template-columns:1fr} }
+  .paneles ul{margin:6px 0 0; padding-left:18px; font-size:.9rem}
+  .mas{color:var(--ok)} .menos{color:var(--fal)}
+  .ideas li{margin-bottom:5px}
+  .oculto{display:none}
+  .mini{font-size:.8rem; color:var(--suave)}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <h1>Vínculos duros y simbólicos · Búsqueda de una ruta</h1>
+  <p class="sub">Tanenbaum 4.3.4 (figs. 4-16 y 4-17, págs. 283–285) y 4.5.3 (fig. 4-35, págs. 322–323) · Resumen de la cátedra. En UNIX la entrada de directorio es solo <b>(nombre, número de nodo-i)</b>: los atributos y los bloques están en el nodo-i. Por eso dos entradas pueden apuntar al <b>mismo</b> nodo-i.</p>
+
+  <div class="pest">
+    <button id="pV" class="act">1 · Vínculos (fig. 4-17)</button>
+    <button id="pR">2 · Buscar /usr/ast/mbox (fig. 4-35)</button>
+  </div>
+
+  <!-- ===================== VÍNCULOS ===================== -->
+  <section id="secV">
+    <div class="tarjeta">
+      <div class="barra">
+        <select id="escV">
+          <option value="duro">Vínculo DURO: ln /home/c/datos /home/b/datos</option>
+          <option value="simb">Vínculo SIMBÓLICO: ln -s /home/c/datos /home/b/datos</option>
+        </select>
+        <button class="prim" id="sigV">Siguiente paso ▶</button>
+        <button id="reiV">Reiniciar</button>
+        <span class="contador" id="contV"></span>
+      </div>
+    </div>
+    <div class="grilla">
+      <div class="tarjeta">
+        <h2>Estado del disco</h2>
+        <div class="cajas">
+          <div class="caja C" id="bxC"><div class="t" style="color:var(--C)">Directorio de C (/home/c)</div><div id="dirC"></div></div>
+          <div class="caja B" id="bxB"><div class="t" style="color:var(--B)">Directorio de B (/home/b)</div><div id="dirB"></div></div>
+          <div class="caja" id="bxI"><div class="t">Tabla de nodos-i</div><div id="tabI"></div></div>
+        </div>
+        <div class="celdas">
+          <div class="celda" id="cCnt"><div class="k">contador de vínculos (nodo-i 20)</div><div class="v">—</div></div>
+          <div class="celda" id="cDue"><div class="k">propietario (cuota)</div><div class="v">—</div></div>
+          <div class="celda" id="cBlo"><div class="k">bloques de datos</div><div class="v">—</div></div>
+        </div>
+        <div class="salida" id="sal">$</div>
+      </div>
+      <div class="tarjeta">
+        <span class="actor">Usuarios C y B · kernel</span>
+        <ol class="codigo" id="codV"></ol>
+        <div class="porque" id="porV"><p class="tit">Listo</p><div>Elegí el tipo de vínculo y apretá «Siguiente paso».</div></div>
+      </div>
+    </div>
+    <div class="tarjeta">
+      <h2>Lado a lado</h2>
+      <div class="paneles">
+        <div><b>Vínculo duro</b> <span class="mini">(otra entrada de directorio al MISMO nodo-i)</span>
+          <ul>
+            <li class="mas">+ No gasta nodo-i ni bloque extra; es tan rápido como el original.</li>
+            <li class="mas">+ Si el dueño borra su nombre, el archivo sigue vivo para B.</li>
+            <li class="menos">− El dueño sigue siendo C, y la cuota se le cobra a C hasta que B lo borre (fig. 4-17c).</li>
+            <li class="menos">− Solo dentro del mismo sistema de archivos (el número de nodo-i es local); en general no se permite a directorios.</li>
+          </ul></div>
+        <div><b>Vínculo simbólico</b> <span class="mini">(un archivo tipo LINK que contiene una RUTA)</span>
+          <ul>
+            <li class="mas">+ Puede cruzar sistemas de archivos y hasta apuntar a otra máquina.</li>
+            <li class="mas">+ Solo el dueño tiene el puntero al nodo-i: si C borra, el archivo se destruye de verdad.</li>
+            <li class="menos">− Más lento: hay que leer la ruta y recorrerla componente por componente.</li>
+            <li class="menos">− Gasta un nodo-i (y quizás un bloque) más; si el original desaparece, queda <b>colgado</b>.</li>
+          </ul></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== RUTAS ===================== -->
+  <section id="secR" class="oculto">
+    <div class="tarjeta">
+      <div class="barra">
+        <select id="escR">
+          <option value="/usr/ast/mbox">/usr/ast/mbox (fig. 4-35)</option>
+          <option value="/usr/ast/minix">/usr/ast/minix</option>
+          <option value="/usr/ast/tesis">⚠️ /usr/ast/tesis (no existe)</option>
+          <option value="../jim">../jim, desde el directorio de trabajo /usr/ast</option>
+          <option value="mbox">mbox, desde el directorio de trabajo /usr/ast</option>
+        </select>
+        <button class="prim" id="sigR">Siguiente paso ▶</button>
+        <button id="todoR">Hasta el final ⏭</button>
+        <button id="reiR">Reiniciar</button>
+        <span class="contador" id="contR"></span>
+      </div>
+    </div>
+    <div class="grilla">
+      <div class="tarjeta">
+        <h2>Lo que hay en el disco (datos de la fig. 4-35)</h2>
+        <div class="cajas" id="disco"></div>
+      </div>
+      <div class="tarjeta">
+        <span class="actor">Sistema de archivos (kernel)</span>
+        <ol class="codigo" id="codR">
+          <li>si la ruta empieza con "/": ino = nodo-i raíz (lugar fijo)</li>
+          <li>si no: ino = directorio de trabajo del proceso</li>
+          <li>para cada componente:</li>
+          <li>  leer nodo-i ino → bloque del directorio</li>
+          <li>  leer el bloque y buscar el componente</li>
+          <li>  no está → ERROR (ENOENT)</li>
+          <li>  ino = número de nodo-i de la entrada</li>
+          <li>leer el nodo-i final a RAM (hasta el close)</li>
+        </ol>
+        <div class="celdas">
+          <div class="celda" id="rIno"><div class="k">nodo-i actual</div><div class="v">—</div></div>
+          <div class="celda" id="rComp"><div class="k">componente</div><div class="v">—</div></div>
+          <div class="celda" id="rLec"><div class="k">lecturas de disco</div><div class="v">0</div></div>
+        </div>
+        <div class="porque" id="porR"><p class="tit">Listo</p><div>Elegí una ruta y apretá «Siguiente paso».</div></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="tarjeta">
+    <h2>Ideas clave y frases de examen</h2>
+    <ul class="ideas">
+      <li><b>Vínculo duro = otra entrada (nombre, nº de nodo-i) al mismo nodo-i</b>; sube el contador. <b>Borrar es unlink</b>: baja el contador, y el archivo se libera recién cuando llega a <b>0</b>.</li>
+      <li>⚠️ Si C borra un archivo con un vínculo duro de B, el archivo <b>no</b> desaparece: queda con contador 1, sigue siendo <b>de C</b> y le sigue contando en la cuota.</li>
+      <li>⚠️ Si C borra el original de un vínculo <b>simbólico</b>, el vínculo queda <b>colgado</b>: «No such file or directory». Borrar el simbólico no le hace nada al original.</li>
+      <li>🧠 Buscar <code>/usr/ast/mbox</code> alterna <b>nodo-i → bloque de directorio → nodo-i → …</b>. Cada componente cuesta 2 lecturas si no hay caché; por eso existe la caché de nombres.</li>
+    </ul>
+  </div>
+</div>
+
+<script id="motor">
+// ---------- Motor de vínculos ----------
+function estadoInicial(){
+  return {dirC:{}, dirB:{}, inodos:{}, salida:"", sigIno:20};
+}
+function clonar(e){ return JSON.parse(JSON.stringify(e)); }
+
+// Operaciones. Cada una devuelve {e (nuevo estado), salida, tit, txt, marca, cambio:[...] }
+var OPS = {
+  crear: function(e){
+    e=clonar(e); e.inodos[20]={tipo:"regular", dueno:"C", vinculos:1, bloques:"3 bloques (12 KB)"}; e.dirC["datos"]=20;
+    return {e:e, salida:"", cambio:["bxC","bxI"], tit:"C crea /home/c/datos", txt:"Se asigna el nodo-i 20 (dueño C, contador 1) y una entrada («datos», 20) en el directorio de C."};
+  },
+  lnDuro: function(e){
+    e=clonar(e); e.dirB["datos"]=20; e.inodos[20].vinculos++;
+    return {e:e, salida:"", cambio:["bxB","bxI"], tit:"ln: B agrega una entrada al MISMO nodo-i",
+      txt:"El directorio de B recibe («datos», 20). No se copia nada: es el mismo nodo-i. El contador de vínculos sube a 2 y el dueño sigue siendo C (fig. 4-17b).",
+      marca:{tipo:"cer", txt:"🧠 Ya no es un árbol sino un grafo acíclico dirigido (DAG): un archivo con dos padres."}};
+  },
+  lnSimb: function(e){
+    e=clonar(e); e.inodos[21]={tipo:"LINK", dueno:"B", vinculos:1, contenido:"/home/c/datos"}; e.dirB["datos"]=21;
+    return {e:e, salida:"", cambio:["bxB","bxI"], tit:"ln -s: se crea un archivo NUEVO de tipo LINK",
+      txt:"B recibe («datos», 21). El nodo-i 21 es de tipo LINK y su contenido es la ruta «/home/c/datos». El contador del nodo-i 20 NO cambia: sigue en 1.",
+      marca:{tipo:"cer", txt:"🧠 Un simbólico gasta un nodo-i propio (y a veces un bloque) para guardar una ruta."}};
+  },
+  catB: function(e){
+    var ino=e.dirB["datos"], s, tit, txt, marca=null;
+    if (ino===undefined){ s="cat: /home/b/datos: No such file or directory"; tit="No hay entrada"; txt="B ya no tiene la entrada."; }
+    else if (e.inodos[ino] && e.inodos[ino].tipo==="LINK"){
+      var r=resolverEnC(e, e.inodos[ino].contenido);
+      if (r===null){ s="cat: /home/b/datos: No such file or directory"; tit="El vínculo simbólico quedó COLGADO";
+        txt="El kernel lee el nodo-i 21, ve que es LINK y sigue la ruta «/home/c/datos». Pero en el directorio de C ya no hay ninguna entrada «datos»: la ruta no lleva a ningún lado.";
+        marca={tipo:"ojo", txt:"⚠️ El simbólico guarda una RUTA, no un nodo-i. Si el original se borra (o se renombra), el vínculo se rompe."}; }
+      else { s="(contenido del archivo: 12 KB)"; tit="B lee a través del simbólico";
+        txt="El kernel lee el nodo-i 21, ve tipo LINK, lee la ruta «/home/c/datos», la recorre componente por componente y llega al nodo-i "+r+". Son accesos extra al disco."; }
+    } else { s="(contenido del archivo: 12 KB)"; tit="B lee el archivo directamente";
+      txt="La entrada de B apunta al nodo-i 20, que existe y tiene los bloques. Es tan directo como para C."+(e.dirC["datos"]===undefined?" Aunque C ya borró su nombre, el archivo sigue vivo.":""); }
+    return {e:e, salida:s, cambio:[], tit:tit, txt:txt, marca:marca, leer:ino};
+  },
+  rmC: function(e){
+    e=clonar(e); var ino=e.dirC["datos"]; delete e.dirC["datos"]; var n=e.inodos[ino]; n.vinculos--;
+    var lib = n.vinculos===0; if (lib) n.liberado=true;
+    return {e:e, salida:"", cambio:["bxC","bxI"], tit:"C hace rm /home/c/datos (= unlink)",
+      txt: lib ? "Se borra la entrada de C y el contador del nodo-i 20 baja a 0: el nodo-i y sus bloques vuelven a la lista libre. El archivo se destruye de verdad."
+               : "Se borra SOLO la entrada de C. El contador baja a "+n.vinculos+", así que el nodo-i 20 y sus bloques se quedan. El dueño sigue siendo C (fig. 4-17c).",
+      marca: lib ? {tipo:"ojo", txt:"⚠️ El simbólico de B sigue existiendo, pero ahora apunta a una ruta que no existe."}
+                 : {tipo:"ojo", txt:"⚠️ ¿Por qué no liberar el nodo-i igual? Porque B quedaría apuntando a un nodo-i inválido, que podría reasignarse a OTRO archivo. Y el sistema no puede encontrar las entradas de B: el nodo-i no guarda quién lo apunta."}};
+  },
+  rmB: function(e){
+    e=clonar(e); var ino=e.dirB["datos"]; delete e.dirB["datos"]; var n=e.inodos[ino]; n.vinculos--;
+    var lib=n.vinculos===0; if (lib) n.liberado=true;
+    var txt = n.tipo==="LINK" ? "Se borra la entrada de B y el nodo-i 21 (el LINK) queda en 0 y se libera. El original no se entera (en este punto ya no existía)."
+                              : "Se borra la entrada de B; el contador del nodo-i 20 llega a 0: recién ahora se liberan el nodo-i y sus 3 bloques, y C deja de pagar cuota por el archivo.";
+    return {e:e, salida:"", cambio:["bxB","bxI"], tit:"B hace rm /home/b/datos", txt:txt, marca:{tipo:"cer", txt:"🧠 Regla: el archivo existe mientras el contador sea > 0."}};
+  }
+};
+function resolverEnC(e, ruta){ var nombre=ruta.split("/").pop(); var i=e.dirC[nombre]; return (i===undefined || !e.inodos[i] || e.inodos[i].liberado) ? null : i; }
+
+var GUIONES = {
+  duro: [["C","crear","touch /home/c/datos"],["B","lnDuro","ln /home/c/datos /home/b/datos"],["B","catB","cat /home/b/datos"],["C","rmC","rm /home/c/datos"],["B","catB","cat /home/b/datos"],["B","rmB","rm /home/b/datos"]],
+  simb: [["C","crear","touch /home/c/datos"],["B","lnSimb","ln -s /home/c/datos /home/b/datos"],["B","catB","cat /home/b/datos"],["C","rmC","rm /home/c/datos"],["B","catB","cat /home/b/datos"],["B","rmB","rm /home/b/datos"]]
+};
+function correrGuion(nombre, hasta){
+  var e=estadoInicial(), r=null, g=GUIONES[nombre];
+  for (var i=0;i<hasta && i<g.length;i++){ r=OPS[g[i][1]](e); e=r.e; }
+  return {e:e, ultimo:r};
+}
+
+// ---------- Motor de búsqueda de rutas (fig. 4-35) ----------
+var DISCO = {
+  raizIno: 1, cwd: 26,
+  inodos: { 1:{bloque:1, dir:true}, 6:{bloque:132, dir:true}, 26:{bloque:406, dir:true} },
+  bloques: {
+    1:   [[1,"."],[1,".."],[4,"bin"],[7,"dev"],[14,"lib"],[9,"etc"],[6,"usr"],[8,"tmp"]],
+    132: [[6,"."],[1,".."],[19,"dick"],[30,"erik"],[51,"jim"],[26,"ast"],[45,"bal"]],
+    406: [[26,"."],[6,".."],[64,"becas"],[92,"libros"],[60,"mbox"],[81,"minix"],[17,"src"]]
+  }
+};
+function buscarRuta(ruta){
+  var pasos=[], lec=0, abs=ruta.charAt(0)==="/", ino=abs?DISCO.raizIno:DISCO.cwd;
+  var comps=ruta.split("/").filter(function(x){return x!=="";});
+  pasos.push({l:abs?1:2, ino:ino, comp:"—", lec:lec, hl:[],
+    tit: abs ? "Ruta absoluta: arranca en el nodo-i raíz" : "Ruta relativa: arranca en el directorio de trabajo",
+    txt: abs ? "En UNIX el nodo-i del directorio raíz está en un lugar FIJO del disco (aquí, el 1)." : "El proceso tiene como directorio de trabajo /usr/ast, cuyo nodo-i es el 26. Se busca igual que una absoluta, pero desde acá."});
+  for (var i=0;i<comps.length;i++){
+    var c=comps[i], n=DISCO.inodos[ino];
+    if (!n){ pasos.push({l:6, ino:ino, comp:c, lec:lec, error:true, hl:[], tit:"Fuera de la figura", txt:"El libro no muestra el contenido del nodo-i "+ino+"."}); return {pasos:pasos, ino:null, lecturas:lec}; }
+    lec++;
+    pasos.push({l:4, ino:ino, comp:c, lec:lec, hl:["i"+ino], tit:"Leo el nodo-i "+ino, txt:"El nodo-i "+ino+" dice que su directorio está en el bloque "+n.bloque+". Ubicarlo es directo: los nodos-i están en un lugar fijo, indexados por número."});
+    lec++;
+    var ent=DISCO.bloques[n.bloque].filter(function(x){return x[1]===c;})[0];
+    pasos.push({l:5, ino:ino, comp:c, lec:lec, hl:["i"+ino,"b"+n.bloque], fila:ent?[n.bloque,c]:null, tit:"Leo el bloque "+n.bloque+" y busco «"+c+"»", txt: ent ? "Lo encuentro: «"+c+"» → nodo-i "+ent[0]+"." + (c===".."?" «..» es una entrada más: apunta al padre.":"") : "Recorro todas las entradas y «"+c+"» no está."});
+    if (!ent){ pasos.push({l:6, ino:ino, comp:c, lec:lec, error:true, hl:["b"+n.bloque], tit:"Error: «"+c+"» no existe", txt:"open devuelve error (ENOENT, «No such file or directory»). Igual se gastaron "+lec+" lecturas de disco.",
+      marca:{tipo:"ojo", txt:"⚠️ Buscar un nombre que no está también cuesta lecturas: hay que revisar el directorio entero."}}); return {pasos:pasos, ino:null, lecturas:lec}; }
+    ino=ent[0];
+    pasos.push({l:7, ino:ino, comp:c, lec:lec, hl:[], tit:"Paso al nodo-i "+ino, txt:"Ahora el nodo-i actual es el "+ino+"."+(i<comps.length-1?" Sigue el próximo componente.":"")});
+  }
+  lec++;
+  pasos.push({l:8, ino:ino, comp:"—", lec:lec, fin:true, hl:["i"+ino], tit:"Se lee el nodo-i "+ino+" a memoria: "+lec+" lecturas en total",
+    txt:"El nodo-i "+ino+" queda en RAM hasta el close. Desde ahí, leer el archivo ya no requiere volver a buscar la ruta.",
+    marca:{tipo:"cer", txt:"🧠 Sin caché: 2 lecturas por directorio recorrido (su nodo-i y su bloque) + 1 del nodo-i final."}});
+  return {pasos:pasos, ino:ino, lecturas:lec};
+}
+</script>
+
+<script>
+var $=function(id){return document.getElementById(id);};
+// pestañas
+$("pV").onclick=function(){$("secV").classList.remove("oculto");$("secR").classList.add("oculto");this.classList.add("act");$("pR").classList.remove("act");};
+$("pR").onclick=function(){$("secR").classList.remove("oculto");$("secV").classList.add("oculto");this.classList.add("act");$("pV").classList.remove("act");};
+
+// ---- vínculos
+var pV=0;
+function tablaDir(d, hl){
+  var k=Object.keys(d); if(!k.length) return '<div class="vacio">(sin entradas propias)</div>';
+  return '<table><tr><th>nombre</th><th>nodo-i</th></tr>'+k.map(function(n){return '<tr'+(hl===d[n]?' class="hl"':'')+'><td>'+n+'</td><td>'+d[n]+'</td></tr>';}).join("")+'</table>';
+}
+function dibV(){
+  var g=GUIONES[$("escV").value], r=correrGuion($("escV").value,pV), e=r.e, u=r.ultimo;
+  $("codV").innerHTML=g.map(function(x,i){var q=x[0]; return '<li class="'+(i===pV-1?"ahora":(i<pV-1?"hecho":""))+'"><span class="quien '+q+'">'+q+'</span><span>$ '+x[2]+'</span></li>';}).join("");
+  var leer=u&&u.leer;
+  $("dirC").innerHTML=tablaDir(e.dirC, leer); $("dirB").innerHTML=tablaDir(e.dirB, leer);
+  var ks=Object.keys(e.inodos);
+  $("tabI").innerHTML = ks.length ? '<table><tr><th>nº</th><th>tipo</th><th>dueño</th><th>vínc.</th></tr>'+ks.map(function(k){var n=e.inodos[k];
+    return '<tr class="'+(n.liberado?"muerto":"")+(leer==k&&!n.liberado?" hl":"")+'"><td>'+k+'</td><td>'+n.tipo+(n.contenido?' → '+n.contenido:'')+'</td><td>'+n.dueno+'</td><td>'+n.vinculos+'</td></tr>';}).join("")+'</table>' : '<div class="vacio">(vacía)</div>';
+  ["bxC","bxB","bxI"].forEach(function(id){$(id).classList.toggle("cambio", !!(u&&u.cambio.indexOf(id)>=0));});
+  var n20=e.inodos[20];
+  function celda(id,v,c){$(id).querySelector(".v").textContent=v; $(id).classList.toggle("cambio",!!c);}
+  celda("cCnt", n20 ? (n20.liberado?"0 → liberado":n20.vinculos) : "—", u&&u.cambio.indexOf("bxI")>=0&&!!n20);
+  celda("cDue", n20 ? (n20.liberado?"(nadie)":"C") : "—", false);
+  celda("cBlo", n20 ? (n20.liberado?"devueltos a la lista libre":n20.bloques) : "—", false);
+  $("sal").textContent = pV ? "$ "+g[pV-1][2]+(u.salida?"\n"+u.salida:"") : "$";
+  if(!u){$("porV").innerHTML='<p class="tit">Listo</p><div>Elegí el tipo de vínculo y apretá «Siguiente paso».</div>';}
+  else $("porV").innerHTML='<p class="tit">'+u.tit+'</p><div>'+u.txt+'</div>'+(u.marca?'<span class="marca '+u.marca.tipo+'">'+u.marca.txt+'</span>':'');
+  $("contV").textContent="Paso "+pV+" de "+g.length; $("sigV").disabled=pV>=g.length;
+}
+$("escV").onchange=function(){pV=0;dibV();}; $("sigV").onclick=function(){pV++;dibV();}; $("reiV").onclick=function(){pV=0;dibV();};
+
+// ---- rutas
+var pR=0;
+function dibR(){
+  var res=buscarRuta($("escR").value), s=res.pasos, p=pR?s[pR-1]:null, hl=p?p.hl:[];
+  var h='';
+  [1,6,26].forEach(function(i){ var n=DISCO.inodos[i];
+    h+='<div class="caja'+(hl.indexOf("i"+i)>=0?' cambio':'')+'"><div class="t">nodo-i '+i+'</div><div class="mini">modo, tamaño, tiempos</div><div>bloque: <b>'+n.bloque+'</b></div></div>';
+    var b=n.bloque;
+    h+='<div class="caja'+(hl.indexOf("b"+b)>=0?' cambio':'')+'" style="grid-column:span 2"><div class="t">bloque '+b+' (directorio)</div><table>'+DISCO.bloques[b].map(function(x){
+      var on=p&&p.fila&&p.fila[0]===b&&p.fila[1]===x[1]; return '<tr'+(on?' class="hl"':'')+'><td>'+x[0]+'</td><td>'+x[1]+'</td></tr>';}).join("")+'</table></div>';
+  });
+  $("disco").innerHTML=h;
+  [].forEach.call($("codR").children,function(li,i){li.className=(p&&p.l===i+1)?"ahora":"";});
+  function celda(id,v){$(id).querySelector(".v").textContent=v;}
+  celda("rIno",p?p.ino:"—"); celda("rComp",p?p.comp:"—"); celda("rLec",p?p.lec:0);
+  if(!p){$("porR").innerHTML='<p class="tit">Listo</p><div>Elegí una ruta y apretá «Siguiente paso».</div>';$("porR").style.borderLeftColor="";}
+  else {$("porR").innerHTML='<p class="tit">'+p.tit+'</p><div>'+p.txt+'</div>'+(p.marca?'<span class="marca '+p.marca.tipo+'">'+p.marca.txt+'</span>':'');$("porR").style.borderLeftColor=p.error?"var(--fal)":(p.fin?"var(--ok)":"");}
+  $("contR").textContent="Paso "+pR+" de "+s.length; $("sigR").disabled=$("todoR").disabled=pR>=s.length;
+}
+$("escR").onchange=function(){pR=0;dibR();}; $("sigR").onclick=function(){pR++;dibR();}; $("todoR").onclick=function(){pR=buscarRuta($("escR").value).pasos.length;dibR();}; $("reiR").onclick=function(){pR=0;dibR();};
+dibV(); dibR();
+</script>
+</body>
+</html>

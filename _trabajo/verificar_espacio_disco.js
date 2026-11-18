@@ -1,0 +1,35 @@
+// Verifica motor + HTML de unidades/u04-archivos/visuales/espacio_disco.html
+const fs=require('fs'), vm=require('vm'), path=require('path');
+const F='unidades/u04-archivos/visuales/espacio_disco.html';
+const html=fs.readFileSync(F,'utf8'); const ctx={}; vm.createContext(ctx);
+vm.runInContext(html.match(/<script id="motor">([\s\S]*?)<\/script>/)[1]+';this.R={fragmentacion,velocidad,eficiencia,registroLibres};',ctx);
+const {fragmentacion,velocidad,eficiencia,registroLibres}=ctx.R;
+let ok=0,mal=0; const chk=(c,m)=>{c?(ok++,console.log('OK  ',m)):(mal++,console.log('FALLA',m));};
+let r=fragmentacion(3712518,4096,512);
+chk(r.sectoresPorBloque===8,'8 sectores por bloque'); chk(r.llenos===906&&r.resto===1542,'906 llenos, resto 1542');
+chk(r.frag===2554&&r.bloques===907&&r.ocupa===3715072,'frag 2554, 907 bloques, 3.715.072 B');
+chk(r.bpb.x0B==='00'&&r.bpb.x0C==='02','BPB 0x0B=00, 0x0C=02');
+chk(fragmentacion(8192,4096,512).frag===0,'múltiplo exacto: 0');
+chk(fragmentacion(2900,512,512).frag===172,'2900 B en 512: 172 (pregunta del tema 3)');
+let v=velocidad(4096,5,8.33,1e6); chk(Math.abs(v.ms-9.199)<0.01,'4 KB: ~9,2 ms');
+v=velocidad(65536,5,8.33,1e6); chk(Math.abs(v.ms-9.711)<0.01,'64 KB: ~9,7 ms');
+chk(eficiencia(4096,1024)===1&&eficiencia(4096,8192)===0.5&&eficiencia(4096,16384)===0.25,'eficiencia 100/50/25 %');
+chk(Math.abs(eficiencia(4096,65536)-0.0625)<1e-9,'64 KB: 6,25 % (≈7 % del libro)');
+let l=registroLibres(500e9,1024,1); chk(Math.abs(l.n/1e6-488.28)<0.01,'500 GB / 1 KB ≈ 488 M bloques');
+chk(l.porBloque===255,'255 números por bloque'); chk(Math.abs(l.lista/1e6-1.915)<0.01,'lista ≈ 1,9 M bloques'); chk(l.mapa===59605,'mapa 59.605 bloques (poco menos de 60.000)');
+chk(Math.abs(l.umbral-0.0311)<0.001,'la lista gana con < 3,1 % libre');
+const {chromium}=require(path.join(process.env.APPDATA,'npm/node_modules/@playwright/mcp/node_modules/playwright-core'));
+(async()=>{
+  const br=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'});
+  const pg=await br.newPage({viewport:{width:1100,height:900}}); const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
+  await pg.goto('file:///'+path.resolve(F).split(path.sep).join('/'));
+  chk((await pg.textContent('#fRes')).includes('2.554 B'),'HTML frag 2.554');
+  chk((await pg.textContent('#fPasos')).includes('1.542'),'HTML resto 1.542');
+  chk((await pg.textContent('#lRes')).includes('59.605'),'HTML mapa 59.605');
+  chk((await pg.locator('#graf path').count())===2,'HTML 2 curvas');
+  await pg.fill('#lL','1'); await pg.dispatchEvent('#lL','input'); chk((await pg.textContent('#lEst')).includes('LISTA'),'HTML 1 % libre: gana la lista');
+  await pg.setViewportSize({width:390,height:800});
+  chk(await pg.evaluate(()=>document.documentElement.scrollWidth<=390),'sin scroll horizontal en móvil');
+  chk(errs.length===0,'sin errores '+errs.join('|'));
+  await br.close(); console.log(`\n${ok} OK, ${mal} fallos`); process.exit(mal?1:0);
+})();

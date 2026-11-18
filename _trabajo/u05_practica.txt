@@ -1,0 +1,32 @@
+===== [PDF pag 1] =====
+ 
+1-a                 21  →  3   →  7  → 27 
+   b​
+ ​
+ 21  →  3   →  7  → 27(1) 
+​
+​
+27(0) → 21  →  3   →  7(0) Se reemplaza por el n! pagina 23  
+​
+​
+23(1) → 27(0) → 21(1) → 3(1) 
+ 
+ 
+2- Convertimos la direccion hexa a bin 6047H → 0110 0000 0100 0111  → n°pag 12  
+​
+Tenemos los 11 bit de desplazamiento y los 5 de n° de pagina 
+​
+Buscamos en la tabla y obtenemos el marco de pagina  
+​
+Reemplazamos el marco de pagina por el n° de pag 11 H → 10001 
+​
+1000 1000 0100 0111  
+​
+ 
+3- 512 bytes   7200 rpm   6.8 ms     velocidad transf   19mb    sobrecarga 2ms 
+TmLW = tiempo medio posicionamiento + t retardo + t de transferencia + sobrecarga 
+​
+=  6.8ms + 4.165ms + 0,0269ms + 2ms=12,99ms 
+ 
+7200 / 60 =120 por segundo     1/120 = 0,00833s  / 2 = 0,004165 → 4,165 ms  
+Tiempo de transferencia = Tamaño sector / velocidad    512/19*10 a la 6= 0,0269ms 

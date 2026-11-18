@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cadena de la FAT</title>
+<style>
+  :root{
+    --bg:#f4f5f8; --panel:#fff; --borde:#d6dae2; --texto:#1b1f24; --suave:#5b6572; --acento:#3d63c9;
+    --ok:#15803d; --ok-bg:#e9f8ee; --fal:#dc2626; --fal-bg:#fdecec; --lim:#b45309; --lim-bg:#fff6e0;
+    --cer:#7c3aed; --cer-bg:#f3edff; --hl:#facc15;
+    --cad:#2563eb; --cad-bg:#e6efff; --fin:#15803d; --lib:#94a3b8;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+      --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+      --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308;
+      --cad:#60a5fa; --cad-bg:#16233d; --fin:#4ade80; --lib:#64748b;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+    --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+    --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308;
+    --cad:#60a5fa; --cad-bg:#16233d; --fin:#4ade80; --lib:#64748b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--texto); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .envoltura{max-width:1150px; margin:0 auto; padding:18px 16px 48px}
+  h1{font-size:1.35rem; margin:0 0 4px}
+  h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave); margin:0 0 6px}
+  .sub{color:var(--suave); margin:0 0 14px; font-size:.92rem}
+  .tarjeta{background:var(--panel); border:1px solid var(--borde); border-radius:12px; padding:14px 16px; margin-bottom:12px; min-width:0}
+  button,select,input,textarea{font:inherit; font-size:.86rem; padding:7px 10px; border-radius:8px; border:1px solid var(--borde); background:var(--panel); color:var(--texto)}
+  button{cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--acento)}
+  button:disabled{opacity:.4; cursor:not-allowed}
+  button.prim{background:var(--acento); color:#fff; border-color:var(--acento); font-weight:650}
+  textarea{width:100%; font-family:ui-monospace,Consolas,monospace; min-height:54px; resize:vertical}
+  input[type=number]{width:100px}
+  label{font-size:.82rem; color:var(--suave); display:flex; flex-direction:column; gap:3px; max-width:100%; min-width:0}
+  select{max-width:100%}
+  .datos{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; margin-top:8px}
+  .barra{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:10px 0 2px}
+  .contador{margin-left:auto; color:var(--suave); font-size:.88rem}
+  .grilla{display:grid; grid-template-columns:1.25fr 1fr; gap:12px}
+  @media (max-width:880px){ .grilla{grid-template-columns:1fr} }
+  .fat{display:grid; grid-template-columns:repeat(auto-fill,minmax(64px,1fr)); gap:6px}
+  .ent{border:1px solid var(--borde); border-radius:8px; padding:4px 6px; text-align:center; position:relative; min-width:0}
+  .ent .i{font-size:.7rem; color:var(--suave)}
+  .ent .v{font:700 .95rem ui-monospace,Consolas,monospace}
+  .ent.libre .v{color:var(--lib); font-weight:400}
+  .ent.encad{background:var(--cad-bg); border-color:var(--cad)}
+  .ent.encad.esfin{border-color:var(--fin); box-shadow:inset 0 0 0 1px var(--fin)}
+  .ent.actual{outline:3px solid var(--hl); outline-offset:1px}
+  .ent.malo{background:var(--fal-bg); border-color:var(--fal)}
+  .ent .ord{position:absolute; top:-8px; right:-6px; background:var(--cad); color:#fff; border-radius:99px; font-size:.68rem; font-weight:800; padding:0 6px}
+  .cadena{font:700 .95rem ui-monospace,Consolas,monospace; overflow-wrap:anywhere; margin-top:10px; padding:8px 10px; border:1px dashed var(--borde); border-radius:8px; min-height:38px}
+  .cadena small{font-weight:400; color:var(--suave)}
+  .celdas{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px}
+  .celda{border:1px solid var(--borde); border-radius:9px; padding:6px 9px; min-width:0}
+  .celda .k{font-size:.72rem; color:var(--suave); text-transform:uppercase; letter-spacing:.04em}
+  .celda .v{font:700 .92rem ui-monospace,Consolas,monospace; overflow-wrap:anywhere}
+  .celda.cambio{outline:2px solid var(--cer); background:var(--cer-bg)}
+  .codigo{font:13px/1.5 ui-monospace,Consolas,monospace; margin:8px 0 0; padding:0; list-style:none}
+  .codigo li{padding:2px 6px; border-radius:6px}
+  .codigo li.ahora{background:var(--hl); color:#000}
+  .actor{display:inline-block; padding:2px 10px; border-radius:99px; font-weight:800; font-size:.8rem; color:#fff; background:var(--acento)}
+  .porque{border:1px solid var(--borde); border-left:5px solid var(--acento); border-radius:10px; padding:12px 14px; margin-top:10px}
+  .porque .tit{font-weight:700; font-size:1.02rem; margin:0 0 4px}
+  .marca{display:block; margin-top:8px; border-radius:8px; padding:7px 10px; font-size:.88rem}
+  .marca.ojo{background:var(--fal-bg); border:1px solid var(--fal)}
+  .marca.cer{background:var(--cer-bg); border:1px solid var(--cer)}
+  .res{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:10px}
+  @media (max-width:700px){ .res{grid-template-columns:1fr 1fr} }
+  .res .celda .v{font-size:1.05rem}
+  .estado{margin-top:10px; padding:8px 12px; border-radius:8px; font-weight:650}
+  .estado.ok{background:var(--ok-bg); border:1px solid var(--ok)}
+  .estado.mal{background:var(--fal-bg); border:1px solid var(--fal)}
+  .estado.lim{background:var(--lim-bg); border:1px solid var(--lim)}
+  .paneles{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px}
+  @media (max-width:880px){ .paneles{grid-template-columns:1fr} }
+  .disco{display:flex; flex-wrap:wrap; gap:3px; margin:8px 0}
+  .b{width:24px; height:24px; border-radius:4px; border:1px solid var(--borde); font:600 .68rem ui-monospace,Consolas,monospace; display:flex; align-items:center; justify-content:center}
+  .b.A{background:var(--cad-bg); border-color:var(--cad)}
+  .b.B{background:var(--cer-bg); border-color:var(--cer)}
+  .b.h{background:repeating-linear-gradient(45deg,transparent 0 4px,var(--borde) 4px 6px)}
+  .mas{color:var(--ok)} .menos{color:var(--fal)}
+  .paneles ul{margin:6px 0 0; padding-left:18px; font-size:.88rem}
+  .ideas li{margin-bottom:5px}
+  .mini{font-size:.8rem; color:var(--suave)}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <h1>Seguir la cadena de una FAT</h1>
+  <p class="sub">Tanenbaum 4.3.2, págs. 276–278 (figs. 4-11 y 4-12) y ejercicio de final de la cátedra. La <b>entrada de directorio</b> guarda solo el <b>primer cluster</b>. La <b>FAT</b> es un arreglo en RAM con una entrada por cluster: en la entrada <i>c</i> está <b>el número del cluster que sigue</b> a <i>c</i> en el archivo, o una marca de <b>FIN</b>. Elegí un escenario o escribí tu propia tabla y avanzá con «Siguiente paso».</p>
+
+  <div class="tarjeta">
+    <h2>Datos</h2>
+    <div class="datos">
+      <label>Escenario
+        <select id="esc"></select>
+      </label>
+      <label>Cluster inicial (de la entrada de directorio)
+        <input type="number" id="ini" min="0">
+      </label>
+      <label>Tamaño de cluster (bytes)
+        <input type="number" id="tb" min="1">
+      </label>
+      <label>Tamaño real del archivo (bytes, opcional)
+        <input type="number" id="tam" min="0" placeholder="—">
+      </label>
+      <label>Byte a ubicar (opcional)
+        <input type="number" id="byte" min="0" placeholder="—">
+      </label>
+    </div>
+    <label style="margin-top:10px">Tabla FAT: los valores van en orden desde la entrada 0, separados por espacios. FIN = <code>FF</code>, <code>EOF</code> o <code>-1</code>. Libre = <code>0</code> o <code>-</code>.
+      <textarea id="tabla"></textarea>
+    </label>
+    <div class="barra">
+      <button id="cargar">Aplicar datos</button>
+      <button class="prim" id="sig">Siguiente paso ▶</button>
+      <button id="todo">Hasta el final ⏭</button>
+      <button id="rei">Reiniciar</button>
+      <span class="contador" id="cont"></span>
+    </div>
+  </div>
+
+  <div class="grilla">
+    <div class="tarjeta">
+      <h2>La FAT en memoria principal</h2>
+      <div class="fat" id="fat"></div>
+      <div class="cadena" id="cadena"></div>
+      <p class="mini">Azul = cluster del archivo (el globito es el número de <b>bloque lógico</b>). Borde verde = el que tiene FIN. Amarillo = la entrada que se está leyendo. Gris = libre.</p>
+    </div>
+    <div class="tarjeta">
+      <h2>Quién ejecuta y qué línea</h2>
+      <span class="actor" id="actor">Sistema de archivos (kernel)</span>
+      <ol class="codigo" id="codigo" start="1">
+        <li>c = entrada_dir.primer_cluster</li>
+        <li>i = 0                  // bloque lógico</li>
+        <li>repetir:</li>
+        <li>  cadena[i] = c         // bloque i está en cluster c</li>
+        <li>  sig = FAT[c]          // se lee de RAM, no del disco</li>
+        <li>  si sig == FIN: salir</li>
+        <li>  si sig libre/fuera/visto: ERROR</li>
+        <li>  c = sig ; i = i + 1</li>
+        <li>espacio = n_clusters × tam_cluster</li>
+      </ol>
+      <div class="celdas" style="margin-top:10px">
+        <div class="celda" id="cC"><div class="k">c (cluster actual)</div><div class="v">—</div></div>
+        <div class="celda" id="cS"><div class="k">FAT[c]</div><div class="v">—</div></div>
+        <div class="celda" id="cI"><div class="k">i (bloque lógico)</div><div class="v">—</div></div>
+        <div class="celda" id="cN"><div class="k">clusters contados</div><div class="v">0</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tarjeta">
+    <div class="porque" id="porque"><p class="tit">Listo para empezar</p><div>Apretá «Siguiente paso».</div></div>
+    <div class="res" id="res"></div>
+    <div id="estado"></div>
+  </div>
+
+  <div class="tarjeta">
+    <h2>Los tres métodos de asignación, lado a lado (figs. 4-10, 4-11 y 4-12)</h2>
+    <div class="paneles">
+      <div>
+        <b>Asignación contigua</b>
+        <div class="disco"><span class="b A">A</span><span class="b A">A</span><span class="b A">A</span><span class="b A">A</span><span class="b h"></span><span class="b h"></span><span class="b B">B</span><span class="b B">B</span><span class="b B">B</span><span class="b h"></span></div>
+        <div class="mini">El directorio guarda <b>(primer bloque, cantidad)</b>. Al borrar quedan huecos (rayados).</div>
+        <ul>
+          <li class="mas">+ Muy simple: el bloque <i>k</i> está en inicio + <i>k</i>.</li>
+          <li class="mas">+ Lectura excelente: una sola búsqueda.</li>
+          <li class="menos">− Fragmentación <b>externa</b>: huecos al borrar.</li>
+          <li class="menos">− Hay que saber el tamaño final al crear el archivo.</li>
+        </ul>
+        <div class="mini">Hoy: CD-ROM y DVD (se escriben una vez).</div>
+      </div>
+      <div>
+        <b>Lista enlazada (puntero dentro del bloque)</b>
+        <div class="disco"><span class="b A">4</span>→<span class="b A">7</span>→<span class="b A">2</span>→<span class="b A">10</span>→<span class="b A">12</span></div>
+        <div class="mini">La primera palabra de cada bloque apunta al siguiente. El directorio guarda solo el <b>primer bloque</b>.</div>
+        <ul>
+          <li class="mas">+ Sin fragmentación externa: sirve cualquier bloque.</li>
+          <li class="menos">− Acceso aleatorio lentísimo: para llegar al bloque <i>n</i> hay que leer los anteriores <b>del disco</b>.</li>
+          <li class="menos">− El dato útil ya no es potencia de 2 (el puntero ocupa bytes).</li>
+        </ul>
+      </div>
+      <div>
+        <b>Lista enlazada con tabla en memoria (FAT)</b>
+        <div class="disco"><span class="b">4</span><span class="mini">→7</span> <span class="b">7</span><span class="mini">→2</span> <span class="b">2</span><span class="mini">→10</span> <span class="b">10</span><span class="mini">→12</span> <span class="b">12</span><span class="mini">FIN</span></div>
+        <div class="mini">Los punteros salen de los bloques y van a una tabla en RAM.</div>
+        <ul>
+          <li class="mas">+ El bloque entero queda para datos.</li>
+          <li class="mas">+ La cadena se recorre en RAM, sin ir al disco.</li>
+          <li class="menos">− Toda la tabla tiene que estar en memoria siempre.</li>
+          <li class="menos">− No escala: 200 GB con bloques de 1 KB son 200 M de entradas, entre 600 y 800 MB de RAM.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="tarjeta">
+    <h2>Ideas clave y frases de examen</h2>
+    <ul class="ideas">
+      <li><b>Espacio ocupado = cantidad de clusters de la cadena × tamaño de cluster.</b> Se cuenta en clusters <b>enteros</b>: el último puede estar a medias, y eso es fragmentación <b>interna</b>.</li>
+      <li>⚠️ <b>Contá todos los clusters, incluido el que tiene FIN.</b> El que tiene FIN también guarda datos: es el <b>último</b> bloque del archivo, no una marca aparte. Error típico: contar «saltos» (7) en vez de clusters (8).</li>
+      <li>⚠️ <b>«¿En qué cluster termina?»</b> se responde con el <b>número de entrada</b> que contiene FIN, no con el valor «FF».</li>
+      <li>🧠 La FAT arregla las <b>dos</b> desventajas de la lista enlazada (bloque entero para datos y acceso aleatorio en RAM), pero cobra con <b>memoria</b>. El i-nodo (tema 4) lo resuelve cargando en RAM solo los de los archivos abiertos.</li>
+    </ul>
+  </div>
+</div>
+
+<script id="motor">
+// ---------- Motor (sin DOM) ----------
+var ESCENARIOS = [
+  { id:"figA", nombre:"Fig. 4-12: archivo A (empieza en 4)", tabla:"- - 10 11 7 - 3 2 - - 12 14 -1 - -1 -", ini:4, tb:1024, tam:"", byte:"",
+    nota:"Tabla de la fig. 4-12: el archivo A usa 4, 7, 2, 10 y 12." },
+  { id:"figB", nombre:"Fig. 4-12: archivo B (empieza en 6)", tabla:"- - 10 11 7 - 3 2 - - 12 14 -1 - -1 -", ini:6, tb:1024, tam:"", byte:"",
+    nota:"Misma tabla: el archivo B usa 6, 3, 11 y 14." },
+  { id:"final", nombre:"Final de la cátedra: FAT32, bloques de 256 B, cluster 4", tabla:"0 22 71 8 9 23 13 FF 4 24 21 FF FF 11 16 6 10 0 FF 21 0 7 FF FF 14", ini:4, tb:256, tam:"", byte:"",
+    nota:"Ejercicio 3 del final: la tabla de 5×5 se numera fila por fila (0 a 24). La entrada 5 sale borrosa en la foto, pero no está en la cadena." },
+  { id:"rota", nombre:"⚠️ Cadena rota: apunta a un cluster libre", tabla:"- - 10 11 7 - 3 2 - - - 14 -1 - -1 -", ini:4, tb:1024, tam:"", byte:"",
+    nota:"Igual a la fig. 4-12 pero la entrada 10 quedó libre (por ejemplo, un corte de luz a mitad de una escritura)." },
+  { id:"ciclo", nombre:"⚠️ Ciclo en la cadena", tabla:"- - 10 11 7 - 3 2 - - 12 14 7 - -1 -", ini:4, tb:1024, tam:"", byte:"",
+    nota:"Igual a la fig. 4-12 pero la entrada 12 apunta a 7 en vez de FIN." }
+];
+
+function parseFAT(txt){
+  var t = String(txt).trim().split(/[\s,;]+/).filter(function(x){return x!=="";});
+  return t.map(function(raw){
+    var u = raw.toUpperCase();
+    if (u==="FF"||u==="EOF"||u==="FIN"||u==="-1"||u==="FFFF"||u==="0XFFFFFFFF"||u==="FFFFFFFF") return {tipo:"fin", raw:raw};
+    if (u==="-"||u==="0"||u==="L"||u==="LIBRE") return {tipo:"libre", raw:raw};
+    if (/^\d+$/.test(u)) return {tipo:"sig", v:parseInt(u,10), raw:raw};
+    return {tipo:"invalido", raw:raw};
+  });
+}
+
+function textoValor(e){
+  if (!e) return "—";
+  if (e.tipo==="fin") return "FIN";
+  if (e.tipo==="libre") return "libre";
+  if (e.tipo==="sig") return String(e.v);
+  return e.raw;
+}
+
+// Genera la cadena y la lista de pasos (cada paso = una línea del código)
+function simular(fat, ini, tb){
+  var pasos = [], cadena = [], visto = {}, estado = "ok", detalle = "";
+  pasos.push({linea:1, c:ini, i:null, sig:null, n:0, cadena:[],
+    tit:"Se lee la entrada de directorio",
+    txt:"La entrada de directorio del archivo dice que empieza en el cluster "+ini+". Es lo único que guarda el directorio: con FAT alcanza con un entero, sin importar lo grande que sea el archivo."});
+  if (!(ini>=0 && ini<fat.length)){
+    estado="rango"; detalle="El cluster inicial "+ini+" no existe en la tabla (tiene "+fat.length+" entradas).";
+    pasos.push({linea:7, c:ini, i:0, sig:null, n:0, cadena:[], error:true, tit:"Error: cluster inicial fuera de la tabla", txt:detalle});
+    return {pasos:pasos, cadena:cadena, estado:estado, detalle:detalle};
+  }
+  pasos.push({linea:2, c:ini, i:0, sig:null, n:0, cadena:[], tit:"Bloque lógico 0", txt:"El primer bloque del archivo (bloque lógico 0) está en el cluster "+ini+"."});
+  var c = ini, i = 0;
+  while (true){
+    if (visto[c]!==undefined){
+      estado="ciclo"; detalle="La entrada "+cadena[cadena.length-1]+" apunta a "+c+", que ya está en la cadena (bloque lógico "+visto[c]+"). Es un ciclo: sin este control, el recorrido no terminaría nunca.";
+      pasos.push({linea:7, c:c, i:i, sig:c, n:cadena.length, cadena:cadena.slice(), error:true, malo:c, tit:"Error: ciclo en la cadena", txt:detalle,
+        marca:{tipo:"ojo", txt:"⚠️ Una FAT inconsistente es uno de los problemas que busca fsck / chkdsk (tema 8)."}});
+      break;
+    }
+    visto[c]=i; cadena.push(c);
+    pasos.push({linea:4, c:c, i:i, sig:null, n:cadena.length, cadena:cadena.slice(),
+      tit:"Bloque lógico "+i+" → cluster "+c,
+      txt:"Se anota que el bloque lógico "+i+" del archivo está en el cluster "+c+". Ya van "+cadena.length+" cluster"+(cadena.length>1?"s":"")+"."});
+    var e = fat[c];
+    pasos.push({linea:5, c:c, i:i, sig:e, n:cadena.length, cadena:cadena.slice(),
+      tit:"Se lee FAT["+c+"] = "+textoValor(e),
+      txt:"Se mira la entrada "+c+" de la tabla. Esto pasa en memoria principal: con la FAT no hace falta leer el bloque de datos del disco para saber cuál sigue.",
+      marca: i===0 ? {tipo:"cer", txt:"🧠 La entrada c de la FAT no dice «qué hay en c»: dice cuál es el cluster SIGUIENTE a c en el archivo."} : null});
+    if (e && e.tipo==="fin"){
+      pasos.push({linea:6, c:c, i:i, sig:e, n:cadena.length, cadena:cadena.slice(), fin:true,
+        tit:"FAT["+c+"] es FIN: el archivo termina en el cluster "+c,
+        txt:"La marca de fin (en el libro, −1; en la cátedra, FF) no es un número de cluster válido, así que la cadena termina acá. El cluster "+c+" es el último bloque del archivo y también tiene datos.",
+        marca:{tipo:"ojo", txt:"⚠️ El cluster "+c+" SE CUENTA: la cadena tiene "+cadena.length+" clusters, no "+(cadena.length-1)+"."}});
+      break;
+    }
+    if (!e || e.tipo!=="sig" || e.v>=fat.length){
+      estado = !e ? "rango" : (e.tipo==="libre" ? "libre" : (e.tipo==="sig" ? "rango" : "invalido"));
+      detalle = !e ? "El cluster "+c+" no tiene entrada en la tabla." :
+        e.tipo==="libre" ? "FAT["+c+"] figura como libre, pero el cluster "+c+" es parte de un archivo: la cadena está rota y el resto del archivo se perdió." :
+        e.tipo==="sig" ? "FAT["+c+"] = "+e.v+", pero la tabla mostrada termina en "+(fat.length-1)+": no se puede seguir." :
+        "FAT["+c+"] tiene un valor que no se entiende ("+e.raw+").";
+      pasos.push({linea:7, c:c, i:i, sig:e, n:cadena.length, cadena:cadena.slice(), error:true, malo:c, tit:"Error: la cadena no se puede seguir", txt:detalle,
+        marca:{tipo:"ojo", txt:"⚠️ Una FAT inconsistente es uno de los problemas que busca fsck / chkdsk (tema 8)."}});
+      break;
+    }
+    pasos.push({linea:8, c:e.v, i:i+1, sig:e, n:cadena.length, cadena:cadena.slice(),
+      tit:"Se salta al cluster "+e.v,
+      txt:"El siguiente cluster del archivo es "+e.v+", que va a ser el bloque lógico "+(i+1)+"."});
+    c = e.v; i++;
+  }
+  if (estado==="ok"){
+    pasos.push({linea:9, c:c, i:i, sig:null, n:cadena.length, cadena:cadena.slice(), fin:true,
+      tit:"Espacio en disco = "+cadena.length+" × "+tb+" = "+(cadena.length*tb)+" bytes",
+      txt:"El disco asigna clusters enteros. Cadena: "+cadena.join(" → ")+" (FIN). Termina en el cluster "+c+" y ocupa "+cadena.length+" clusters."});
+  }
+  return {pasos:pasos, cadena:cadena, estado:estado, detalle:detalle};
+}
+
+function espacio(n, tb, tam){
+  var r = {n:n, bytes:n*tb};
+  if (tam!==null && tam!==undefined && tam!=="" && !isNaN(tam)){
+    tam = Number(tam);
+    var nec = Math.ceil(tam/tb);
+    r.tam = tam; r.necesarios = nec; r.frag = n*tb - tam;
+    r.coherente = (nec===n);
+  }
+  return r;
+}
+
+// Dónde está un byte del archivo y cuántas lecturas de disco cuesta llegar
+function ubicar(cadena, tb, byte){
+  if (byte===null || byte===undefined || byte==="" || isNaN(byte)) return null;
+  byte = Number(byte);
+  var k = Math.floor(byte/tb);
+  if (k>=cadena.length) return {fuera:true, k:k};
+  return {k:k, cluster:cadena[k], desp:byte%tb, lecturasFAT:1, lecturasEnlazada:k+1};
+}
+</script>
+
+<script>
+var $ = function(id){return document.getElementById(id);};
+var estado = {fat:[], sim:null, paso:0, tb:256, tam:"", byte:""};
+
+ESCENARIOS.forEach(function(e,ix){
+  var o=document.createElement("option"); o.value=ix; o.textContent=e.nombre; $("esc").appendChild(o);
+});
+
+function cargarEscenario(ix){
+  var e=ESCENARIOS[ix];
+  $("tabla").value=e.tabla; $("ini").value=e.ini; $("tb").value=e.tb; $("tam").value=e.tam; $("byte").value=e.byte;
+  aplicar(e.nota);
+}
+
+function aplicar(nota){
+  estado.fat = parseFAT($("tabla").value);
+  estado.tb = Math.max(1, parseInt($("tb").value,10)||1);
+  estado.tam = $("tam").value; estado.byte = $("byte").value;
+  var ini = parseInt($("ini").value,10); if (isNaN(ini)) ini=0;
+  estado.sim = simular(estado.fat, ini, estado.tb);
+  estado.paso = 0;
+  estado.nota = nota || "";
+  dibujar();
+}
+
+function dibujar(){
+  var sim=estado.sim, p = estado.paso>0 ? sim.pasos[estado.paso-1] : null;
+  var cad = p ? p.cadena : [];
+  var ord = {}; cad.forEach(function(c,i){ord[c]=i;});
+  // FAT
+  var h="";
+  estado.fat.forEach(function(e,i){
+    var cl="ent";
+    if (e.tipo==="libre") cl+=" libre";
+    if (ord[i]!==undefined){ cl+=" encad"; if (e.tipo==="fin") cl+=" esfin"; }
+    if (p && p.c===i && estado.paso<sim.pasos.length+1 && !(p.linea===9)) cl+=" actual";
+    if (p && p.malo===i) cl+=" malo";
+    h+='<div class="'+cl+'"><div class="i">entrada '+i+'</div><div class="v">'+textoValor(e)+'</div>'+
+       (ord[i]!==undefined?'<span class="ord">b'+ord[i]+'</span>':'')+'</div>';
+  });
+  $("fat").innerHTML=h;
+  $("cadena").innerHTML = cad.length ? cad.join(" → ")+(p && p.fin ? " → <small>FIN</small>" : " …") : '<small>La cadena aparece acá a medida que avanzás.</small>';
+  // código
+  [].forEach.call($("codigo").children,function(li,ix){ li.className = (p && p.linea===ix+1) ? "ahora" : ""; });
+  // celdas
+  function celda(id,val,camb){ var d=$(id); d.querySelector(".v").textContent=val; d.className="celda"+(camb?" cambio":""); }
+  celda("cC", p && p.c!=null ? p.c : "—", p && (p.linea===1||p.linea===8));
+  celda("cS", p && p.sig ? textoValor(p.sig) : "—", p && p.linea===5);
+  celda("cI", p && p.i!=null ? p.i : "—", p && (p.linea===2||p.linea===8));
+  celda("cN", p ? p.n : 0, p && p.linea===4);
+  // por qué
+  if (!p){
+    $("porque").innerHTML='<p class="tit">Listo para empezar</p><div>'+(estado.nota||"")+' Apretá «Siguiente paso».</div>';
+    $("porque").style.borderLeftColor="";
+  } else {
+    var m = p.marca ? '<span class="marca '+p.marca.tipo+'">'+p.marca.txt+'</span>' : "";
+    $("porque").innerHTML='<p class="tit">'+p.tit+'</p><div>'+p.txt+'</div>'+m;
+    $("porque").style.borderLeftColor = p.error ? "var(--fal)" : (p.fin ? "var(--ok)" : "");
+  }
+  $("cont").textContent = "Paso "+estado.paso+" de "+sim.pasos.length;
+  $("sig").disabled = estado.paso>=sim.pasos.length;
+  $("todo").disabled = estado.paso>=sim.pasos.length;
+  // resultados (solo al terminar)
+  var terminado = estado.paso>=sim.pasos.length;
+  if (terminado && sim.estado==="ok"){
+    var es = espacio(sim.cadena.length, estado.tb, estado.tam);
+    var r = '<div class="celda"><div class="k">termina en el cluster</div><div class="v">'+sim.cadena[sim.cadena.length-1]+'</div></div>'+
+            '<div class="celda"><div class="k">clusters</div><div class="v">'+es.n+'</div></div>'+
+            '<div class="celda"><div class="k">espacio en disco</div><div class="v">'+es.n+' × '+estado.tb+' = '+es.bytes+' B</div></div>';
+    r += es.tam!==undefined ? '<div class="celda"><div class="k">fragmentación interna</div><div class="v">'+es.frag+' B</div></div>' :
+         '<div class="celda"><div class="k">fragmentación interna</div><div class="v">cargá el tamaño real</div></div>';
+    $("res").innerHTML=r;
+    var est="";
+    if (es.tam!==undefined){
+      est += es.coherente ? '<div class="estado ok">✔ Coherente: '+es.tam+' B necesitan ⌈'+es.tam+' / '+estado.tb+'⌉ = '+es.necesarios+' clusters, igual que la cadena. Al último le sobran '+es.frag+' B.</div>'
+                         : '<div class="estado lim">⚠ Incoherente: '+es.tam+' B necesitan '+es.necesarios+' clusters, pero la cadena tiene '+es.n+'.</div>';
+    }
+    var u = ubicar(sim.cadena, estado.tb, estado.byte);
+    if (u){
+      est += u.fuera ? '<div class="estado lim">El byte '+estado.byte+' caería en el bloque lógico '+u.k+', pero el archivo solo tiene '+sim.cadena.length+' bloques.</div>'
+        : '<div class="estado ok">Byte '+estado.byte+': bloque lógico ⌊'+estado.byte+' / '+estado.tb+'⌋ = '+u.k+' → cluster '+u.cluster+', desplazamiento '+u.desp+'. '+
+          'Lecturas de disco: <b>FAT = '+u.lecturasFAT+'</b> (la cadena se sigue en RAM) contra <b>lista enlazada en disco = '+u.lecturasEnlazada+'</b> (hay que leer los bloques 0 a '+u.k+').</div>';
+    }
+    $("estado").innerHTML=est;
+  } else if (terminado){
+    $("res").innerHTML=""; $("estado").innerHTML='<div class="estado mal">✘ '+sim.detalle+'</div>';
+  } else { $("res").innerHTML=""; $("estado").innerHTML=""; }
+}
+
+$("esc").onchange=function(){cargarEscenario(this.value);};
+$("cargar").onclick=function(){aplicar("Datos propios cargados.");};
+$("sig").onclick=function(){ if(estado.paso<estado.sim.pasos.length){estado.paso++; dibujar();} };
+$("todo").onclick=function(){ estado.paso=estado.sim.pasos.length; dibujar(); };
+$("rei").onclick=function(){ estado.paso=0; dibujar(); };
+cargarEscenario(2);
+</script>
+</body>
+</html>

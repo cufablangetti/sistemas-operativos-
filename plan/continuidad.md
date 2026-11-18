@@ -3,7 +3,7 @@
 > **Este archivo es para la IA que retoma la tutoría en otra computadora.**
 > Leelo completo antes de responderle nada al estudiante.
 
-Última actualización: **2026-11-09**
+Última actualización: **2026-11-13**
 
 ---
 
@@ -32,6 +32,21 @@ Material en `material_so/` (**nunca modificar los originales**). Libro principal
 
 ## 2. ⭐ QUÉ HAY QUE HACER AHORA
 
+**🏁 12/11 — LA UNIDAD 3 ESTÁ CERRADA** (clase de los 11 temas + cierre, del 9 al 12/11) y ya se hizo todo lo de después de la unidad:
+- `unidades/u03-memoria/repaso_u03.pdf` (47 págs.; índice en `_trabajo/indice_repaso_u03.md`). Para regenerarlo: `python -X utf8 _trabajo/extraer_chat.py <sesión.jsonl> _trabajo/u03_clase_chat.md "enseñame la unidad 3"`, después `_trabajo/armar_repaso_u03.py` y `html2pdf.py`.
+- Mapa conceptual con U1 + U2 + U3 (`plan/mapa_conceptual.md` → `_trabajo/mapa_conceptual.py` → `html2pdf.py`; PDF de 72 págs.). Copia previa en `_trabajo/mapa_conceptual_antes_u03.md`.
+- Mapa gráfico: U3 agregada solo sumando entradas (`_trabajo/agregar_u03_mapa_grafico.py`; copia previa en `_trabajo/mapa_grafico_antes_u03.html`).
+- **Cuestionario U3 generado y PENDIENTE** (`unidades/u03-memoria/cuestionario.md`, 21 preguntas, 100 p; `respuestas.md` NO se muestra). El estudiante quiere tomar los de **U1 (partes C–F), U2 y U3 juntos más adelante**. No insistir.
+- 14 simuladores de la U3 en `unidades/u03-memoria/visuales/` (listados al final del mapa conceptual, rama «Cierre de la U3»).
+- **Lo que le costó en la U3** (para repasar): traducción a física en el ejercicio de segunda oportunidad (dio 0x3CEE, era 0x333A; nunca explicó cómo llegó) y qué es la «cola final» — ★★★ en examen, conviene un ejercicio extra; M que sale del TLB → tabla, no disco; WSClock con la sucia; sobrepaginación → control de carga; DLL → código independiente de la posición; vocabulario (marcos = RAM, la dirección en disco no está ni en la tabla de páginas ni en el descriptor de MULTICS; `id` bajo ≠ CPU ociosa).
+- **🆕 13/11 — UNIDAD 4 PREPARADA (Fase 2).** Lo próximo es **«enseñame la unidad 4»**. Archivos en `unidades/u04-archivos/` (fuentes/, `notebooklm_u04.md`, `prompt_video.txt`); textos en `_trabajo/u04_tanenbaum.txt` (págs. del recorte: 1–74 cap. 4, 75–80 middleware, 81–100 protección, 101–125 Linux, 126–138 NTFS), `u04_resumen.txt`, `u04_comandos.txt`. Notas de huecos y errores del material en `plan/mapa_unidades.md` (U4). Lo que más se toma: **FAT** (cluster final y espacio ocupado), **i-nodos** (tamaño máximo con (D + P + P² + P³)·B; bloques de datos e índice), **fragmentación interna**, comandos `lsblk -f`, `/etc/fstab`, `ln`/`ln -s`. En la clase conviene un simulador de FAT e i-nodos y uno de fsck (formato de gráficos de CLAUDE.md).
+- **🆕 18/11 — U4 CERRADA (clase + repaso_u04.pdf + mapa conceptual + mapa gráfico; cuestionario U4 PENDIENTE junto con U1–U3, por pedido) y UNIDAD 5 PREPARADA (Fase 2).** Lo próximo es **«enseñame la unidad 5»**. Archivos en `unidades/u05-entrada-salida/` (fuentes/, `notebooklm_u05.md`, `prompt_video.txt`); textos en `_trabajo/u05_tanenbaum.txt` (págs. del recorte: 1–104 cap. 5, 105–108 shell, 109–117 E/S Linux, 118–128 E/S Windows), `u05_resumen.txt`, `u05_practica.txt`. Lo que más se toma: **tiempo medio de acceso a disco** (búsqueda + media vuelta 30000/rpm + transferencia + sobrecarga), **planificación del brazo** (FCFS, SSF, elevador), las tres formas de E/S y DMA, bloque vs. carácter (`ls -l /dev`), `vmstat` (columna `id`). En la clase conviene un simulador del brazo del disco, uno de DMA/formas de E/S y una calculadora de tiempo de acceso.
+- Cronograma propuesto el 9/11: U4 y U5 del 15 al 19/11 (vamos un día adelantados con la preparación).
+
+---
+
+### Estado anterior (9/11), se conserva como historia
+
 **🏁 LA UNIDAD 2 ESTÁ CERRADA EN CLASE** (3 de noviembre): los 10 temas + el cierre. Ese mismo día se generaron:
 
 - **`unidades/u02-procesos/repaso_u02.pdf`** — 168 páginas, la clase completa tal como se dio (armada desde el historial del chat con `_trabajo/armar_repaso_u02.py`; índice de páginas en `_trabajo/indice_repaso_u02.md`).
@@ -43,6 +58,13 @@ Material en `material_so/` (**nunca modificar los originales**). Libro principal
 - Se leyó `preguntasrepaso.md` (raíz; su chat de repaso con otra IA: **64 preguntas**, del tema 1 de la U1 a sleep/wakeup) y se agregaron **57 comentarios 💬** en `visuales/mapa_grafico.html`, como comentarios de un .docx: burbuja en la caja + panel lateral con filtros (U1/U2/con corrección/sin resolver), buscador, «Resuelto» y una pestaña «🎛 Gráficos». Todo va en un bloque agregado antes de `</body>`; lo de arriba quedó idéntico byte por byte (copia previa en `_trabajo/mapa_grafico_antes_comentarios.html`).
 - **Errores de la otra IA marcados con ⚠️ en los comentarios:** (1) le dio por bueno que la inversión de prioridades es «inanición + interbloqueo» → **no es interbloqueo**: H está ejecutando (girando), L está LISTO; (2) le dijo que el planificador y los drivers son «procesos del kernel» → el planificador es código del kernel que llama la interrupción de reloj; los drivers son procesos solo en un microkernel. También se aclaró «se bloquea ≠ se cae» (hilos de usuario) y la híbrida (el kernel no ve los hilos de usuario).
 - **Formato de explicación nuevo (vale para TODAS las unidades, está en `CLAUDE.md`)**: simulador paso a paso / paneles lado a lado con + y − / calculadora con estado ok-al límite-saturado, y siempre 3–4 viñetas de ideas clave con ⚠️ y 🧠. Se hicieron 4 gráficos con ese formato (ver sección 7).
+
+**🆕 9/11 — UNIDAD 3 PREPARADA (Fase 2 completa). Lo próximo es "enseñame la unidad 3" (Fase 3, clase en el chat).**
+- Archivos: `unidades/u03-memoria/fuentes/` (tanenbaum_u03.pdf 108 págs., resumen_catedra_u03.pdf, comandos_linux_memoria.pdf, práctica con los ejercicios de memoria), `notebooklm_u03.md` (25.000 palabras, 16 secciones en el orden del programa), `prompt_video.txt` (238 palabras). Textos extraídos en `_trabajo/u03_tanenbaum.txt`, `u03_resumen.txt`, `u03_comandos.txt`.
+- **Números verificados** (`_trabajo/verificar_u03.py`, 0 fallos): 1−0,8ⁿ con n = 3/7/11 → 49/79/91 %; fig. 3-9: 0→8192, 8192→24576, 20500→12308, 32780→fallo (y →4108 tras desalojar el marco 1), 8196→24580; 0x2C3A con 1 KB → pág. 11, marco 5 → 0x143A; 0x6047 con 2 KB → pág. 12, marco 17 → 0x8847; 0x00403004 → TP1 = 1, TP2 = 3, desp. 4; cadena 7 0 1 2 0 3 0 4 2 3 0 3 2 con 3 marcos: FIFO 10, LRU 9, óptimo 7; segunda oportunidad del ejemplo nuevo: víctima la pág. 12, 0x24C5 → 0x38C5; huecos 10,4,20,18,7,9,12,15 con pedidos 12,10,9: primer 20/10/18, mejor 12/10/9, peor 20/18/15, siguiente 20/18/9; p óptimo = √(2se) = 4096.
+- **Método de la cátedra (práctica resuelta):** traducción = cortar los bits de desplazamiento (1 KB → 10, 2 KB → 11, 4 KB → 12) y reemplazar el número de página por el marco. Segunda oportunidad: solo páginas presentes, ordenadas por llegada; R = 1 → R = 0, llegada = ahora, al final; la primera con R = 0 sale; **la cátedra escribe la cola de la más nueva (izquierda) a la más vieja (derecha)**. El examen pide además "modificar la tabla" (R, llegada, P, marco).
+- **Huecos del material** (decírselo si pregunta): particiones fijas (no están como tema), free/calloc/realloc (solo malloc), el sistema compañero está en Linux 10.4.3. **Dos erratas del libro en español** (ver `plan/mapa_unidades.md`).
+- **Al dar la clase, aplicar el formato de explicación del 9/11** (ver `CLAUDE.md`): simuladores para traducción con TLB, reemplazo de páginas (FIFO/LRU/óptimo/segunda oportunidad/reloj con conteo de fallos) y asignación first/best/worst fit; paneles para paginación contra segmentación y multinivel contra invertida; calculadoras para tamaños de tabla, p = √(2se) y 1 − pⁿ (el tiempo efectivo con TLB no está en el libro: si se hace, marcarlo como complemento).
 
 **Cuestionarios: POSPUESTOS por decisión del estudiante.** El de la U2 **ya está generado** (2026-11-03: `unidades/u02-procesos/cuestionario.md`, 21 preguntas, 100 p, y `respuestas.md`, que NO se le muestra; numéricos verificados con `_trabajo/verificar_cuestionario_u02.js` y `.py`); el de la U1 está pausado (partes C–F). Quiere hacerlos **los dos juntos, más adelante**. No insistirle; cuando los pida, tomárselos y corregir con la Fase 5.
 

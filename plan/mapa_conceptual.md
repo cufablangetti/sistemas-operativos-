@@ -1,12 +1,12 @@
 # Cómo usar este mapa {#guia}
 
-> Mapa conceptual ACUMULATIVO de Sistemas Operativos (UTN FRM). Unidades incluidas: 1 y 2. Última ampliación: 3 de noviembre de 2026.
+> Mapa conceptual ACUMULATIVO de Sistemas Operativos (UTN FRM). Unidades incluidas: 1, 2, 3 y 4. Última ampliación: 18 de noviembre de 2026.
 
 Este mapa sirve para dos cosas: **estudiar** (tiene el contenido completo, no un resumen) y **ordenar el repaso** (ves de un vistazo qué entra y en qué orden). Cada rama lleva **dos referencias**: la del libro, para leer la fuente, y la del PDF de repaso, para volver a lo que ya leíste.
 
 - **Leyenda de marcas**
   - 📖 **Referencia al Tanenbaum** — capítulo y páginas impresas del libro (la página del PDF del libro es la impresa + 30).
-  - 📄 **Referencia al PDF de repaso** — página real de `repaso_u01.pdf` o `repaso_u02.pdf` y el título de la sección, para volver a lo que ya leíste.
+  - 📄 **Referencia al PDF de repaso** — página real de `repaso_u01.pdf`, `repaso_u02.pdf`, `repaso_u03.pdf` o `repaso_u04.pdf` y el título de la sección, para volver a lo que ya leíste.
   - 🔢 **Secuencia** — un procedimiento con pasos numerados, para recitarlo en orden.
   - 🧠 **Nota de memoria** — mnemotecnia o regla rápida.
   - ⚖️ **Par que se confunde** — dos cosas parecidas que hay que separar.
@@ -34,8 +34,12 @@ Este mapa sirve para dos cosas: **estudiar** (tiene el contenido completo, no un
   - SMP con un mutex global contra SMP con un mutex por subsistema [[u2-tipos-so-mp]].
   - Una cola global de listos contra una cola por CPU [[u2-planif-mp]].
 - 🧠 **Cuando no podés avanzar, ¿en qué estado te quedás?** Girar = EN EJECUCIÓN (gasta CPU), ceder = LISTO, dormir = BLOQUEADO (no gasta CPU). Es la pregunta de los temas 6 y 7 de la U2 [[u2-tres-esperas]].
-- 🧠 **El algoritmo óptimo siempre necesita un dato del futuro.** SJF necesita las ráfagas [[u2-lotes]], el algoritmo de retrospección necesita saber cuánto dura el candado [[u2-sinc-mp]], y en la U3 el reemplazo óptimo de páginas necesita las referencias futuras.
-- 🧠 **Mecanismo contra política.** El mecanismo dice *cómo* se puede hacer algo; la política dice *quién y cuándo*. Aparece en el microkernel [[u1-estructuras]] y en la planificación [[u2-politica]].
+- 🧠 **El algoritmo óptimo siempre necesita un dato del futuro.** SJF necesita las ráfagas [[u2-lotes]], el algoritmo de retrospección necesita saber cuánto dura el candado [[u2-sinc-mp]], y en la U3 el reemplazo óptimo de páginas necesita las referencias futuras [[u3-optimo]].
+- 🧠 **Un nivel rápido y chico guarda lo más usado de uno lento y grande.** La caché guarda líneas de la RAM [[u1-jerarquia]], el TLB guarda traducciones de la tabla de páginas [[u3-tlb]] y la RAM guarda páginas del disco (memoria virtual) [[u3-paginacion]]. En la U4, la **caché de bloques** guarda bloques del disco en RAM [[u4-cache-bufer]]. Todo funciona por **localidad**, y elegir qué sacar es siempre el mismo problema [[u3-reemplazo]].
+- 🧠 **Una tabla por recurso no escala; una por lo que está en uso, sí.** La tabla de páginas lineal contra la invertida [[u3-invertida]], y en la U4 la FAT (proporcional al disco) contra los nodos-i (proporcionales a los archivos abiertos) [[u4-fat-vs-nodoi]].
+- 🧠 **Lo contiguo es rápido pero fragmenta afuera; los bloques fijos no, pero desperdician adentro.** Segmentación contra paginación [[u3-pag-vs-seg]], y en la U4 asignación contigua contra bloques [[u4-asignacion]] y la fragmentación interna del último bloque [[u4-frag-interna]].
+- 🧠 **Esperar sin gastar CPU = BLOQUEADO.** El proceso que espera E/S, el que espera un semáforo [[u2-semaforos]] y el que espera que llegue su página del disco en un fallo de página [[u3-diez-pasos]] quedan BLOQUEADOS, y la CPU la usa otro.
+- 🧠 **Mecanismo contra política.** El mecanismo dice *cómo* se puede hacer algo; la política dice *quién y cuándo*. Aparece en el microkernel [[u1-estructuras]], en la planificación [[u2-politica]] y en el paginador externo de la memoria virtual [[u3-fallo]]. En la U4, el **VFS** fija la interfaz y cada sistema de archivos concreto pone su implementación [[u4-vfs]].
 
 # U1 — Introducción, hardware y estructura de los SO {#u1}
 
@@ -57,7 +61,7 @@ La idea que atraviesa la unidad: el SO existe para **esconder un hardware incóm
   - ❓ **"Primitiva" no quiere decir antigua**: quiere decir que tiene el mínimo nivel de abstracción (mover, sumar, comparar, saltar). No sabe qué es un texto ni una pantalla.
 - **Función 2 — Administrador de recursos** {#u1-admin-recursos} — **asignación ordenada y controlada** de procesadores, memorias y dispositivos de E/S entre los programas que compiten por ellos.
   - **Multiplexaje en el TIEMPO** — los recursos se turnan (CPU, impresora). Genera el problema de *¿quién va primero?* → 🔗 planificación [[u2-planificacion]].
-  - **Multiplexaje en el ESPACIO** — cada uno recibe una parte (memoria principal, disco). Genera el problema de *¿y si uno pisa al otro?* → protección (U3).
+  - **Multiplexaje en el ESPACIO** — cada uno recibe una parte (memoria principal, disco). Genera el problema de *¿y si uno pisa al otro?* → protección: base y límite y espacio de direcciones (U3) [[u3-espacio]].
   - ⚠️ **El disco tiene dos recursos adentro**: la superficie se reparte en el **espacio**, pero el **brazo**, que es uno solo, se reparte en el **tiempo** (de ahí sale la planificación de disco de la U5). En el cuestionario me faltó identificar qué se multiplexa de cada forma (parte B-a, 1,5/2).
 - **Modelo de la multiprogramación** {#u1-multiprog-modelo} — si un proceso espera E/S una fracción **p** del tiempo y hay **n** procesos independientes en memoria, la probabilidad de que todos esperen a la vez es pⁿ.
   - 🧠 **Uso de la CPU = 1 − pⁿ.** A n se le llama **grado de multiprogramación**.
@@ -104,12 +108,12 @@ La idea que atraviesa la unidad: el SO existe para **esconder un hardware incóm
     3. Promedio: Tm = 0,95 × 1 + 0,05 × 11 = 1,50 ns.
     4. Sin caché serían 10 ns → la caché es 6,67 veces más rápida.
     5. Con mala localidad (50 % de aciertos): Tm = 6,00 ns → solo 1,67 veces más rápida. **La caché vale lo que vale la localidad del programa.**
-  - 🔗 La TLB de la U3 es una caché de traducciones: misma idea, mismo cálculo de tiempo medio. Y la caché vuelve en los multiprocesadores, con la coherencia [[u2-hw-mp]].
+  - 🔗 La TLB de la U3 es una caché de traducciones: misma idea, mismo cálculo de tiempo medio [[u3-tlb]]. Y la caché vuelve en los multiprocesadores, con la coherencia [[u2-hw-mp]].
 - **Memorias no volátiles** — **ROM** (de fábrica, no se modifica); **EEPROM y flash** (se reescriben); **CMOS** (volátil, con batería: fecha, hora y configuración del BIOS, incluida la lista de dispositivos de arranque).
   - ❓ **El BIOS no está en la RAM ni en el disco**: está en un chip ROM/flash de la placa madre. Por eso puede arrancar sin disco [[u1-arranque]].
   - ❓ **Disco contra RAM**: la RAM es rápida y volátil (trabajo); el disco es lento y permanente (almacenamiento).
 - **Disco** — platos que giran a 5400, 7200 o 10800 rpm. **Pista** = anillo que lee una cabeza; **cilindro** = todas las pistas bajo una misma posición del brazo; **sector** = la unidad mínima de lectura.
-- **MMU (unidad de administración de memoria)** — la parte de la CPU que traduce la dirección del programa a la dirección física. Es el hardware de la memoria virtual (U3).
+- **MMU (unidad de administración de memoria)** — la parte de la CPU que traduce la dirección del programa a la dirección física. Es el hardware de la memoria virtual (U3) [[u3-terminos]].
 - **Dispositivos de E/S** — siempre dos partes: el **dispositivo** y su **controlador** (un chip). El software que le habla al controlador es el **driver**, y corre en modo kernel.
   - ⚖️ **Driver contra controlador**: el **controlador** es *hardware* (el chip del dispositivo); el **driver** es *software* (el programa del SO que le habla a ese chip). En castellano a veces al driver le dicen "controlador": por eso se confunden.
 - **Buses** — ISA (viejo) → PCI; USB para dispositivos lentos; SCSI para dispositivos veloces.
@@ -1161,3 +1165,804 @@ El tema que más puntos vale en los prácticos. Mapa del tema: 8.1 conceptos y m
   - Comandos: `ps -ef`, `pgrep`, `kill -STOP` / `kill -CONT`, `strace` [[u1-strace]].
   - Formato típico: 5 a 7 consignas, 60 minutos, se aprueba con 60 puntos.
 - **Simuladores de la unidad** — `planificacion_cpu.html` (Gantt con la cola de preparados y los ejercicios de la cátedra), `filosofos_comelones.html`, `productor_consumidor.html`, `condicion_de_carrera.html`, `estados_de_proceso.html` (todos en `unidades/u02-procesos/visuales/`).
+
+# U3 — Administración de memoria {#u3}
+
+> 📖 Tanenbaum, cap. 3 completo (págs. 175–247) + 1.3.2 (págs. 23–26) + 10.4.2–10.4.3 (págs. 761–767) + 11.5 (págs. 879–894) + apuntes de la cátedra (resumen U3, comandos de memoria, práctica de traducción y segunda oportunidad)
+> 📄 Repaso U3, 47 págs. — la clase completa; mapa de la unidad en la pág. 1; cierre y lo que más se toma en las págs. 46–47
+
+La pregunta que recorre la unidad: **¿cómo conviven varios programas que juntos no entran en la RAM, sin pisarse?** Es una escalera: cada tema resuelve el problema que dejó el anterior. Sin abstracción se pisan → **base y límite** → no entran todos → **intercambio** → los procesos enteros son lentos de mover → **paginación** → la tabla es lenta y enorme → **TLB y multinivel/invertida** → no hay marcos libres → **reemplazo** → el sistema colapsa → **diseño (control de carga)** → varios espacios lógicos → **segmentación**.
+
+## Tema 1 — Jerarquía de memoria y administrador de memoria {#u3-jerarquia}
+
+> 📖 cap. 1.3.2, págs. 23–26; introducción del cap. 3, págs. 175–176
+> 📄 Repaso U3, pág. 1 — "Tema 1 — La jerarquía de memoria y el administrador de memoria"
+
+- **Jerarquía** — registros (< 1 KB, ~1 ns) → caché (~4 MB, ~2 ns) → RAM (~GB, ~10 ns) → disco (~TB, ~10 ms) → cinta. Hacia abajo: más lenta, más barata por bit, más grande. La memoria ideal (infinita, rápida, no volátil, barata) **no existe**.
+  - **Volátiles**: registros, caché, RAM. **No volátiles**: ROM, flash, disco (la CMOS es volátil pero tiene pila).
+  - 🔗 Es la jerarquía de la U1 [[u1-jerarquia]]; acá vuelve porque **el SO administra la RAM**.
+- **Administrador de memoria** — la parte del SO que (1) lleva el registro de qué partes están en uso, (2) asigna memoria cuando la piden y (3) la libera cuando terminan.
+  - ⚖️ **Caché vs. RAM**: la caché la administra el **hardware**, sola, en nanosegundos; la RAM la administra el **SO**. Por eso la unidad estudia la RAM.
+  - ⚠️ Dije que la caché era "más temporal" que la RAM: las dos son volátiles; la diferencia es **quién la administra**.
+- **Localidad** — lo que se usó hace poco y lo que está al lado se va a volver a usar. Es lo que hace que la caché acierte.
+  - Ejemplo: caché 1 ns, RAM 10 ns. Con 95 % de aciertos → 0,95·1 + 0,05·11 = **1,50 ns**; con 50 % → **6,00 ns**.
+  - 📌 Frase de examen: *«La caché vale lo que vale la localidad del programa.»* ⚠️ Me faltó la palabra **localidad** al responder.
+- 🧠 **La idea que se repite en toda la unidad** {#u3-idea-cache} — un nivel rápido y chico guarda lo más usado de uno lento y grande: la **RAM es caché del disco** (memoria virtual), el **TLB es caché de la tabla de páginas** [[u3-tlb]], y elegir qué página sacar es el mismo problema que elegir qué línea de caché sacar [[u3-reemplazo]].
+
+## Tema 2 — Sin abstracción y el espacio de direcciones {#u3-espacio}
+
+> 📖 cap. 3.1 y 3.2.1, págs. 176–181 (figs. 3-1 a 3-3)
+> 📄 Repaso U3, pág. 3 — "Tema 2 — Sin abstracción de memoria y el espacio de direcciones"
+
+- **Sin abstracción** — el programa ve la memoria **física** (`MOV REG, 1000` lee la celda 1000). No puede haber dos programas en memoria: se pisan.
+- **IBM 360** — memoria en bloques de 2 KB con una **llave de protección** de 4 bits; la llave del proceso está en el **PSW**; si no coinciden → trap.
+  - 🔗 La llave vive en el PSW, el mismo registro del bit de modo [[u1-modos]]: la protección la **impone el hardware** y la **configura el SO**.
+- **Problema de la reubicación** (fig. 3-2) — el `JMP 28` del programa 2, cargado en 16384, salta a la física 28, dentro del programa 1.
+  - **Reubicación estática** — sumar 16384 a todas las direcciones al cargar. Lenta, no general, y el cargador tiene que distinguir direcciones (`JMP 28`) de constantes (`MOV REG, 28`).
+- **Espacio de direcciones** {#u3-espacio-dir} — el conjunto de direcciones que puede usar un proceso; cada proceso tiene el suyo. 🧠 **El proceso es una CPU abstracta y el espacio de direcciones es una memoria abstracta** [[u2-proceso]].
+  - Resuelve **protección** (no tocar lo ajeno) y **reubicación** (funcionar en cualquier lugar).
+- **Registros base y límite** {#u3-base-limite} — base = dónde empieza en la física; límite = cuánto mide. Reubicación **dinámica**: el programa no se modifica.
+  - 🔢 **En cada acceso a memoria**
+    1. El proceso genera la dirección d.
+    2. ¿d ≥ límite? → **trap** (se sale de su espacio).
+    3. Si no: física = d + base → al bus de memoria.
+  - Desventaja: una **suma y una comparación en cada acceso** (la suma es lenta por el acarreo).
+  - 📌 Solo el SO puede cambiar base y límite (instrucción privilegiada) [[u1-modos]].
+  - ⚠️ Con base 40000 y límite 8000, la dirección **8000 es trap**, no 48000: las válidas van de 0 a **7999**. La condición es **≥**, no >.
+  - ⚠️ El problema de distinguir `JMP 28` de `MOV REG, 28` desaparece porque **solo se reubica lo que efectivamente accede a memoria**, en el momento del acceso; no por la protección.
+- 📌 **Particiones fijas** — el programa las nombra, pero esta edición del libro **no las desarrolla**; lo más cercano son las llaves de la IBM 360 y base/límite.
+
+## Tema 3 — Intercambio y administración de la memoria libre {#u3-intercambio}
+
+> 📖 cap. 3.2.2–3.2.3, págs. 181–187 (figs. 3-4 a 3-7); algoritmo de colegas: 10.4.3, págs. 765–767
+> 📄 Repaso U3, pág. 5 — "Tema 3 — Intercambio y administración de la memoria libre"
+
+- **Intercambio (swapping)** — traer cada proceso **completo**, ejecutarlo un rato y devolverlo al disco. Al volver puede quedar en **otro lugar** → hace falta base y límite [[u3-base-limite]].
+  - **Huecos** → **compactación**: mover todo para juntarlos. Carísima (1 GB copiando 4 B cada 20 ns ≈ **5 s**).
+  - **Los procesos crecen**: heap hacia arriba, pila hacia abajo; se deja **espacio para crecer** entre los dos.
+- **Mapa de bits** — un bit por unidad de asignación (0 libre, 1 ocupado).
+  - + simple; el tamaño depende solo de la memoria y la unidad (32 MB en unidades de 4 KB → 8192 bits = **1 KB**).
+  - − para k unidades hay que **buscar k ceros seguidos**: lento.
+- **Lista ligada** — nodos P (proceso) / H (hueco) con inicio y tamaño, ordenada por dirección.
+  - 🔢 **Fusión al liberar X** (fig. 3-7)
+    1. A X B → A · B (X se vuelve hueco).
+    2. A X · → A ··· (se une con el de la derecha).
+    3. · X B → ··· B (se une con el de la izquierda).
+    4. · X · → ····· (los tres en uno; la lista pierde 2 nodos).
+- **Algoritmos de asignación** {#u3-ajustes}
+  - **Primer ajuste** — el primer hueco que alcance. **Rápido**.
+  - **Siguiente ajuste** — igual, pero **retoma desde donde quedó**. Un poco peor que el primero.
+  - **Mejor ajuste** — el hueco más chico que alcance. 📌 **Desperdicia MÁS**: deja sobras diminutas inútiles; y es lento (recorre toda la lista).
+  - **Peor ajuste** — el más grande. Tampoco funciona bien.
+  - **Ajuste rápido** — listas separadas por tamaño. Rapidísimo, pero fusionar vecinos es caro.
+  - Ejemplo: huecos 10, 4, 20, 18, 7, 9, 12, 15; pedidos 12, 10, 9 → primer 20/10/18; mejor 12/10/9; peor 20/18/15; siguiente 20/18/9.
+  - ⚠️ En el siguiente ajuste salté al hueco de 9 cuando lo correcto era el **sobrante del hueco recién usado** (6 KB del de 14): la búsqueda arranca **donde quedó**, incluido ese hueco.
+- **Sistema de colegas (buddy)** {#u3-colegas} — "sistema compañero" en el programa; en el libro está en Linux. Todo en **potencias de 2**: se parte a la mitad hasta el tamaño pedido; dos **colegas** libres se vuelven a unir.
+  - + encontrar y fusionar es rapidísimo. − **fragmentación interna** enorme (pedís 65 páginas, te dan 128).
+  - 🔗 Linux lo usa para los marcos y encima pone el **asignador de losas** [[u3-linux]].
+
+## Tema 4 — Memoria virtual y paginación ★ {#u3-paginacion}
+
+> 📖 cap. 3.3 y 3.3.1, págs. 188–193 (figs. 3-8 a 3-10)
+> 📄 Repaso U3, pág. 7 — "Tema 4 — Memoria virtual y paginación"
+
+- **Por qué** — intercambiar procesos enteros es lento (1 GB a 100 MB/s = 10 s). Antes: **sobrepuestos (overlays)** hechos a mano por el programador.
+- **Memoria virtual** (Fotheringham, 1961) — cada programa tiene su espacio dividido en **páginas**; **no todas tienen que estar en RAM**. Según la cátedra: nace porque los programas son más grandes que la memoria.
+- **Términos** {#u3-terminos}
+  - **Dirección virtual** — la que genera el programa.
+  - **Página** — pedazo de tamaño fijo del espacio **virtual**.
+  - **Marco de página** — pedazo del mismo tamaño de la memoria **física**.
+  - **MMU** — hardware que traduce en cada acceso [[u1-cpu]]. Las transferencias RAM↔disco son de **páginas completas**.
+  - **Fallo de página** — la página no está presente → **trap** al SO.
+- **Fig. 3-9** — 16 bits (64 KB virtuales), 32 KB de RAM, páginas de 4 KB → **16 páginas, 8 marcos**.
+- **Traducción** {#u3-traduccion}
+  - 🧠 **Regla de oro**: se **reemplaza el número de página por el número de marco**; el desplazamiento **no se toca**.
+  - 🧠 Bits de desplazamiento = log₂(página): **1 KB → 10 · 2 KB → 11 · 4 KB → 12**.
+  - 🔢 **Traducir a mano (método de la cátedra)**
+    1. Pasar la dirección a binario (cada dígito hexa = 4 bits).
+    2. Cortar los n bits bajos = desplazamiento (n según el tamaño de página).
+    3. Los bits altos = número de página → buscar en la tabla.
+    4. ¿P = 0? → fallo de página.
+    5. Reemplazar la página por el **marco** y pegar el desplazamiento.
+    6. Pasar a hexa y controlar en decimal: marco × tamaño + desplazamiento.
+  - Ejemplos: 8196 → pág. 2, desp 4, marco 6 → **24580**; 0x2C3A con 1 KB → pág. 11, desp 58, marco 5 → **0x143A**; 0x1D7B con 2 KB → pág. 3, marco 9 → **0x4D7B**.
+  - 📌 **¿Por qué potencia de 2?** Porque así la MMU **no divide ni multiplica**: corta bits y reemplaza. ⚠️ Respondí "para adivinar la página": no sirve en el examen.
+  - ⚠️ Con 2 KB el desplazamiento tiene **11 bits**, no 12: en el examen separá con una barra exactamente donde cortás.
+- 🔗 Mientras se trae la página del disco, el proceso queda **BLOQUEADO** y la CPU pasa a otro [[u2-transiciones]]: la memoria virtual encaja con la multiprogramación.
+
+## Tema 5 — La tabla de páginas por dentro y el TLB ★ {#u3-tabla}
+
+> 📖 cap. 3.3.2–3.3.3, págs. 193–198 (figs. 3-11 y 3-12)
+> 📄 Repaso U3, pág. 9 — "Tema 5 — La tabla de páginas por dentro y el TLB"
+
+- **Entrada de la tabla** (fig. 3-11) {#u3-entrada} — caché deshabilitada · referenciada · modificada · protección · presente/ausente · **número de marco** (el campo más importante).
+  - **P (presente/ausente)** — lo pone el SO; 0 → fallo de página.
+  - **Protección** — R/W/X; violarla → fallo de protección.
+  - **M (modificada, "sucia")** — la pone el **hardware** al escribir; al desalojar, si M = 1 se **escribe al disco**, si no se descarta.
+  - **R (referenciada)** — la pone el **hardware** al leer o escribir; la usan los algoritmos de reemplazo [[u3-reemplazo]].
+  - **Caché deshabilitada** — para páginas mapeadas a registros de dispositivos. 🔗 Existe por la **E/S mapeada a memoria** [[u1-es]].
+  - 📌 **La dirección en disco NO está en la tabla de páginas**: la tabla tiene solo lo que el hardware necesita para traducir; el SO guarda la ubicación en disco en sus propias tablas. ⚠️ Respondí que sí estaba (V/F del tema 5, incorrecto).
+- **Los dos problemas** — (1) la traducción debe ser **rápida** (cada referencia) → TLB; (2) la tabla puede ser **enorme** (32 bits y 4 KB → 2²⁰ entradas por proceso) → tema 6.
+- **TLB** {#u3-tlb} — búfer de traducción adelantada o memoria asociativa: hardware **dentro de la MMU**, chico (8 a 64 entradas), busca en **todas las entradas en paralelo**. Funciona por **localidad**.
+  - Entrada: válida · **página virtual** · modificada · protección · marco. ⚖️ A diferencia de la tabla, el TLB **sí guarda la página virtual** porque no está indexado por página.
+  - 🔢 **Traducción con TLB**
+    1. ¿La página está en el TLB? Sí → ¿protección ok? → marco → física (**acierto**). Si viola la protección → fallo de protección.
+    2. No → buscar en la tabla de páginas (en RAM).
+    3. P = 1 → cargar la entrada en el TLB (desalojando una, cuyo **M vuelve a la tabla**) y traducir: **fallo suave**.
+    4. P = 0 → **fallo de página** → disco: **fallo duro**.
+  - **TLB por software** (SPARC, MIPS, HP PA) — ante un fallo de TLB, trap y **el SO** carga la entrada; MMU más simple.
+  - 🔗 Es una caché de traducciones: misma idea y mismo cálculo de tiempo medio que la caché de la U1 [[u1-jerarquia]] [[u3-idea-cache]].
+- ⚖️ **Fallo suave vs. fallo duro (del TLB)** {#u3-suave-duro} — suave: la página está en RAM pero no en el TLB, se actualiza el TLB, **nanosegundos**; duro: no está en RAM, hay que ir al **disco**, **milisegundos** (≈ un millón de veces más lento).
+  - ⚠️ **Cuando una entrada sale del TLB, su bit M va a la tabla de páginas, NO al disco.** Al disco se escribe recién cuando la **página sale de la RAM** con M = 1. Lo respondí mal.
+  - 🔗 Windows usa "suave/duro" para los fallos de página con el mismo sentido: encontrado en memoria vs. leído del disco [[u3-windows]].
+
+## Tema 6 — Tablas de páginas para memorias grandes {#u3-multinivel}
+
+> 📖 cap. 3.3.4, págs. 198–201 (figs. 3-13 y 3-14); resumen de la cátedra, págs. 12–15
+> 📄 Repaso U3, pág. 11 — "Tema 6 — Tablas de páginas para memorias grandes"
+
+- **El problema** — 32 bits y 4 KB → 2²⁰ entradas = **4 MB por proceso**, aunque use 12 MB.
+- **Tabla multinivel** (fig. 3-13) — la dirección de 32 bits se corta **TP1 (10) | TP2 (10) | desplazamiento (12)**. La tabla superior tiene 1024 entradas, cada una cubre **4 MB**; las de 2º nivel, 1024 páginas de 4 KB.
+  - Ejemplo del libro: proceso de 12 MB (texto abajo, datos, pila arriba) → **4 tablas** (1 superior + 3) = **16 KB** contra 4 MB. Los trozos del **hueco** no tienen tabla de 2º nivel (P = 0 en la superior).
+  - 🔢 **Dividir 0x00403004** → `0000000001 | 0000000011 | 000000000100` → **TP1 = 1, TP2 = 3, desp = 4**. ⚠️ **Errata**: el libro en español dice TP2 = 2; los bits dan 3 (4M + 3·4096 + 4 = 4.206.596).
+  - 🧠 Con 10|10|12, los **3 últimos dígitos hexa** son el desplazamiento; TP1 y TP2 sí van en binario (10 bits no coinciden con dígitos hexa).
+  - Más de 3 niveles rara vez conviene: sin TLB, cada nivel suma un acceso a memoria.
+  - Ejemplo de clase: 0x01C0A2F0 → TP1 = 7, TP2 = 10, desp = 0x2F0 → trozo de 28 a 32 MB.
+  - 🔗 Es lo mismo que el **directorio de páginas + tabla de páginas** del Pentium (Dir 10 | Pág 10 | Desp 12) [[u3-pentium]]; Linux usa **cuatro niveles** [[u3-linux]].
+- **Tabla invertida** (fig. 3-14) {#u3-invertida} — con **64 bits** ni el multinivel alcanza (2⁵² entradas). Una entrada **por marco físico** (no por página virtual), con el par **(proceso, página virtual)**; **una sola para todo el sistema**.
+  - − traducir requiere **buscar** (n, p) en toda la tabla en cada acceso → se usa el **TLB** y, cuando falla, una **tabla hash** sobre la página virtual, recorrida **por software**; con tantas ranuras como marcos, la cadena promedio tiene **una** entrada.
+  - ❓ **¿Qué función de hash?** El libro no lo dice; solo que las páginas con el mismo hash quedan **encadenadas** y que se compara el **par completo** (por las colisiones).
+  - 🧠 Según la cátedra: **32 bits → multinivel; 64 bits → invertida + TLB.**
+  - 📌 V/F: "la invertida tiene una entrada por página virtual de cada proceso y cada proceso tiene la suya" → **falso**.
+
+## Tema 7A — Reemplazo de páginas: óptimo, NRU, FIFO, segunda oportunidad, reloj ★ {#u3-reemplazo}
+
+> 📖 cap. 3.4–3.4.5, págs. 201–206 (figs. 3-15 y 3-16)
+> 📄 Repaso U3, pág. 14 — "Tema 7A — Algoritmos de reemplazo de páginas"
+
+- **El problema** — hay un fallo de página y no hay marcos libres: hay que elegir una **víctima**. Si tiene **M = 1** se escribe primero al disco; si está limpia, se descarta.
+- **Óptimo** {#u3-optimo} — saca la que se va a usar **más tarde**. **No se puede implementar** (requiere el futuro); sirve de **referencia** (cota inferior de fallos).
+  - 🔗 Igual que SJF, necesita un dato del futuro [[u2-sjf]] [[ideas]].
+- **NRU (no usada recientemente)** {#u3-nru} — usa R y M; **el SO borra R en cada interrupción de reloj**, nunca M.
+  - Clases: **0** (R0 M0) → **1** (R0 M1) → **2** (R1 M0) → **3** (R1 M1). Saca **una al azar de la clase más baja no vacía**.
+  - 🧠 La clase 1 parece imposible, pero aparece cuando el reloj borra R de una página de clase 3.
+  - 📌 NRU prefiere sacar una **modificada no usada** (clase 1) antes que una **limpia muy usada** (clase 2).
+- **FIFO** — saca la que **llegó primero** (el supermercado que tira la harina). Casi no se usa puro.
+- **Segunda oportunidad** ★ {#u3-segunda} — FIFO mirando el bit R de la más vieja.
+  - 🔢 **Algoritmo (como lo toma la cátedra)**
+    1. Ordenar las páginas **presentes** por llegada, de la más vieja a la más nueva.
+    2. Mirar la más vieja: si **R = 1** → R = 0, **llegada = instante actual**, va al final de la cola.
+    3. Repetir hasta encontrar una con **R = 0** → esa es la **víctima**.
+    4. Si la víctima tiene M = 1 → se escribe al disco.
+    5. La nueva página entra en el **marco que liberó** la víctima: P = 1, R = 1, M = 0 si es lectura (1 si es escritura), llegada = ahora.
+    6. Traducir la dirección con ese marco.
+    7. Escribir la **cola final**: según la cátedra, **de la más nueva (izquierda) a la más vieja (derecha)**, con el R de cada una.
+  - Si todas tienen R = 1, da la vuelta completa y saca la primera: **degenera en FIFO pero siempre termina**. 📌 V/F "entra en un ciclo infinito" → falso.
+  - Ejemplo de clase: 2 KB, instante 200, lectura de 0x4B3A → pág. **9** (fallo); se salvan la 11 y la 5; víctima la **2** (sucia → disco); entra en el **marco 6** → física **0x333A**; cola final **9(1) → 5(0) → 11(0) → 14(1)**.
+  - ⚠️ **Me dio 0x3CEE en vez de 0x333A** y no sabía qué era la "cola final". Es ★★★: repetir ejercicios. El marco **reemplaza** los 5 bits de página; el desplazamiento (11 bits) se copia igual.
+  - ⚠️ Mostrar los pasos de las páginas salvadas: el examen pide **cómo se llega** a la víctima, no solo cuál es.
+- **Reloj** {#u3-reloj} — segunda oportunidad **sin mover páginas**: lista **circular** y una **manecilla**. R = 1 → R = 0 y avanza; R = 0 → víctima, la nueva toma su lugar y la manecilla avanza. Mismas víctimas que la segunda oportunidad, más eficiente.
+- Cadena 7 0 1 2 0 3 0 4 2 3 0 3 2 con 3 marcos: **óptimo 7, FIFO 10, segunda oportunidad 9, reloj 9, LRU 9**.
+
+## Tema 7B — LRU, envejecimiento, conjunto de trabajo y WSClock ★ {#u3-lru}
+
+> 📖 cap. 3.4.6–3.4.10, págs. 205–215 (figs. 3-17 a 3-22)
+> 📄 Repaso U3, pág. 16 — "Tema 7B — LRU y sus aproximaciones; conjunto de trabajo y WSClock"
+
+- 🧠 **En una línea**: LRU es el mejor algoritmo **realizable**, pero caro; todo lo demás son formas baratas de imitarlo.
+- **LRU (menos usada recientemente)** — saca la que hace **más tiempo** que no se usa. Exacto: lista ordenada actualizada en **cada** referencia (carísimo) o hardware.
+  - **Contador de 64 bits** por instrucción, copiado en la entrada al referenciar; sale la de menor contador.
+  - **Matriz n × n** (fig. 3-17) — al referenciar la página k: **fila k en 1, columna k en 0**; sale la de **fila más chica** (en binario). 🧠 Para recitar: *«fila en 1, columna en 0; la fila más chica sale».*
+- **NFU** — un contador por página; en cada pulso se le **suma R**. ⚠️ **Nunca olvida**: lo muy usado en el pasado le gana a lo que se usa ahora.
+- **Envejecimiento** {#u3-envejecimiento} — en cada pulso: **desplazar a la derecha** y meter **R por la izquierda**; sale el **menor valor**.
+  - Ejemplo de clase: contadores 80, 48, 160, 144 → sale la página **1**; con NFU las cuatro valen 2 (empate).
+  - 🧠 NFU mide **frecuencia**; envejecimiento mide **recencia**, que es lo que aproxima a LRU. ⚠️ Me faltó esa conclusión.
+  - 📌 Dos diferencias con LRU verdadero: (1) no distingue el orden **dentro de un mismo pulso** (empates); (2) tiene **horizonte finito** (8 bits: más allá de 8 pulsos no distingue).
+  - ⚠️ **Errata** fig. 3-18, página 2: debe decir **00010000** y **10001000**.
+  - ❓ **Las columnas de la fig. 3-18 son las páginas**; cada fila es un pulso. ❓ El contador **no cuenta unos**: es el número binario que se forma.
+- **Conjunto de trabajo** {#u3-conjunto-trabajo} — las páginas que el proceso usa **en este momento**. **w(k, t)** = páginas usadas en las k referencias más recientes.
+  - **Paginación bajo demanda** — arrancar sin páginas e ir fallando. **Prepaginación** — cargar el conjunto de trabajo antes de reanudar (modelo del conjunto de trabajo).
+  - **Localidad de referencia** — en cada fase el proceso usa pocas páginas. Si el conjunto no entra → **sobrepaginación** [[u3-sobrepaginacion]].
+  - Aproximación práctica: lo usado en los últimos **τ de tiempo virtual**. ⚠️ **Tiempo virtual** = CPU del **propio** proceso, no el tiempo real.
+  - 🔢 **Algoritmo en el fallo (fig. 3-20)** — para cada página: edad = tiempo virtual actual − último uso.
+    1. R = 1 → último uso = actual (está en el conjunto, no sale).
+    2. R = 0 y edad > τ → **víctima** (fuera del conjunto); el recorrido sigue para actualizar.
+    3. R = 0 y edad ≤ τ → se reserva; se anota la más vieja.
+    4. Ninguna fuera → sale la **más vieja con R = 0**; si todas tienen R = 1 → una al azar, mejor limpia.
+- **WSClock** ★ {#u3-wsclock} — el conjunto de trabajo **montado sobre el reloj**: anillo con manecilla.
+  - 🔢 **Paso de la manecilla**
+    1. R = 1 → R = 0 y avanza.
+    2. R = 0, edad > τ y **limpia** → **víctima**; la nueva entra ahí.
+    3. R = 0, edad > τ y **sucia** → se **planifica su escritura** y **avanza** (no sale todavía).
+    4. R = 0, edad ≤ τ → avanza.
+    5. Si da la vuelta entera: si hubo escrituras, sigue hasta que una quede limpia; si no hubo ninguna, sale cualquier limpia, y si no, la actual.
+  - ⚠️ **Lo más preguntado**: la vieja **sucia no sale** ni se copia en ese momento; se **planifica la escritura** y la manecilla sigue, para no frenar el fallo esperando el disco. Lo respondí mal (dije que se copiaba y quedaba con M = 0).
+- **Resumen (fig. 3-22)** — los dos mejores en la práctica: **envejecimiento** (basado en LRU) y **WSClock** (basado en el conjunto de trabajo).
+
+## Tema 8A — Diseño: sobrepaginación, local/global, PFF, tamaño de página ★ {#u3-diseno}
+
+> 📖 cap. 3.4.8 (pág. 209) y 3.5.1–3.5.3, págs. 216–220 (figs. 3-23 y 3-24)
+> 📄 Repaso U3, pág. 21 — "Tema 8A — Cuestiones de diseño: sobrepaginación, local/global, tamaño de página"
+
+- **Sobrepaginación (thrashing / hiperpaginación)** {#u3-sobrepaginacion} — el proceso pasa más tiempo **paginando** que ejecutando: falla cada pocas instrucciones porque su conjunto de trabajo no entra.
+  - 🧠 **No es culpa del algoritmo de reemplazo**: si la **suma de los conjuntos de trabajo** supera la RAM, aparece igual.
+  - ⚠️ En el escenario de la clase no la nombré ni di la causa ni la solución. Respuesta completa: **sobrepaginación → control de carga (swapping de un proceso entero)**.
+  - 🔗 En `vmstat`: **si/so altos sostenidos y wa alto** [[u3-linux]].
+- **Reemplazo local vs. global** (fig. 3-23) {#u3-local-global} — local: la víctima sale del **mismo proceso** (tamaño fijo); global: de **cualquier** proceso (tamaño variable). En la fig. 3-23, local saca **A5**, global saca **B3**.
+  - En general **global funciona mejor**, sobre todo si el conjunto de trabajo varía.
+  - 📌 FIFO y LRU sirven con las dos; **conjunto de trabajo y WSClock solo como locales**.
+- **Asignación de marcos** — **equitativa** (iguales para todos) o **proporcional** al tamaño, con un **mínimo**. Ejemplo de clase: 12416 marcos / 10 procesos = 1241 cada uno y sobran 6.
+- **PFF (frecuencia de fallos de página)** (fig. 3-24) {#u3-pff} — por encima de la línea **A** → darle más marcos; por debajo de **B** → sacarle marcos. Media móvil: (m + x) / 2.
+  - ⚠️ **PFF decide CUÁNTOS marcos tiene cada proceso, NO CUÁL página sale.**
+- **Control de carga** ★ {#u3-control-carga} — si todos están por encima de A y ninguno por debajo de B → **sacar procesos enteros al disco** (swapping) y repartir sus marcos.
+  - 📌 *«PFF indica que algunos necesitan más memoria y ninguno necesita menos → la única solución real es reducir la cantidad de procesos en memoria.»*
+  - 🧠 Por eso **el intercambio sigue existiendo aunque haya paginación**: no para conseguir páginas, sino para **bajar el grado de multiprogramación** [[u1-multiprog-modelo]]. Se parece a la **planificación de dos niveles** [[u2-dos-niveles]].
+  - Tampoco hay que bajar demasiado la multiprogramación: la CPU queda ociosa.
+- **Tamaño de página** ★ {#u3-tamano} — chica: menos **fragmentación interna** (½ página por segmento) pero tabla más grande; grande: al revés.
+  - 🧠 **Sobrecarga = s·e/p + p/2** (s = tamaño promedio del proceso, e = bytes por entrada). **Óptimo: p = √(2se)**. En el óptimo **los dos términos son iguales**.
+  - Ejemplos: s = 1 MB, e = 8 B → p = 4 KB; ejercicio de clase → 8 KB. ⚠️ No entendí que cada término valía 4 KB: es la marca del óptimo.
+
+## Tema 8B — Compartir memoria: páginas compartidas, copia en escritura, DLL ★ {#u3-compartir}
+
+> 📖 cap. 3.5.4–3.5.9, págs. 221–227 (figs. 3-25 a 3-27)
+> 📄 Repaso U3, pág. 24 — "Tema 8B — Compartir memoria: páginas y bibliotecas compartidas, copia en escritura"
+
+- **Espacios I y D separados** (fig. 3-25) — un espacio para instrucciones y otro para datos; duplica el espacio disponible. El enlazador debe saberlo (los datos arrancan en la virtual 0).
+- **Páginas compartidas** (fig. 3-26) — varios procesos con el **mismo programa** comparten las páginas de **texto** (solo lectura): dos tablas de páginas apuntan a los mismos marcos.
+  - ⚠️ Si se saca a A con todas sus páginas, **B empieza a fallar**; si A termina, las páginas **siguen en uso**: hacen falta estructuras que lleven la cuenta.
+- **Copia en escritura (copy-on-write)** ★ {#u3-cow} — tras `fork`, padre e hijo comparten **todas** las páginas marcadas **solo lectura**; al escribir → **trap** → se copia **esa sola página** y las dos copias quedan L/E.
+  - 🔢 **Escritura en una página compartida con COW**
+    1. El proceso escribe en una página marcada de solo lectura.
+    2. La MMU genera un **trap** (violación de protección).
+    3. El SO ve que la página es copia en escritura (no un error real).
+    4. Copia la página en un marco nuevo y actualiza la tabla de ese proceso.
+    5. Marca las dos copias como lectura/escritura.
+    6. Reinicia la instrucción, que ahora tiene éxito.
+  - 🔗 En `fork` + `execve` el hijo descarta su espacio enseguida: sin COW, el fork habría copiado todo para tirarlo [[u2-fork]].
+  - 📌 *«El texto se comparte siempre porque es de solo lectura; COW solo cambia qué pasa con los datos y la pila.»* Ejemplo de clase: 12 compartidas y 4 copiadas.
+  - ⚠️ El mismo trap puede ser COW o un **error real** (escribir en el código) → en ese caso, **señal** al proceso.
+- **Bibliotecas compartidas (DLL)** {#u3-dll} — una sola copia en RAM para todos; se **pagina bajo demanda**; se actualiza sin recompilar.
+  - **Problema de la reubicación** (fig. 3-27): cada proceso la mapea en otra dirección virtual y **hay una sola copia física**, así que no se pueden reubicar las direcciones absolutas para cada uno.
+  - Solución: **código independiente de la posición** (solo desplazamientos relativos). ⚠️ Me faltaron el porqué (una sola copia) y el término.
+  - 🔗 Windows comparte EXE y DLL igual y marca COW las páginas escribibles de las imágenes [[u3-windows]].
+- **Archivos asociados a memoria** — mapear un archivo en el espacio virtual y leerlo como memoria; las DLL son un caso particular. 🔗 `mmap` en Linux [[u3-linux]], `MapViewOfFile` en Windows.
+- **Política de limpieza: demonio de paginación** {#u3-limpieza} — proceso en segundo plano que mantiene **marcos libres** y **escribe las páginas sucias** antes de que hagan falta. Funciona como un **reloj de dos manecillas** (la de adelante limpia, la de atrás reclama).
+  - 🔗 Es el **escritor de páginas modificadas** de Windows [[u3-windows]].
+- **Interfaz de memoria virtual** — dar al programador control sobre su mapa (memoria compartida distribuida, mensajes sin copiar).
+
+## Tema 9 — Implementación: el fallo de página paso a paso ★ {#u3-fallo}
+
+> 📖 cap. 3.6.1–3.6.6, págs. 227–234 (figs. 3-28 a 3-30)
+> 📄 Repaso U3, pág. 28 — "Tema 9 — Cuestiones de implementación: el fallo de página paso a paso"
+
+- **Los 4 momentos en que el SO trabaja con la paginación**
+  - **Crear** un proceso — tamaño inicial, **crear e inicializar la tabla de páginas**, reservar el **área de intercambio** en disco, anotar en la tabla de procesos.
+  - **Ejecutar** — **reiniciar la MMU**, **vaciar el TLB** (tiene restos del anterior), cargar la tabla del nuevo; opcionalmente prepaginar.
+  - **Fallo de página** — los 10 pasos.
+  - **Terminar** — liberar tabla, páginas y espacio en disco; las **compartidas** cuando termina el **último** que las usa.
+- 🔢 **Manejo de un fallo de página: los 10 pasos** ★ {#u3-diez-pasos}
+  1. **Hardware**: trap al kernel; se guarda el **PC** en la pila (y a veces el estado de la instrucción).
+  2. **Rutina en ensamblador**: guarda los registros y llama al SO.
+  3. **SO**: averigua qué **página virtual** se necesita (registro de hardware o analizando la instrucción).
+  4. **SO**: ¿dirección válida y **protección** ok? Si no → **señal** o se elimina el proceso. Si sí, busca un **marco libre**; si no hay, corre el **algoritmo de reemplazo**.
+  5. Si la víctima está **sucia**: se planifica su escritura al disco, **cambio de contexto** (el proceso queda **BLOQUEADO**) y el marco se marca **ocupado**.
+  6. Cuando el marco está limpio: busca la **dirección en disco** de la página y planifica la lectura (el proceso sigue suspendido).
+  7. **Interrupción de disco**: se actualiza la **tabla de páginas** (marco, P = 1) y el marco queda normal; el proceso pasa a **LISTO**.
+  8. Se **respalda la instrucción**: el PC vuelve al inicio de la instrucción que falló.
+  9. Se **planifica** el proceso y se vuelve a la rutina en ensamblador.
+  10. La rutina **recarga los registros** y vuelve a modo usuario; la instrucción se reejecuta.
+  - 🧠 **1–2 y 9–10 son espejo**: es el esquema del **tratamiento de una interrupción** [[u1-seq-interrupcion]] y del **cambio de contexto** [[u2-seq-interrupcion-so]].
+  - 🧠 El fallo de página es un **trap** (sincrónico, lo causa la instrucción); la **interrupción** de dispositivo aparece recién en el paso 7.
+  - ⚠️ El proceso pasa a **LISTO en el paso 7**, no en el 9; el paso 9 dice que se **planifica** [[u2-transiciones]].
+  - ⚠️ La dirección en disco del paso 6 **no está en la tabla de páginas** [[u3-entrada]].
+  - ⚠️ **Errata** del paso 4: el libro dice "no ha ocurrido un fallo de página"; tiene que decir "no hubo **violación de protección**".
+  - ⚠️ Matiz de mi respuesta: con dirección inválida, el proceso recibe una **señal** o se elimina; y el marco se marca **ocupado** durante la E/S.
+- **Respaldo de instrucción** (fig. 3-28) — al fallar, el PC puede valer 1000, 1002 o 1004 según qué operando falló, y puede haber **autoincrementos** a medio hacer. Algunas CPU guardan el PC de inicio en un **registro oculto**; si no, el SO lo deduce.
+- **Bloqueo de páginas (pinning)** {#u3-pinning} — un proceso espera E/S con DMA a un búfer; otro proceso falla y el algoritmo elige justo ese marco → la E/S escribe sobre la página nueva y **corrompe las dos**.
+  - Solución: **fijar** (pin) la página mientras dura la E/S, o hacer la E/S a **búferes del kernel** y copiar después.
+  - 🔗 El **DMA** trabaja con **direcciones físicas** y no se entera de que el SO cambió el dueño del marco [[u1-dma]]. En Windows, `VirtualLock` [[u3-windows]].
+- **Almacén de respaldo** (fig. 3-29) — (a) **área de intercambio estática**: cada proceso tiene su área y la página va en origen + número de página (cálculo trivial; − los datos y la pila crecen); (b) **dinámica**: lugar solo cuando se saca, con un **mapa de disco** por proceso.
+  - 🔗 Windows usa la idea dinámica: archivo de paginación **justo a tiempo** [[u3-windows]].
+- **Separación de política y mecanismo** (fig. 3-30, viene de Mach) — tres partes: **manejador de la MMU** (dependiente de la máquina), **manejador de fallos** (en el kernel) y **paginador externo** (en espacio de usuario). ⚠️ El libro dice "dos partes" y lista tres.
+  - El algoritmo de reemplazo suele quedar en el kernel: el paginador externo **no ve los bits R y M**.
+  - 🔗 Mecanismo contra política [[u1-mecanismo-politica]] [[u2-politica]].
+
+## Tema 10A — Segmentación ★ {#u3-segmentacion}
+
+> 📖 cap. 3.7 y 3.7.1, págs. 234–238 (figs. 3-31 a 3-34)
+> 📄 Repaso U3, pág. 31 — "Tema 10A — Segmentación"
+
+- **El problema** (fig. 3-31) — un compilador con 5 tablas que crecen (texto fuente, símbolos, constantes, árbol sintáctico, pila) en un espacio **unidimensional**: chocan aunque haya lugar en otra. Salidas malas: abortar o hacer de **Robin Hood**.
+- **Segmento** {#u3-segmento} — espacio de direcciones **independiente**, de 0 a un máximo, de **longitud variable** que puede cambiar durante la ejecución. Es una **entidad lógica** que el programador conoce (procedimiento, arreglo, pila); en general no mezcla tipos.
+  - **Dirección bidimensional**: (número de segmento, dirección dentro del segmento).
+- **Ventajas** — (1) crecimiento independiente; (2) **vinculación más simple**: cada procedimiento en (n, 0), recompilar uno no cambia los demás; (3) **compartición** (una biblioteca gráfica en un segmento; con paginación solo se **simula**); (4) **protección por tipo** (procedimiento solo ejecución; arreglo L/E no ejecutable).
+  - 🧠 La protección tiene sentido en segmentación porque **cada segmento tiene un solo tipo**; el contenido de una página es **accidental**.
+- **Paginación vs. segmentación (fig. 3-33)** ★ {#u3-pag-vs-seg}
+  - ¿El programador tiene que saber? Paginación **No** / segmentación **Sí**.
+  - ¿Cuántos espacios lineales? **1** / **muchos**.
+  - ¿Puede superar la memoria física? **Sí** / **Sí**. 📌 Es la única fila igual: no es una diferencia.
+  - ¿Proteger procedimientos y datos por separado? No / Sí. ¿Tablas que cambian de tamaño? No / Sí. ¿Compartir procedimientos? No / Sí.
+  - ¿Para qué se inventó? Paginación: un espacio lineal **grande** sin comprar RAM. Segmentación: espacios **lógicamente independientes** para **compartir y proteger**.
+  - 🧠 La paginación es para **el tamaño**; la segmentación es para **la organización**.
+- **Segmentación pura y tablero de ajedrez** (fig. 3-34) {#u3-tablero} — las páginas son de tamaño fijo y los segmentos no → con el tiempo quedan **segmentos y huecos alternados**: **efecto tablero de ajedrez** o **fragmentación externa**. Se arregla con **compactación** (según la cátedra, costosa).
+  - ⚖️ **Paginación → fragmentación interna; segmentación pura → fragmentación externa.** 🔗 Mismo problema de huecos que el intercambio [[u3-intercambio]].
+- **Traducción (s, d)** (complemento: el libro no da una cuenta) — tabla de segmentos[s] = {base, límite, protección}: ¿existe s? ¿d < límite? ¿la protección permite? → física = **base + d**.
+  - ⚖️ Acá se **SUMA** la base; en paginación se **PEGAN** marco y desplazamiento [[u3-traduccion]]. 🔗 Es base/límite [[u3-base-limite]] con un par por segmento.
+  - Ejemplo de clase: (1, 1300) escribir con base 5000, límite 1400, RW → **6300**; (0, 700) con límite 600 → trap (fuera del segmento); (2, 50) escribir en R → trap (protección). Los dos traps son distintos y los dos terminan en **SIGSEGV**.
+
+## Tema 10B — Segmentación con paginación: MULTICS y Pentium ★ {#u3-seg-pag}
+
+> 📖 cap. 3.7.2–3.7.3, págs. 238–247 (figs. 3-35 a 3-43)
+> 📄 Repaso U3, pág. 34 — "Tema 10B — Segmentación con paginación: MULTICS y Pentium"
+
+- **Idea** — **paginar cada segmento**: de la paginación, tamaño uniforme y no hace falta el segmento entero en RAM (se acaba el tablero de ajedrez); de la segmentación, modularidad, protección y compartición.
+- **MULTICS** {#u3-multics} — hasta **2¹⁸ segmentos** de hasta **65.536 palabras** de 36 bits; páginas de **1024 palabras**.
+  - **Dirección de 34 bits**: segmento **(18)** | página **(6)** | desplazamiento **(10)**.
+  - **Tabla de segmentos** con un **descriptor** por segmento; es tan grande que **es un segmento y se pagina**.
+  - **Descriptor** — si está en memoria; **puntero de 18 bits** a la tabla de páginas (físicas de 24 bits, alineadas a 64 bytes); longitud en páginas; protección.
+  - 📌 **La dirección en disco NO está en el descriptor**: está en otra tabla, la del **manejador de fallos de segmento**. ⚠️ Me faltó decirlo así y hablé de "marcos en el disco" (los marcos son de la RAM).
+  - 🔢 **Referencia a memoria en MULTICS**
+    1. El número de segmento indexa el segmento de descriptores → descriptor.
+    2. ¿La tabla de páginas del segmento está en memoria? No → **fallo de segmento**. ¿Violación de protección? → trap.
+    3. Se examina la entrada de la página: no está → **fallo de página**; está → origen del marco.
+    4. Origen del marco + desplazamiento = dirección física.
+    5. Se hace la lectura o escritura.
+  - ⚖️ **Fallo de segmento** (falta la **tabla de páginas** del segmento) vs. **fallo de página** (la tabla está; falta la **página**). Después de un fallo de segmento puede venir un fallo de página.
+  - **TLB de 16 entradas**, compara (segmento, página) en paralelo; tiene protección y un campo **edad** para sacar la de uso menos reciente.
+- **Intel Pentium** {#u3-pentium} — **16K segmentos** de hasta mil millones de palabras de 32 bits.
+  - **LDT** (una **por programa**: código, datos, pila) y **GDT** (**una sola**: segmentos del sistema y del SO).
+  - **Selector** de 16 bits en un registro de segmento (**CS** código, **DS** datos): **índice (13) | TI (1: 0 = GDT, 1 = LDT) | nivel de privilegio (2)** → 8K descriptores por tabla. El **descriptor 0 está prohibido**.
+  - Truco: se ponen en 0 los 3 bits bajos del selector y se suma la dirección de la tabla (cada descriptor ocupa **8 bytes**). Ejemplo del libro: **selector 72** → índice 9, GDT, en **GDT + 72**.
+  - 🔢 **Traducción (selector, desplazamiento)**
+    1. Del selector se obtiene el **descriptor** (base 32 bits, límite 20 bits, G, P, DPL, tipo).
+    2. ¿Selector 0 o **P = 0**? → trap.
+    3. ¿Desplazamiento más allá del **Límite**? → trap. **G = 0**: límite en **bytes** (hasta 1 MB); **G = 1**: en **páginas de 4 KB** (hasta 2³² bytes).
+    4. **Dirección lineal = Base + desplazamiento** (se **suma**).
+    5. Paginación deshabilitada → física = lineal (**segmentación pura**).
+    6. Habilitada → la lineal es virtual: **Dir (10) | Página (10) | Desp (12)** → directorio de páginas → tabla de páginas → marco + Desp. Antes se consulta el **TLB** de (Dir, Página).
+  - Dos niveles porque un segmento podría tener 1 millón de páginas; cada tabla cubre **4 MB**, y un segmento chico paga solo **dos páginas**.
+  - 🧠 **Paginación deshabilitada → segmentación pura. Todos los segmentos con Base 0 y Límite máximo → paginación pura**: así funcionan todos los SO actuales en el Pentium (solo OS/2 usó todo). Según la cátedra, "usan paginación y simulan segmentación mínima".
+  - 🧠 Método para el ejercicio: selector **en binario** (13 | 1 | 2); límite **en decimal** (× 4096 si G = 1); lineal **sumando en hexa**; Desp = **3 últimos dígitos hexa**; Dir y Página: los 5 primeros hexa **en binario** cortados 10 | 10; física = **pegar** marco y Desp. Dar el resultado en hexa.
+  - Ejemplo de clase: selector 0x002F → índice 5, LDT, nivel 3; base 0x00300000, límite 8 páginas (32 KB), desp 0x2345 → lineal **0x00302345** → Dir 0, Pág 0x302, Desp 0x345 → marco 0x0A1B0 → **0x0A1B0345**.
+- **Anillos de protección** (fig. 3-43) {#u3-anillos} — 4 niveles: **0 kernel · 1 llamadas al sistema · 2 bibliotecas compartidas · 3 usuario**. El nivel actual está en **2 bits del PSW**.
+  - Se puede acceder a **datos de un nivel más alto** (menos privilegiado); a uno inferior → trap.
+  - Llamar a otro nivel: el CALL lleva un selector de **compuerta de llamada**, que da un **punto de entrada oficial**. Vienen de los anillos de MULTICS.
+  - 🔗 Los anillos 0 y 3 son el **modo kernel y el modo usuario** [[u1-modos]]; la compuerta es la forma controlada del **TRAP** de una llamada al sistema [[u1-trap]].
+
+## Tema 11 — Casos de estudio: caché, Linux y Windows {#u3-casos}
+
+> 📖 cap. 1.3.2, págs. 23–25; 10.4.2–10.4.3, págs. 761–767; 11.5, págs. 879–894; apunte de comandos de memoria
+> 📄 Repaso U3, pág. 39 — "Tema 11 — Casos de estudio: caché y Linux"; pág. 42 — "Tema 11C — El administrador de memoria de Windows"
+
+- **Caché** {#u3-cache} — la RAM se divide en **líneas de 64 bytes**; **acierto** ≈ 2 ciclos; **fallo** → a la RAM con castigo de tiempo. La controla el **hardware** de manera parcial.
+  - 🔢 **Las 4 preguntas de cualquier caché**
+    1. **Cuándo** se pone un elemento nuevo.
+    2. **En qué línea** se pone.
+    3. **Qué elemento se saca** cuando falta lugar.
+    4. **Dónde se escribe** el desalojado en la memoria más grande.
+  - Ejemplo del libro: **4096 líneas de 64 B** → bits **6 a 17** = línea, bits **0 a 5** = byte. Ejemplo de clase: 0x0000A1C5 → línea **647 (0x287)**, byte **5**.
+  - **L1** dentro de la CPU (16 KB; una de instrucciones y otra de datos); **L2** de varios MB (1–2 ciclos más). L2 **compartida** (Intel, controlador más complejo) o **por núcleo** (AMD, más difícil la consistencia) [[u2-coherencia]].
+  - 🧠 El SO cachea también bloques de archivos, traducciones de rutas y URL → IP.
+- **Linux** {#u3-linux}
+  - **`malloc`** es un procedimiento de **biblioteca de ANSI C**, no una llamada al sistema; **POSIX no especifica** llamadas de memoria ("pasar la cubeta").
+  - `brk(direc)` — cambia el tamaño del **segmento de datos**. `mmap(direc, lon, prot, banderas, fd, despl)` — **mapea un archivo** (direc y lon múltiplos de página; el archivo tiene que estar abierto). `munmap(direc, lon)` — desmapea.
+  - 📌 **`free`, `calloc` y `realloc` no están en el material** (solo `malloc`). Lo estándar de C, como complemento: free devuelve, calloc pide e inicializa en cero, realloc cambia el tamaño.
+  - 3 GB de usuario + 1 GB de kernel (32 bits); tablas de **cuatro niveles**; **algoritmo de colegas** [[u3-colegas]] + **asignador de losas** + **vmalloc**.
+  - **Comandos de la cátedra**:
+    - `free -h` — mirar **available**, no free: Linux usa la RAM libre como **buff/cache**.
+    - `smem -r -k` — **USS** = exclusiva; **PSS** = privada + parte proporcional de la compartida (la mejor para comparar); **RSS** = cuenta la compartida entera (**exagera**). 🔗 RSS vs. PSS es la compartición de páginas [[u3-compartir]].
+    - `vmstat 1` — `r` alto: esperan CPU; `b`/`wa` altos: esperan E/S; **`si`/`so` altos: swap intenso** (sobrepaginación) [[u3-sobrepaginacion]]; `cs`: cambios de contexto.
+    - `cat /proc/meminfo` — MemAvailable, **Dirty** (= bit M), Active/Inactive, **PageTables**.
+  - ⚠️ En vmstat, **`id` bajo NO es "CPU ociosa"**: en la sobrepaginación el tiempo se va a **wa** (espera de disco) y **sy** (kernel atendiendo fallos), y casi nada a **us**.
+- **Windows** {#u3-windows}
+  - **Espacio** (x86): 4 GB = **2 GB usuario + 2 GB kernel** (3/1 opcional en servidores); los **64 KB de abajo y de arriba son inválidos** (atrapan punteros nulos); el kernel está en el espacio de cada proceso para que la **llamada al sistema no cambie el mapa**. Páginas de 4 KB (y de 4 MB para el TLB). **No usa segmentación** [[u3-pentium]].
+  - **Estados de una página virtual**: **inválida** (referencia → violación de acceso), **reservada** (no se usa para otra cosa; ej.: la pila, páginas de guardia) y **confirmada** (tiene código o datos).
+  - **Archivo de paginación "justo a tiempo"**: el lugar se asigna recién al **sacar** la página; permite **agrupar** escrituras contiguas; si todo entra en RAM, no hace falta. Hasta 16 archivos. El código (EXE, DLL) se relee del archivo del programa.
+  - **API Win32**: VirtualAlloc/Free/Protect/Query, **VirtualLock** (= pinning [[u3-pinning]]), CreateFileMapping/MapViewOfFile (= mmap). Regiones en límites de **64 KB**. **VAD** por región, en un **árbol balanceado**.
+  - **Fallos de página: 5 categorías** — (1) no confirmada → violación de acceso; (2) violó permisos → violación de acceso; (3) **copia en escritura** → copia privada y reintenta [[u3-cow]]; (4) **crece la pila** → página en ceros; (5) confirmada pero no asignada → fallo normal.
+  - 📌 (2) y (3) tienen el **mismo síntoma** (escribir en solo lectura), pero la 3 no es un error.
+  - ⚖️ **Fallo suave** (la página se encuentra en memoria: lista en espera o de modificadas, compartida, página en ceros) vs. **fallo duro** (hay que leer del disco). **SuperFetch** prepagina a la lista en espera y convierte duros en suaves.
+  - **PTE x86**: 20 bits de marco + P, R/W, U/S, **A** (= R), **D** (= M), G, PCD, PWT, AVL. A y D los pone el hardware → aproximación de LRU [[u3-envejecimiento]].
+  - **Reemplazo**: conjunto de trabajo **por proceso** con **mínimo** (20–50) y **máximo** (45–345), no son límites duros; actúa solo si escasea la memoria, cada 1 s, en **3 niveles**: mucha memoria → envejece con el bit A; empieza a escasear → reemplaza las más viejas; escasa → recorta por debajo del máximo. 🔗 Local con tamaño variable + envejecimiento + conjunto de trabajo [[u3-local-global]] [[u3-conjunto-trabajo]].
+  - **Las 5 listas** (base de datos **PFN**): **modificadas**, **en espera**, **libres**, **en ceros**, **defectuosas**.
+  - 🔢 **Transiciones de la fig. 11-36**
+    1. Desalojo del conjunto de trabajo → **modificadas** (sucia) o **en espera** (limpia). No se escribe al disco en ese momento.
+    2. **Fallo suave**: de modificadas o en espera vuelve al conjunto de trabajo, sin E/S.
+    3. Termina el proceso → **libres** (sus páginas sucias **no** se escriben).
+    4. **Escritor de páginas modificadas** → escribe al disco y pasa a **en espera** [[u3-limpieza]].
+    5. Desasignación → **libres** (salvo compartidas).
+    6. Página referenciada que hay que leer del disco (**fallo duro**) → toma un marco **libre** (se sobrescribe entero).
+    7. Hilo **ZeroPage** (prioridad **mínima**) → **en ceros**, por **seguridad**.
+    8. Se necesita una página cero (crece la pila, página nueva) → del conjunto **en ceros**.
+  - ⚠️ Para copiar una página COW alcanza una **libre**: se sobrescribe entera; las páginas **en ceros** son para cuando el contenido no se sobrescribe.
+
+## Cierre de la U3 y lo que más se toma {#u3-examen}
+
+> 📄 Repaso U3, pág. 46 — "Cierre de la Unidad 3"
+
+- **Los 8 puntos**
+  1. **Abstraer la memoria**: base y límite, intercambio, huecos, mapa de bits y listas, primer/siguiente/mejor/peor ajuste [[u3-espacio]] [[u3-ajustes]].
+  2. **Paginación**: página | desplazamiento, MMU, tabla (P, R, M, protección, marco), se **pega** el marco [[u3-traduccion]].
+  3. **Rápida y chica**: TLB, fallo suave/duro, multinivel e invertida [[u3-tlb]] [[u3-multinivel]].
+  4. **Reemplazo**: óptimo, NRU, FIFO (Belady), segunda oportunidad, reloj, LRU, envejecimiento, conjunto de trabajo, WSClock [[u3-reemplazo]] [[u3-lru]].
+  5. **Diseño**: local/global, PFF, sobrepaginación y control de carga, p = √(2se), compartición y COW, limpieza [[u3-diseno]] [[u3-compartir]].
+  6. **Fallo de página en 10 pasos**, respaldo de instrucción, pinning [[u3-diez-pasos]].
+  7. **Segmentación**: fig. 3-33, fragmentación externa; MULTICS y Pentium [[u3-pag-vs-seg]] [[u3-seg-pag]].
+  8. **Casos reales**: caché, Linux (brk/mmap, comandos), Windows (suave/duro, 5 listas) [[u3-casos]].
+- **Lo que más se toma** (parciales, prácticos y exámenes del material)
+  - ★★★ **Traducción de dirección virtual a física** en binario o hexa, con páginas de 1 KB y 4 KB [[u3-traduccion]].
+  - ★★★ **Segunda oportunidad con la tabla de páginas** (R, M, P, marco): víctima, justificación, tabla modificada y **cola final** [[u3-segunda]].
+  - ★★ **Contar fallos** con N marcos en FIFO, LRU y óptimo [[u3-reemplazo]].
+  - ★★ Teoría: los **10 pasos**, la **sobrepaginación** y su solución, **paginación vs. segmentación** [[u3-diez-pasos]] [[u3-sobrepaginacion]] [[u3-pag-vs-seg]].
+- **Simuladores de la unidad** (en `unidades/u03-memoria/visuales/`) — `asignacion_memoria.html`, `traduccion_direcciones.html`, `tlb.html`, `tablas_paginas.html`, `reemplazo_paginas.html` (con la pestaña 📝 Examen), `lru_aproximaciones.html`, `diseno_paginacion.html`, `copia_en_escritura.html`, `fallo_de_pagina.html`, `segmentacion.html`, `segmentacion_paginada.html`, `listas_paginas_windows.html`.
+
+# U4 — Sistemas de archivos {#u4}
+
+> 📖 Tanenbaum, cap. 4 completo (págs. 255–324) + 9.3 protección (págs. 622–641) + 10.6 Linux (págs. 779–803) + 11.8 NTFS (págs. 906–915) + 8.4.4 (págs. 591–596) + apuntes de la cátedra (resumen U4, práctica de FAT, nodos-i y FAT32, comandos de sistemas de archivos)
+> 📄 Repaso U4, 35 págs. — la clase completa; mapa de la unidad en la pág. 1; cierre y lo que más se toma en las págs. 33–34
+
+La pregunta que recorre la unidad: **¿cómo guardamos información que sobreviva al proceso, en un disco que solo sabe «leer el bloque k» y «escribir el bloque k»?** Primero se mira desde el **usuario** (archivos, directorios), después desde el **implementador** (asignación, nodos-i, directorios por dentro, bitácora, espacio libre, consistencia), después casos reales (CD-ROM, FAT, V7, NTFS, NFS, Linux) y la **protección**.
+
+## Tema 1 — Archivos {#u4-archivos}
+
+> 📖 cap. 4.1, págs. 255–268 (figs. 4-1 a 4-5)
+> 📄 Repaso U4, pág. 1 — "Tema 1 — Archivos"
+
+- **Por qué no alcanza la memoria** — guardar los datos en el espacio de direcciones falla por 3 razones: **no entra**, **se pierde** cuando el proceso termina, **no se comparte**. De ahí los 3 requisitos: mucha capacidad, **persistencia**, **acceso concurrente**.
+- **Archivo** — unidad lógica de información creada por los procesos, **independiente de ellos** y **persistente**. **Sistema de archivos** = la parte del SO que los estructura, nombra, accede, usa, protege e implementa.
+  - 🧠 **Tercera abstracción del SO**: proceso (CPU) [[u2-proceso]], espacio de direcciones (RAM) [[u3-espacio-dir]], archivo (disco).
+- **Nombres** — hasta 255 caracteres. La extensión es **convención en UNIX** (`prog.java.gz`); en **Windows tiene significado** (asocia un programa).
+- **Estructura** — (a) **secuencia de bytes** (UNIX y Windows: el SO no interpreta nada); (b) registros fijos; (c) **árbol de registros con llave** (mainframes).
+- **Tipos** — regulares (ASCII o binarios), directorios, especiales de **caracteres** (terminal, impresora) y de **bloques** (discos).
+  - **Ejecutable de UNIX (fig. 4-3)** — encabezado con **número mágico**, tamaños y dirección de inicio; texto, datos, reubicación, tabla de símbolos. El SO **exige** ese formato.
+- **Acceso** — **secuencial** (cinta) o **aleatorio** (disco); UNIX y Windows: **seek + read**.
+- **Atributos (metadatos)** — protección, propietario, banderas (solo lectura, oculto, archivo, temporal), fechas, tamaño.
+- **Operaciones** {#u4-operaciones}
+  - 🔢 **Ciclo de vida de un archivo**
+    1. `create`.
+    2. `open` → trae a RAM los **atributos y las direcciones de disco** (por eso lo que sigue es rápido).
+    3. `read` / `write` / `append` / `seek` (write en el medio sobrescribe; al final, crece).
+    4. `get/set attributes`, `rename`.
+    5. `close` → libera tablas y **fuerza la escritura del último bloque**.
+    6. `delete`.
+  - **`copyfile` (fig. 4-5)** — `while ((n = read(ent, buf, 4096)) > 0) write(sal, buf, n);` — se escribe **n**, no 4096: el último read trae lo que queda; con 4096 la copia quedaría más grande y con basura al final.
+  - 🔗 Son llamadas al sistema (TRAP → modo kernel) [[u1-llamadas]], y el **descriptor** que devuelve `open` es lo que hereda el hijo en un `fork` [[u2-fork]].
+- 📌 «Cambiarle la extensión a `.txt` a un ejecutable en UNIX impide ejecutarlo» → **falso**: deciden el **bit x** y el **número mágico**. En Windows, doble clic lo abre con el Bloc de notas.
+  - ⚠️ Respondí bien pero sin nombrar el **bit x** ni el **número mágico**, que es lo que da el puntaje completo.
+
+## Tema 2 — Directorios {#u4-directorios}
+
+> 📖 cap. 4.2, págs. 268–273 (figs. 4-6 a 4-8)
+> 📄 Repaso U4, pág. 3 — "Tema 2 — Directorios"
+
+- **Un solo nivel** (fig. 4-6) — simple y rápido, pero los nombres de distintos usuarios **chocan**. Hoy: cámaras y reproductores.
+- **Jerárquico** (fig. 4-7) — un árbol; cada usuario se organiza; casi todos los SO.
+- **Rutas** {#u4-rutas}
+  - **Absoluta** — desde la raíz; **empieza con el separador** (`/` UNIX, `\` Windows, `>` MULTICS); única.
+  - **Relativa** — desde el **directorio de trabajo**. Cada proceso tiene el suyo.
+  - **`.`** = actual, **`..`** = padre; en la raíz, `..` apunta a la raíz.
+  - Ejemplo (fig. 4-8): en `/usr/ast`, `cp ../lib/dictionary .` = `cp /usr/lib/dictionary dictionary`.
+  - ⚠️ Escribí `/luis/notas.txt` en un paso intermedio: **toda ruta que empieza con `/` es absoluta**, aunque venga después de los `..`.
+- **Operaciones de directorios (UNIX)** — create (ya trae `.` y `..`), delete (**solo vacío**), opendir/readdir/closedir (formato estándar), rename, **link** (sube el contador del nodo-i), **unlink** (si era la última entrada, el archivo desaparece; **borrar en UNIX es unlink**).
+  - 📌 **«Vacío» = solo `.` y `..`**: `rmdir` lo borra. Cualquier otra entrada, aunque sea `.bashrc`, da *Directory not empty* (pág. 272).
+- 🔗 El directorio de trabajo es parte del estado del proceso: el hijo lo hereda en el `fork` y si hace `cd` el padre no se entera; por eso **`cd` es un comando interno del shell** [[u2-fork]].
+
+## Tema 3 — Distribución del disco y asignación ★ {#u4-asignacion}
+
+> 📖 cap. 4.3.1–4.3.2, págs. 273–279 (figs. 4-9 a 4-12)
+> 📄 Repaso U4, pág. 5 — "Tema 3 — Implementación: distribución del disco y asignación (contigua, enlazada, FAT)"
+
+- **Distribución del disco (fig. 4-9)** — sector 0 = **MBR** (código de arranque + **tabla de particiones**, una **activa**). Cada partición: bloque de arranque · **superbloque** · espacio libre · nodos-i · directorio raíz · archivos.
+  - 🔢 **Arranque desde el disco**
+    1. El BIOS lee y ejecuta el MBR.
+    2. El MBR busca la partición activa.
+    3. Lee su bloque de arranque y lo ejecuta.
+    4. Ese bloque carga el SO.
+  - **Superbloque** — **número mágico** (tipo de FS), cantidad de bloques, datos administrativos; se lee a RAM al montar.
+  - 🔗 Es el sector de booteo de la U1 [[u1-arranque]]; lo nuevo es el interior de la partición.
+- **Contigua** — el directorio guarda inicio + cantidad; bloque k en **inicio + k**.
+  - (+) simple, **una sola búsqueda** para leer todo. (−) **fragmentación externa**, hay que saber el tamaño final. Hoy: **CD-ROM y DVD** (UDF: archivos de 1 GB, película en 3–4 fragmentos).
+  - 🔗 Es el problema de la **segmentación** y el tablero de ajedrez [[u3-tablero]].
+- **Lista enlazada** — la primera palabra de cada bloque apunta al siguiente; el directorio guarda el primero.
+  - (+) sin fragmentación externa. (−) **acceso aleatorio lentísimo** (leer del disco los n−1 anteriores); el dato ya **no es potencia de 2**.
+- **FAT** {#u4-fat} — los punteros pasan a una **tabla en RAM** con una entrada por bloque: **FAT[c] = el bloque que sigue a c**.
+  - (+) el bloque entero para datos; la cadena se recorre **en RAM**. (−) **toda la tabla en RAM siempre**: 200 GB con bloques de 1 KB → 600–800 MB. **No escala.**
+  - 🔗 Es el drama de la **tabla de páginas grande** [[u3-multinivel]]; el nodo-i lo resuelve como la tabla invertida [[u3-invertida]].
+  - 🔢 **Seguir una cadena FAT (ejercicio de final)**
+    1. Del directorio, el cluster inicial c.
+    2. Leer FAT[c]: si es FIN (FF / −1), c es el último.
+    3. Si no, c = FAT[c] y anotar.
+    4. Clusters = cantidad de nodos de la cadena (**no de flechas**).
+    5. Espacio = clusters × tamaño de cluster; frag. interna = espacio − tamaño real.
+    6. Control: ⌈tamaño / cluster⌉ tiene que dar la misma cantidad.
+  - **Final de la cátedra** — FAT32, clusters de 256 B, empieza en 4, tabla 5×5 numerada fila por fila: 4 → 9 → 24 → 14 → 16 → 10 → 21 → 7 (FF). Termina en el **cluster 7**; **8 × 256 = 2048 B**.
+  - 📌 «¿En qué cluster termina?» se responde con el **número de entrada que tiene FF**, no con «FF». Y son **8 clusters con 7 flechas**. Los valores fuera de la cadena son ruido.
+  - ⚠️ En el control respondí bien (cluster 2, 3072 B, 172 B) pero **sin escribir la cadena**: en el final la parte b vale 15 p y sin desarrollo queda parcial.
+  - ⚖️ **FAT vs. lista enlazada para el byte 1.000.000**: las dos recorren la cadena desde el principio, pero la FAT lo hace **en RAM** (~980 consultas + 1 lectura) y la lista **en el disco** (~980 lecturas). Nanosegundos contra milisegundos [[u1-jerarquia]].
+
+## Tema 4 — Nodos-i ★ {#u4-nodoi}
+
+> 📖 cap. 4.3.2, págs. 279–280; 4.5.3, págs. 321–322 (figs. 4-13, 4-34)
+> 📄 Repaso U4, pág. 8 — "Tema 4 — Nodos-i"
+
+- **Nodo-i** — una estructura por archivo con los **atributos** (tamaño, dueño, grupo, permisos, 3 tiempos, **contador de vínculos**) y las **direcciones**: D directos (V7: 10, ext2: 12) + indirecto **simple**, **doble** y **triple**. **P = tamaño de bloque / tamaño de puntero.**
+  - ⚖️ **FAT vs. nodos-i** {#u4-fat-vs-nodoi} — 🧠 *«la FAT es proporcional al disco; los nodos-i, a los archivos abiertos»* (k abiertos × n bytes). Disco de 2 TB con bloques de 1 KB: FAT ≈ 8 GB de RAM; 1000 nodos-i de 128 B ≈ 128 KB.
+  - ⚠️ Dije que la FAT «copia todos los índices»: es **una entrada por cada bloque del disco**; y del lado del nodo-i va a RAM **el nodo-i**, no el archivo.
+- **Tamaño máximo** — **(D + P + P² + P³) · B**.
+  - Práctica: 10 directos, 4 KB, punteros de 4 B → P = 1024 → 1.074.791.434 bloques × 4096 = **4.402.345.713.664 B ≈ 4 TiB**. 🧠 Atajo: P³·B = 2³⁰·2¹² = 2⁴².
+  - 📌 **Errata de la práctica**: dice «4,27 TB»; es **4,00 TiB** (4,40 TB en base 10).
+- **Bloques índice de un archivo** — se van llenando niveles: en el doble se cuenta **el bloque doble + cada sencillo** que cuelga de él.
+  - Práctica: 12 directos, 2 KB, 4 B, 5,5 MB → 2816 datos: simple 1 + doble (1 + ⌈2292/512⌉ = 5) = **7 índices**.
+  - Control: 10 directos, 1 KB, 300 KB → 300 datos + **3 índices** (1 simple + 1 doble + 1 sencillo) = 303 bloques.
+- **¿Dónde está un byte?** {#u4-ubicar-byte}
+  - 🔢 **Ubicar un byte en el nodo-i**
+    1. n = byte div B; desplazamiento = byte mod B.
+    2. Si n < D → directo n.
+    3. Si no, n −= D; si n < P → simple, entrada n.
+    4. Si no, n −= P; si n < P² → doble, entrada n div P, y en el sencillo n mod P.
+    5. Si no, n −= P² → triple.
+    6. Lecturas con el nodo-i en RAM: directo 1, simple 2, doble 3, triple 4 (**+1 si el nodo-i no está en RAM**).
+  - ext2 (12, 1 KB, P = 256), byte 300.000 → bloque 292 → doble, entrada 0, sencillo 24 → **3 lecturas**.
+  - Control: 10 directos, 1 KB, byte 270.000 → bloque 263 → simple, **entrada 253**, **2 lecturas**.
+
+## Tema 5 — Implementación de directorios y vínculos ★ {#u4-vinculos}
+
+> 📖 cap. 4.3.3–4.3.4, págs. 280–285 (figs. 4-14 a 4-17); 4.5.3, págs. 321–323 (figs. 4-33, 4-35)
+> 📄 Repaso U4, pág. 10 — "Tema 5 — Implementación de directorios y vínculos"
+
+- **Qué guarda la entrada** — traduce un nombre a lo necesario para hallar los datos: contigua → dirección de todo; enlazada/FAT → **primer bloque**; nodos-i → **número de nodo-i**.
+  - ⚖️ **Atributos en la entrada (MS-DOS) vs. en el nodo-i (UNIX)** (fig. 4-14). **V7**: entrada = nombre (14 B) + nº de nodo-i (2 B) → **máximo 64 K archivos**.
+- **Nombres largos (fig. 4-15)** — **en línea** (longitud + atributos + nombre con relleno; hueco variable al borrar, puede cruzar páginas → fallo de página) o **en un heap** (entradas fijas con puntero; el próximo archivo siempre entra).
+- **Búsqueda rápida** — **tabla hash** por directorio (colisiones encadenadas; para directorios de cientos o miles) o **caché de búsquedas**.
+- **Buscar `/usr/ast/mbox` (fig. 4-35)** {#u4-ruta-mbox}
+  - 🔢 **Resolución de una ruta en V7**
+    1. Nodo-i de la raíz, en **lugar fijo**.
+    2. Bloque 1 (raíz): `usr` → nodo-i 6.
+    3. Nodo-i 6 → el directorio está en el bloque 132.
+    4. Bloque 132: `ast` → nodo-i 26.
+    5. Nodo-i 26 → bloque 406.
+    6. Bloque 406: `mbox` → nodo-i 60.
+    7. El nodo-i 60 se lee a RAM y queda hasta el `close`. **7 lecturas sin caché.**
+  - Una ruta relativa empieza en el directorio de trabajo; `..` es una entrada más con el nodo-i del padre.
+- **Archivos compartidos** — con vínculos el árbol pasa a ser un **DAG**. Las direcciones tienen que vivir en el **nodo-i** y no en el directorio; si no, lo que agrega uno no lo ve el otro.
+- **Vínculo duro** {#u4-duro} — otra entrada al **mismo nodo-i**; **sube el contador**; el **dueño no cambia**.
+  - 🔢 **Fig. 4-17, contador del nodo-i**
+    1. C crea `datos` → 1.
+    2. B hace `ln` → **2** (el dueño sigue siendo C).
+    3. C hace `rm` → **1**: se borra solo la entrada de C; el archivo **sigue vivo** para B.
+    4. B hace `rm` → **0**: recién ahí se liberan nodo-i y bloques.
+  - Por qué no se libera antes: B quedaría apuntando a un nodo-i que podría reasignarse, y **el nodo-i no sabe qué directorios lo apuntan**.
+  - 📌 **El dueño sigue pagando la cuota** de un archivo que «borró» hasta que el otro borre su vínculo [[u4-espacio]].
+  - **No cruza particiones**: la entrada es (nombre, nº de nodo-i) y el número es **local** a cada FS.
+- **Vínculo simbólico** {#u4-simbolico} — un **archivo nuevo tipo LINK** que contiene una **ruta**; el contador del original **no cambia**. Si el dueño borra, queda **colgado** («No such file or directory»). Más lento (recorre la ruta) y cuesta un nodo-i. **Cruza discos y hasta máquinas.**
+  - 🧠 *«El duro cuenta, el simbólico apunta.»* Analogía: duro = **copia de la llave** (la casa se demuele cuando no queda ninguna); simbólico = **papelito con la dirección** (si demuelen la casa, encontrás un terreno vacío).
+  - ⚠️ En el control (Ana crea, Luis `ln`, Luis `ln -s`, Ana `rm`): contador **1, 2, 2, 1**. Me olvidé de que el `rm` **ya había pasado** al responder el `cat`, y dije que el **simbólico** mantenía vivo el archivo y que pagaba Luis. Lo correcto: `cat inf` funciona, `cat atajo` falla (colgado), **paga Ana**, y lo mantiene vivo **el duro**.
+- 📌 **Problema de los dos** — el archivo tiene varias rutas: un respaldo puede copiarlo **dos veces** [[u4-respaldos]].
+
+## Tema 6 — LFS, bitácora y VFS {#u4-bitacora}
+
+> 📖 cap. 4.3.5–4.3.7, págs. 285–291 (fig. 4-18)
+> 📄 Repaso U4, pág. 13 — "Tema 6 — LFS, bitácora y VFS"
+
+- 📌 El resumen de la cátedra solo trae LFS; bitácora y VFS salen del libro (el programa nombra «actualización atómica, transacciones» y «VFS»).
+- **LFS (sistema estructurado por registro)** — el disco no mejora la búsqueda y lo que llega son **escrituras chicas** (< 1 % de eficiencia). Idea: juntar las escrituras en RAM y escribir **un segmento grande (~1 MB) al final de un registro circular**.
+  - Cada segmento tiene un **resumen**; los nodos-i ya no tienen lugar fijo → **mapa de nodos-i**; un **hilo limpiador** rescata lo vivo de los segmentos viejos.
+  - (+) un orden de magnitud más rápido en escrituras chicas. (−) incompatible → **casi no se usa**.
+  - 🔗 El limpiador es la **compactación** y el registro circular es la idea del **reloj** [[u3-reloj]].
+- **Bitácora (journaling)** ★ {#u4-journaling}
+  - **El problema**: borrar = (A) quitar la entrada del directorio, (B) liberar el nodo-i, (C) devolver los bloques. Si se corta la luz en el medio, **ningún orden es seguro**: limbo, bloques perdidos, **nodo-i reasignado** (B primero) o **bloques compartidos** (C primero).
+  - 🔢 **Operación con bitácora**
+    1. Escribir en el disco la **entrada de bitácora** con las acciones (y releerla).
+    2. Hacer A, B, C.
+    3. Si todo salió bien, **borrar la entrada**.
+    4. Si se cae: al re-arrancar, **rehacer** todo lo pendiente, las veces que haga falta.
+  - **Idempotente** {#u4-idempotente} — hacerla 2 veces deja lo mismo que 1 vez. Hace falta porque se rehace **sin saber** qué se alcanzó a hacer.
+    - 🧠 *Fijar / poner en X / borrar si existe / agregar si no está* → **sí**. *Sumar / incrementar / agregar al final / alternar* → **no**. Ascensor (piso 5) vs. interruptor que alterna.
+    - ⚠️ Confundí «idempotente» con «es la operación correcta». «Poner en 1 el bit 500» **sí** es idempotente; «incrementar el contador» **no**.
+  - **Transacción atómica** — `begin … end transaction`: **todas o ninguna**.
+  - Usan bitácora: **NTFS** [[u4-ntfs]], ReiserFS y **ext3** (compatible con ext2) [[u4-linux]].
+  - ⚠️ En el escenario «libero el nodo-i y después borro la entrada», me faltó el problema concreto: **el nodo-i liberado se reasigna** al archivo nuevo y la entrada vieja **abre el archivo nuevo**. Y la bitácora no «empieza de cero»: **rehace** lo pendiente.
+- **VFS (sistema de archivos virtual)** {#u4-vfs}
+  - Windows usa letras de unidad; UNIX **monta** todo en un árbol. El VFS es la capa común: interfaz **superior POSIX** hacia los procesos e **interfaz VFS inferior** hacia cada FS concreto.
+  - 🔢 **`open("/usr/include/unistd.h")` con VFS**
+    1. Al montarse, cada FS se **registra** con su vector de funciones.
+    2. El VFS ve que en `/usr` hay un FS montado y busca su **superbloque**.
+    3. Busca `include/unistd.h` desde la raíz de ese FS.
+    4. Crea un **nodo-v** en RAM con los datos del nodo-i y el puntero a las funciones del FS.
+    5. Agrega una entrada en la **tabla de descriptores** y devuelve el descriptor.
+    6. Cada `read`: descriptor → nodo-v → la función `read` del FS concreto.
+  - Motivación original de Sun: **NFS** [[u4-nfs]].
+  - 🔗 Es la **capa independiente del dispositivo** de la E/S: interfaz común arriba, «controladores» abajo [[u1-es]].
+
+## Tema 7 — Administración del espacio en disco ★ {#u4-espacio}
+
+> 📖 cap. 4.4.1, págs. 292–298 (figs. 4-20 a 4-24)
+> 📄 Repaso U4, pág. 16 — "Tema 7 — Administración del espacio en disco"
+
+- **Bloques fijos, no contiguos** — porque mover un archivo que crece es carísimo. 🔗 Es la decisión segmentación vs. paginación [[u3-pag-vs-seg]].
+- **Tamaño de bloque (fig. 4-21)** — tiempo = búsqueda (5 ms) + media rotación (4,165 ms) + transferencia (k/1 MB × 8,33 ms): **~9,2 ms casi fijos** por acceso.
+  - Bloque grande → **más rápido** (más bytes por acceso) pero **más desperdicio**; las curvas se cruzan cerca de 64 KB. **No hay tamaño ideal.** Históricamente 1–4 KB.
+  - Mediciones (VU 2005): el 59 % de los archivos ≤ 4 KB, pero el 93 % de los bloques los usa el 10 % de los archivos más grandes.
+  - 🔗 Es el compromiso del tamaño de página p = √(2se) [[u3-tamano]].
+- **Fragmentación interna** {#u4-frag-interna}
+  - 🔢 **Cuenta de fragmentación interna**
+    1. n_llenos = tamaño div bloque.
+    2. resto = tamaño − n_llenos × bloque.
+    3. bloques = n_llenos + 1 (si resto > 0).
+    4. disco = bloques × bloque.
+    5. frag = bloque − resto (**contra el bloque/cluster, nunca contra el sector**).
+  - **Práctica FAT32** — bloque 4 KB, sector 512 B, 3.712.518 B: **8 sectores por bloque**; BPB bytes por sector 512 = 0x0200 → **0x0B = 00, 0x0C = 02** (little-endian); 906 llenos, resto 1542 → **907 bloques = 3.715.072 B**, frag **2554 B**.
+  - 📌 **Errata de la práctica**: «2580,48 B» sale de usar 0,37 × 4096 (decimal redondeado). Siempre el **resto exacto**.
+  - ⚠️ En el control (cluster 8 KB, 1.000.000 B): sumé el resto encima de los 123 clusters (1.008.192 en vez de **1.007.616**) y medí la fragmentación **contra el sector** (448 en vez de **7616**). El FS asigna **clusters enteros**.
+- **Registro de bloques libres (figs. 4-22, 4-23)** {#u4-libres}
+  - **Lista enlazada** — bloques llenos de números de bloques libres (1 KB con números de 32 bits → **255 libres + 1 puntero**). Sus bloques **son bloques libres** (no cuestan).
+  - **Mapa de bits** — **1 bit por bloque del disco**; tamaño **fijo**. Asignando desde un pedazo del mapa, los bloques quedan **cerca** (menos brazo).
+  - ⚖️ 500 GB, bloques de 1 KB (488 M): lista ≈ **1,9 M bloques**, mapa ≈ **60.000**. La lista solo gana con el disco **casi lleno** (< ~3 % libre). Con 1 TB al 2 % libre: lista ≈ 84.200, mapa 131.072.
+  - **Variante de series** — primer bloque + cantidad; buena con el disco poco fragmentado.
+  - **Fig. 4-23** — tener en RAM un bloque de punteros **por la mitad**, para absorber altas y bajas de archivos temporales sin E/S.
+- **Cuotas (fig. 4-24)** — cada bloque nuevo se le carga al **dueño**. Límite **suave** (se puede pasar en la sesión; advertencias al iniciar sesión; si se acaban, no entra) y **duro** (nunca; error). Límites también para la **cantidad de archivos**. 🔗 Por eso el duro sigue cobrando al dueño [[u4-duro]].
+
+## Tema 8 — Respaldos, consistencia (fsck) y rendimiento {#u4-confiabilidad}
+
+> 📖 cap. 4.4.2–4.4.5, págs. 298–312 (figs. 4-25 a 4-29)
+> 📄 Repaso U4, pág. 19 — "Tema 8 — Respaldos, consistencia (fsck) y rendimiento"
+
+- **Respaldos** {#u4-respaldos} — para el **desastre** y la **estupidez** (Papelera).
+  - Qué decidir: no respaldar binarios reinstalables, temporales ni **`/dev`** (peligroso: se colgaría leyendo un dispositivo); **incrementales** (completo semanal + diario de lo cambiado; restaurar = completo + incrementales **en orden**); compresión (un error arruina todo); **sistema activo → instantáneas**; cintas **fuera del sitio**.
+  - ⚖️ **Vaciado físico** (bloques 0…n: simple y rápido; no saltea directorios, no es incremental, no restaura un archivo suelto) vs. **lógico** (recorre el árbol desde una fecha base; incremental; restaura un archivo).
+  - 🔢 **Vaciado lógico de UNIX (fig. 4-25)**, con un mapa de bits por nodo-i
+    1. Marcar los archivos modificados y **todos** los directorios.
+    2. Desmarcar los directorios sin nada modificado debajo.
+    3. Vaciar los directorios marcados (con atributos).
+    4. Vaciar los archivos marcados.
+  - 📌 Se vacían directorios **no modificados** si están en el camino a algo modificado (para restaurar en un disco nuevo o un archivo suelto).
+  - 📌 Al restaurar: la lista de libres **no se respalda** (se reconstruye), un archivo con varios vínculos se restaura **una vez**, los **huecos** no se restauran como ceros (core), los archivos especiales no se vacían [[u4-vinculos]].
+- **Consistencia: fsck** {#u4-fsck} — `fsck` (UNIX) / `scandisk` (Windows), usando la **redundancia** del FS; cada partición por separado.
+  - 🔢 **Consistencia de bloques**
+    1. Tabla «en uso»: leer todos los nodos-i (dispositivo crudo) y sumar 1 por cada bloque que listan.
+    2. Tabla «libres»: sumar 1 por cada aparición en la lista o el mapa.
+    3. Para cada bloque, **uso + libres = 1**.
+    4. Reparar y avisar.
+  - Los casos (fig. 4-27): **0+0 faltante** → agregar a libres (solo desperdicio) · **0+2 duplicado en libres** → reconstruir la lista (**imposible con mapa de bits**) · **2 en uso, duplicado de datos** (el peor) → **copiar el contenido** a un bloque libre, dar la copia a uno de los archivos y **avisar** (uno tendrá basura) · **1 en uso + 1 libre** → **sacarlo de la lista de libres, nunca del archivo**.
+    - 🧠 Reconstruir la lista como **complemento** de los bloques que usan los nodos-i arregla de un saque faltantes, duplicados en libres y «en uso y libre».
+    - ⚠️ En el control: en el duplicado de datos me faltó **copiar el contenido y avisar**; en «en uso y libre» dije «ver cuál fue el paso reciente» (fsck **no tiene historial**). Y el mapa de bits evita **solo** el duplicado en libres.
+  - **Consistencia de directorios** — un contador **por nodo-i**: cuántos directorios lo contienen (los duros suman, los simbólicos no) vs. la **cuenta de vínculos** del nodo-i.
+    - Cuenta **>** entradas → nunca llega a 0, desperdicio. Cuenta **<** entradas → **catastrófico**: al borrar un nombre se libera y el otro queda apuntando a un nodo-i que se reasigna [[u4-journaling]]. Arreglo: **cuenta = entradas reales**.
+    - También avisa: nodo-i fuera de rango, modos raros (0007), archivos de root con **SETUID** en directorios de usuarios [[u4-proteccion]].
+- **Rendimiento** {#u4-cache-bufer}
+  - **Caché de bloques (fig. 4-28)** — hash por dirección + lista doble en orden LRU. 🔗 Es reemplazo de páginas [[u3-reemplazo]]; el bit de modificado es el bit M [[u3-entrada]].
+    - 📌 **LRU exacto acá sí se puede** (pocas referencias) **pero no conviene**: un bloque de nodos-i modificado quedaría mucho sin escribirse. **LRU modificado**: los bloques **esenciales para la consistencia** (todo menos datos) se escriben **apenas se modifican**; los que no se reusarán pronto van **al frente**.
+    - ⚖️ **UNIX `sync` cada 30 s** (programa *update*; junta escrituras; se pierden hasta 30 s) vs. **write-through** (Windows histórico; cada bloque al disco ya; más E/S; sacar el disquete no rompe nada). Hoy `FlushFileBuffers` y NTFS con bitácora.
+    - 🧠 Sacar un pendrive sin expulsar: los datos estaban **solo en la caché** y los metadatos pueden quedar **a medias**. **Expulsar = sync + desmontar.**
+  - **Lectura adelantada** — traer k+1 al pedir k; **un bit por archivo abierto** (secuencial/aleatorio), cada `seek` lo apaga.
+  - **Menos movimiento del brazo** — bloques cercanos (fácil con mapa de bits [[u4-libres]]); nodos-i **en el medio del disco** o **grupos de cilindros** (fig. 4-29) [[u4-ext2]].
+  - **Desfragmentar** — `defrag`; no se mueven el archivo de paginación, el de hibernación ni la bitácora; ext2/ext3 casi no lo necesitan.
+  - 🔗 La caché de búfer es otra instancia de la jerarquía y la localidad [[u3-idea-cache]].
+
+## Tema 9 — Ejemplos: ISO 9660, MS-DOS, UNIX V7, NTFS y NFS {#u4-ejemplos}
+
+> 📖 cap. 4.5, págs. 312–324 (figs. 4-30 a 4-35); 11.8, págs. 906–915; 10.6.4, págs. 796–803; 8.4.4, págs. 591–596
+> 📄 Repaso U4, pág. 23 — "Tema 9 — Ejemplos: ISO 9660, MS-DOS, UNIX V7, NTFS y NFS"
+
+- 📌 El resumen de la cátedra no cubre este tema; sale del libro.
+- 🧠 **Dónde están los bloques / los libres**: ISO 9660 → **contiguo** / no se registran · MS-DOS → **FAT** / la misma FAT · V7 → **nodo-i** / lista libre · NTFS → **tiradas** en la MFT / mapa de bits.
+- **ISO 9660 (CD-ROM)** — una sola escritura: **sin registro de libres**. Números binarios **dos veces** (little y big endian). Espiral, bloques de 2352 B con **2048 útiles**. 16 bloques libres + descriptor de volumen primario + raíz. Archivos **contiguos** (inicio + tamaño). Nombres 8+3;versión, mayúsculas. Máximo **8 niveles**; año 2156.
+  - Niveles 1 (8+3, contiguo), 2 (31 caracteres), 3 (secciones). **Rock Ridge** (UNIX: PX permisos, PN, SL, NM, CL/PL/RE, TF) y **Joliet** (Microsoft: 64 Unicode, más de 8 niveles), en el campo «uso del sistema».
+  - 📌 **Errata del libro**: dice «1998»; es **1988**.
+- **MS-DOS / FAT** {#u4-msdos} — entrada fija de **32 B**: nombre 8 · ext 3 · atributos 1 · reservado 10 · hora 2 · fecha 2 · primer bloque 2 · tamaño 4. Atributos: solo lectura, **archivado** (lo usan los respaldos), oculto, sistema.
+  - **Hora** = horas 5 · minutos 6 · **segundos/2** 5 → **±2 s**. **Fecha** = año−1980 7 · mes 4 · día 5 → último año **2107**.
+  - Libres en **la misma FAT** (código especial) [[u4-fat]].
+  - ⚖️ **FAT-12 / 16 / 32**: 12 bits (2–16 MB, disquetes) · 16 bits (hasta **2 GB** = 64K × 32 KB) · **28 bits** (1 TB con 4 KB; **tope 2 TB** = 2⁹ × 2³² por el tamaño de partición en sectores).
+  - 📌 **FAT-32 tiene 28 bits, no 32.** Ejemplo 2 GB: FAT-16 obliga a 32 KB (archivos de 8 KB desperdician 3/4); FAT-32 usa 4 KB pero la FAT ocupa **2 MB** de RAM.
+  - Control: 1 GB con FAT-16 → bloque mínimo **16 KB** (al límite), archivos de 2 KB → 87,5 %; FAT-32 con 4 KB → 256K × 4 B = **1 MB**, 50 %.
+- **UNIX V7** — entrada **16 B** (nº de nodo-i 2 + nombre 14) → 64 K archivos por FS; nombres con cualquier ASCII salvo `/` y NUL; 10 directos + indirectos; búsqueda de `/usr/ast/mbox` [[u4-ruta-mbox]].
+- **NTFS** {#u4-ntfs} — direcciones de **64 bits**, 255 Unicode, clusters de 512 B a 64 KB (casi siempre 4 KB). Un archivo es un **conjunto de atributos (flujos)**; los flujos extra se pierden al copiar.
+  - **MFT** — registros de **1 KB**, pares (encabezado, valor). Valor corto **adentro** (archivo inmediato), largo **no residente**. La MFT **es un archivo**.
+  - Bloques en **tiradas**: pares (dirección, longitud), p. ej. (20,4)(64,2)(80,3) = 9 bloques. Huecos → archivos dispersos.
+  - Primeros 16 registros: 0 `$Mft`, 1 espejo, 2 **`$LogFile` (bitácora)** [[u4-journaling]], 5 raíz, 6 **`$Bitmap`**, 8 defectuosos, 9 `$Secure`.
+- **NFS** {#u4-nfs} — el servidor **exporta** (`/etc/exports`), el cliente **monta** donde quiere: el mismo archivo puede llamarse distinto en cada cliente; el servidor no conoce el punto de montaje.
+  - Dos protocolos: **montaje** (devuelve un **manejador**) y **acceso** (lookup, read, write).
+  - ⚖️ **NFSv3 sin estado** (no hay open/close en el servidor; si cae y rearranca no se pierde nada; los bloqueos necesitan otro mecanismo) vs. **NFSv4 con estado** (admite open; el servidor guarda los archivos abiertos).
+  - **nodo-v → nodo-i** (local) o **nodo-r** (remoto, el cliente NFS manda el mensaje) [[u4-vfs]]. Cachés con temporizadores (3 s datos, 30 s directorios).
+  - **Semántica de sesión** — los demás ven los cambios **al cerrar**; gana el que cierra último (modelo de envío/descarga).
+  - ⚖️ **Transparencia de localización** (la ruta no dice dónde está) ≠ **independencia de ubicación** (moverlo sin cambiar el nombre). El montaje remoto no tiene la segunda.
+  - 📌 El «período de gracia» de NFSv4 es real pero **no está en el libro**.
+
+## Tema 10 — Protección {#u4-proteccion}
+
+> 📖 cap. 9.3, págs. 622–641 (figs. 9-4 a 9-15)
+> 📄 Repaso U4, pág. 26 — "Tema 10 — Protección"
+
+- 📌 El resumen de la cátedra no cubre este tema; sale del libro.
+- **Dominio** — conjunto de pares **(objeto, derechos)**. **POLA**: cada dominio con lo mínimo necesario.
+  - Fig. 9-4: Archivo1 en D1 (R) y D2 (RW), mismo objeto con derechos distintos; Impresora1 en D2 y D3 con los mismos.
+  - **UNIX: dominio = (UID, GID).** Cambio de dominio: una **llamada al sistema** (usuario → kernel) [[u1-modos]] o un `exec` con **SETUID/SETGID**.
+- **Matriz de protección** — filas = dominios, columnas = objetos. Cambio de dominio = dominios como objetos con el derecho **enter** (fig. 9-6). Es enorme y **casi vacía**: se guarda por columnas o por filas.
+- **ACL (por columnas)** {#u4-acl} — cada **objeto** con su lista ordenada. Fig. 9-7: F1 = A: RW; B: R · F2 = A: R; B: RW; C: R · F3 = B: RWX; C: RX.
+  - Grupos (roles): Tana escribe el archivo de contraseñas solo como **sysadm**. Comodín `tana, *: RW`.
+  - 📌 **Gana la primera entrada que coincide, no la más específica**: `virgil, *: (nada); *, *: RW` deja afuera solo a Virgil; `*, alumnos: R; juan, *: RW` **no deja escribir a Juan**.
+  - Revocar: editar la ACL. 📌 Si se revisa solo en `open`, un archivo **ya abierto conserva** los derechos.
+- **Capacidades (por filas)** {#u4-capacidades} — cada **proceso** con su **lista-C** (objeto + mapa de bits de derechos).
+  - Protegerlas: (1) **arquitectura etiquetada** (AS/400); (2) lista-C **en el SO**, usada por posición (como los **descriptores de archivo**; Hydra); (3) **cifradas** en espacio de usuario (Amoeba): (servidor, objeto, derechos, f(objeto, derechos, comprobación)), con f de una vía.
+  - Derechos genéricos: copiar capacidad, copiar objeto, eliminar capacidad, destruir objeto.
+- ⚖️ **ACL vs. capacidades** {#u4-acl-vs-cap}
+  - Verificar: la ACL puede buscar mucho · la capacidad es inmediata.
+  - Revocar: ACL **fácil y selectivo** · capacidades **difícil**; en Amoeba, cambiar la comprobación **invalida a todos** (hay que re-entregar a los que siguen).
+  - Encapsular un proceso: fácil con capacidades. Objeto borrado: la ACL se va con él; las capacidades quedan colgadas.
+  - 🧠 *«La ACL cuelga del archivo; la capacidad la lleva el proceso, como una llave.»*
+  - Control: en una ACL **no se escribe** a quien no entra (solo celdas no vacías).
+- **Sistemas confiables** — **TCB** = hardware y software mínimos que hacen cumplir la seguridad; **monitor de referencia** = todas las llamadas de seguridad pasan por él. 🧠 *Las características son enemigas de la seguridad.*
+- **Modelos formales** — 6 primitivas de Harrison (create/delete object, create/delete domain, insert/remove right). Para un sistema arbitrario **no se puede probar** que nunca llegue a un estado no autorizado.
+  - ⚖️ **Discrecional** (decide el dueño) vs. **obligatorio** (decide la organización).
+- **Bell-La Padula (secreto)** {#u4-blp} — **no leer hacia arriba** (seguridad simple) · **no escribir hacia abajo** (propiedad *). La información solo sube.
+  - ⚠️ Justifiqué «no escribir hacia abajo» con «me puedo equivocar». Es **fuga de información hacia abajo**: el modelo supone un proceso que puede ser malicioso (troyano).
+- **Biba (integridad)** — al revés: **no escribir hacia arriba** · **no leer hacia abajo**. ⚖️ Los dos están **en conflicto directo**: un proceso Secreto escribiendo en Confidencial → BLP no, Biba sí.
+- **Canales encubiertos** {#u4-canales} — modelo de Lampson (cliente, servidor, colaborador); **confinamiento**. Modular la CPU (con **Hamming**), la tasa de **paginación** [[u3-reemplazo]], el **bloqueo de un archivo** (fig. 9-15, 11010100), recursos, la factura.
+  - 📌 **Ninguna matriz los puede evitar.** El programa dice «canales de **conversión**»: son los canales **encubiertos** (*covert channels*).
+  - **Esteganografía** — Shakespeare en los bits bajos de una foto de cebras (1024 × 768 × 3 bits = 294.912 B); marcas de agua.
+
+## Tema 11 — Linux: llamadas, VFS, ext2, ext3, /proc y comandos ★ {#u4-linux}
+
+> 📖 cap. 10.6.1–10.6.3, págs. 779–796 (figs. 10-24 a 10-34) · Cartilla de comandos de la cátedra
+> 📄 Repaso U4, pág. 30 — "Tema 11 — El sistema de archivos de Linux y los comandos de la cátedra"
+
+- **Conceptos** — secuencia de bytes; 255 caracteres; extensiones = convención. Especiales de caracteres (`/dev/tty`) y de bloques (`/dev/hd1`, partición cruda: la usan `mkfs` y **fsck** [[u4-fsck]]). **Montaje** en un solo árbol.
+  - **Bloqueo POSIX** — de un byte al archivo entero; **compartido** o **exclusivo**; elegir bloquearse o volver con error. Fig. 10-26: un exclusivo del byte 9 espera a **B y C**.
+- **Llamadas** — `open` devuelve el **descriptor libre más chico**; `creat` trunca; read/write avanzan la posición; `stat` (dispositivo, nº de nodo-i, modo, vínculos, dueño, grupo, tamaño, 3 tiempos); `pipe`; `fcntl`; directorios: mkdir, rmdir (vacío), **link**, **unlink**, chdir, opendir/readdir.
+  - 📌 **`lseek` nunca mueve el brazo**: solo cambia un número en memoria.
+  - Descriptores 0, 1, 2 ya abiertos; el shell redirige antes de arrancar el programa. 🔗 Los pasos de `read` de la U1 [[u1-seq-read]].
+- **VFS de Linux** — 4 objetos: **superbloque**, **nodo-i**, **dentry** (componente de ruta, en la *dentry_cache*), **file** (archivo abierto) [[u4-vfs]].
+- **ext2** {#u4-ext2} — bloque 0 de arranque + **grupos de bloques**: superbloque · descriptor de grupo · **mapa de bits de bloques** · **mapa de bits de nodos-i** · nodos-i · datos [[u4-libres]].
+  - Política: archivo en el **grupo de su directorio**, datos en el grupo de su nodo-i; **preasigna 8 bloques**. 🔗 Grupos de cilindros [[u4-cache-bufer]].
+  - Nodo-i de 128 B; **raíz = nodo-i 2** (el 1, bloques defectuosos); **12 directos** + simple, doble, triple; **número de generación**.
+  - Directorio (fig. 10-32): (nº de nodo-i, `rec_len`, tipo, longitud, nombre), sin ordenar; al borrar, el `rec_len` de la anterior **se agranda** y tapa la entrada.
+  - Byte 300.000 → doble, entradas 0 y 24, 3 lecturas [[u4-ubicar-byte]]. Control: byte 20.000 → bloque 19, **simple, entrada 7, 2 lecturas**.
+  - 📌 **Errata del libro**: «10 + 2¹⁶ bloques» mezcla los 10 directos de V7 con los 12 de Linux.
+- **Las tres tablas (fig. 10-34)** ★★ {#u4-tres-tablas}
+  - 🔢 **De un `read(fd, …)` al dato**
+    1. **Tabla de descriptores** del proceso: fd → entrada de la tabla intermedia.
+    2. **Tabla de descripción de archivos abiertos**: la **posición** y el modo.
+    3. **Tabla de nodos-i**: un nodo-i por archivo abierto → los bloques.
+  - Por qué la tabla del medio: con la posición **en el nodo-i**, procesos **no relacionados** la compartirían; con la posición **en el descriptor**, en `(p1; p2) > x` p2 heredaría una **copia** (0) y **pisaría** a p1.
+  - 🧠 **`fork` comparte la posición; `open` no.** Dos `open` del mismo archivo, aunque sea en un proceso, dan dos posiciones.
+  - Control: P abre y lee 100, `fork`, H lee 50, Q abre aparte y lee 10 → H desde **100**, Q desde **0**, P después desde **150**; tablas: **3 descriptores, 2 descripciones, 1 nodo-i**.
+  - 🔗 Es lo que hereda el hijo en el `fork` de la U2 [[u2-fork]].
+- **ext3** — ext2 + **bitácora** [[u4-journaling]]; compatible con ext2; registro como **búfer circular**; el **JBD** con registro del diario, **operación atómica** (todos los cambios de una llamada) y transacción. Registrar todo o **solo metadatos** (más rápido, no protege los datos).
+- **/proc** — un directorio por PID; los archivos **no existen en el disco**, se generan al leerlos. 🔗 `/proc/PID/status` y `/proc/meminfo` [[u3-linux]].
+- **Comandos de la cátedra** {#u4-comandos}
+  - `cat /proc/mounts`, `mount`, `findmnt` → lo montado **ahora**.
+  - **`/etc/fstab`** — 6 columnas: **dispositivo/UUID · punto de montaje · tipo · opciones · dump · pass** (orden de fsck: 1 raíz, 2 el resto, 0 no se revisa).
+    - 📌 **fstab dice qué se monta al arrancar, no qué está montado ahora.** `noauto` → no se monta al arrancar (se monta con `mount /punto`).
+    - Ejemplo de la cátedra: `UUID=xxxx-xxxx /home ext4 defaults 0 2`.
+  - `lsblk -f` — NAME, FSTYPE, FSVER, LABEL, UUID, FSAVAIL, FSUSE%, MOUNTPOINTS.
+  - 🔢 **La práctica de la imagen de disco**
+    1. `dd if=/dev/zero of=mi_imagen.img bs=1M count=100` (100 MB de ceros, todavía no es un FS).
+    2. `mkfs.ext4 mi_imagen.img`.
+    3. `sudo mkdir /mnt/mi_imagen` y `sudo mount -o loop mi_imagen.img /mnt/mi_imagen` (**loop**: un archivo como dispositivo de bloques).
+    4. `df -h | grep mi_imagen`.
+    5. `sudo umount /mnt/mi_imagen` (hace sync [[u4-cache-bufer]]).
+    6. Copia `sudo cp /etc/fstab /etc/fstab.bak` y agregar la línea con `… | sudo tee -a /etc/fstab`.
+    7. `sudo mount -a` para probar.
+  - `ln orig duro` · `ln -s orig simb` [[u4-vinculos]].
+  - 📌 **Fuera del material**: ext4, xfs, btrfs y zfs por dentro, y el comando para ver el tamaño de bloque (complemento: `sudo tune2fs -l /dev/sdXN` o `stat -f /punto`).
+
+## Cierre de la U4 y lo que más se toma {#u4-examen}
+
+> 📄 Repaso U4, pág. 33 — "Cierre de la Unidad 4"
+
+- **Los 8 puntos**
+  1. **Archivo** como abstracción del disco; rutas absolutas y relativas [[u4-archivos]] [[u4-rutas]].
+  2. **Asignación**: contigua, enlazada, FAT (contar clusters, no saltos) [[u4-asignacion]] [[u4-fat]].
+  3. **Nodos-i**: (D + P + P² + P³)·B y las lecturas por nivel [[u4-nodoi]] [[u4-ubicar-byte]].
+  4. **Vínculos**: el duro cuenta, el simbólico apunta [[u4-duro]] [[u4-simbolico]].
+  5. **Consistencia**: bitácora + idempotencia; fsck de bloques y directorios [[u4-journaling]] [[u4-fsck]].
+  6. **Espacio**: frag = bloque − resto; mapa de bits vs. lista [[u4-frag-interna]] [[u4-libres]].
+  7. **Protección**: ACL vs. capacidades, primera entrada que coincide, Bell-La Padula vs. Biba, canales encubiertos [[u4-acl-vs-cap]] [[u4-blp]] [[u4-canales]].
+  8. **Linux**: ext2, las 3 tablas, ext3, fstab [[u4-ext2]] [[u4-tres-tablas]] [[u4-comandos]].
+- **Lo que más se toma**
+  - ★★★ **Cadena FAT**: clusters, espacio y desperdicio [[u4-fat]].
+  - ★★★ **Nodo-i**: tamaño máximo, bloques índice y en qué nivel cae un byte [[u4-nodoi]].
+  - ★★ **Fragmentación interna en FAT32** (sectores por bloque, BPB, resto exacto) [[u4-frag-interna]].
+  - ★★ **Tablas de fsck** [[u4-fsck]] · **duro vs. simbólico** [[u4-vinculos]] · **3 tablas** con `fork` y `open` [[u4-tres-tablas]].
+  - ★ ACL vs. capacidades y Bell-La Padula vs. Biba [[u4-proteccion]] · una línea de **fstab** [[u4-comandos]].
+- **Simuladores de la unidad** (en `unidades/u04-archivos/visuales/`) — `fat.html`, `inodos.html`, `vinculos_rutas.html`, `bitacora.html`, `espacio_disco.html`, `fsck.html`, `ejemplos_fs.html`, `proteccion.html`, `tres_tablas.html`.

@@ -1,0 +1,34 @@
+// Verifica motor + HTML de unidades/u04-archivos/visuales/bitacora.html
+const fs=require('fs'), vm=require('vm'), path=require('path');
+const F='unidades/u04-archivos/visuales/bitacora.html';
+const html=fs.readFileSync(F,'utf8'); const ctx={}; vm.createContext(ctx);
+vm.runInContext(html.match(/<script id="motor">([\s\S]*?)<\/script>/)[1]+';this.R={simular};',ctx);
+const {simular}=ctx.R;
+let ok=0,mal=0; const chk=(c,m)=>{c?(ok++,console.log('OK  ',m)):(mal++,console.log('FALLA',m));};
+const fin=(o,b,m,c)=>{const p=simular(o,b,m,c); return p[p.length-1].problemas;};
+const tiene=(ps,t)=>ps.some(x=>x.includes(t));
+chk(fin('ABC',false,'bitmap',null).length===0,'sin caída: consistente');
+chk(tiene(fin('ABC',false,'bitmap',1),'limbo'),'A y cae: nodo-i en el limbo');
+let p=fin('ABC',false,'bitmap',2); chk(p.length===1&&tiene(p,'perdido')===false||tiene(p,'perdido'),'A,B y cae: bloques perdidos'); chk(tiene(p,'perdido'),'  (bloques perdidos)');
+chk(tiene(fin('BAC',false,'bitmap',1),'OTRO archivo'),'B primero y cae: nombre abre otro archivo');
+chk(tiene(fin('CAB',false,'bitmap',1),'comparten'),'C primero y cae: bloques compartidos');
+for (const o of ['ABC','BAC','CAB']) for (let c=0;c<5;c++) chk(fin(o,true,'bitmap',c).length===0,`bitácora+bitmap ${o} caída ${c}: consistente`);
+chk(tiene(fin('ABC',true,'lista',4),'comparten'),'bitácora+lista, C hecho y cae: no idempotente -> compartidos');
+chk(fin('ABC',true,'lista',3).length===0,'bitácora+lista, cae antes de C: ok');
+chk(fin('ABC',true,'lista',null).length===0,'bitácora+lista sin caída: ok');
+const {chromium}=require(path.join(process.env.APPDATA,'npm/node_modules/@playwright/mcp/node_modules/playwright-core'));
+(async()=>{
+  const br=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'});
+  const pg=await br.newPage({viewport:{width:1200,height:900}}); const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
+  await pg.goto('file:///'+path.resolve(F).split(path.sep).join('/'));
+  await pg.click('#todo'); chk((await pg.textContent('#diag')).includes('INCONSISTENTE'),'HTML: por defecto (A y cae) inconsistente');
+  await pg.selectOption('#bit','1'); await pg.selectOption('#caida','2'); await pg.click('#todo');
+  chk((await pg.textContent('#diag')).includes('consistente')&&!(await pg.textContent('#diag')).includes('INCON'),'HTML: con bitácora consistente');
+  await pg.selectOption('#modo','lista'); await pg.selectOption('#caida','4'); await pg.click('#todo');
+  chk((await pg.textContent('#diag')).includes('comparten'),'HTML: lista no idempotente');
+  await pg.click('#rei'); await pg.click('#sig'); await pg.click('#sig'); chk((await pg.textContent('#porque')).includes('bitácora'),'HTML paso a paso');
+  await pg.setViewportSize({width:390,height:800});
+  chk(await pg.evaluate(()=>document.documentElement.scrollWidth<=390),'sin scroll horizontal en móvil');
+  chk(errs.length===0,'sin errores '+errs.join('|'));
+  await br.close(); console.log(`\n${ok} OK, ${mal} fallos`); process.exit(mal?1:0);
+})();

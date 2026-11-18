@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hardware de E/S</title>
+<style>
+  :root{
+    --bg:#f4f5f8; --panel:#fff; --borde:#d6dae2; --texto:#1b1f24; --suave:#5b6572; --acento:#3d63c9;
+    --ok:#15803d; --ok-bg:#e9f8ee; --fal:#dc2626; --fal-bg:#fdecec; --lim:#b45309; --lim-bg:#fff6e0;
+    --cer:#7c3aed; --cer-bg:#f3edff; --hl:#facc15; --mem:#0e7490; --mem-bg:#e3f6f9; --es:#c2410c; --es-bg:#fdf0e7;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+      --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+      --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308; --mem:#22d3ee; --mem-bg:#0f2a30; --es:#fb923c; --es-bg:#2d1d10;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+    --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+    --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308; --mem:#22d3ee; --mem-bg:#0f2a30; --es:#fb923c; --es-bg:#2d1d10;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--texto); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .envoltura{max-width:1150px; margin:0 auto; padding:18px 16px 48px}
+  h1{font-size:1.35rem; margin:0 0 4px}
+  h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave); margin:0 0 8px}
+  h3{font-size:1rem; margin:0 0 4px}
+  .sub{color:var(--suave); margin:0 0 14px; font-size:.92rem}
+  .tarjeta{background:var(--panel); border:1px solid var(--borde); border-radius:12px; padding:14px 16px; margin-bottom:12px; min-width:0}
+  button,select,input{font:inherit; font-size:.86rem; padding:7px 11px; border-radius:8px; border:1px solid var(--borde); background:var(--panel); color:var(--texto); max-width:100%; min-width:0}
+  button{cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--acento)}
+  button:disabled{opacity:.4; cursor:not-allowed}
+  button.prim{background:var(--acento); color:#fff; border-color:var(--acento); font-weight:650}
+  label{font-size:.82rem; color:var(--suave); display:flex; flex-direction:column; gap:3px; min-width:0; max-width:100%}
+  .pest{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px}
+  .pest button.on{background:var(--acento); color:#fff; border-color:var(--acento)}
+  .oculto{display:none}
+  .tres{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px}
+  @media (max-width:860px){ .tres{grid-template-columns:1fr} }
+  .esq{border:2px solid var(--borde); border-radius:12px; padding:12px; min-width:0}
+  .esq.sel{border-color:var(--acento); box-shadow:0 0 0 3px color-mix(in srgb, var(--acento) 25%, transparent)}
+  .espacios{display:flex; gap:8px; height:200px; margin:8px 0}
+  .espacio{flex:1; display:flex; flex-direction:column; border:1px solid var(--borde); border-radius:8px; overflow:hidden; min-width:0}
+  .espacio .tit{font-size:.72rem; text-align:center; padding:2px; color:var(--suave)}
+  .franja{display:flex; align-items:center; justify-content:center; font:600 .72rem system-ui,sans-serif; text-align:center; padding:2px}
+  .franja.mem{background:var(--mem-bg); color:var(--mem)}
+  .franja.es{background:var(--es-bg); color:var(--es)}
+  .franja.hit{outline:3px solid var(--hl); outline-offset:-3px}
+  .esq ul{margin:6px 0 0; padding-left:20px; font-size:.88rem}
+  .mas{color:var(--ok)} .menos{color:var(--fal)}
+  .datos{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px}
+  @media (max-width:700px){ .datos{grid-template-columns:1fr} }
+  .estado{margin-top:10px; padding:8px 12px; border-radius:8px; font-weight:600}
+  .estado.ok{background:var(--ok-bg); border:1px solid var(--ok)}
+  .estado.mal{background:var(--fal-bg); border:1px solid var(--fal)}
+  .estado.lim{background:var(--lim-bg); border:1px solid var(--lim)}
+  .marca{display:block; margin-top:8px; border-radius:8px; padding:7px 10px; font-size:.88rem}
+  .marca.ojo{background:var(--fal-bg); border:1px solid var(--fal)}
+  .marca.cer{background:var(--cer-bg); border:1px solid var(--cer)}
+  .grilla{display:grid; grid-template-columns:1.2fr 1fr; gap:12px}
+  @media (max-width:860px){ .grilla{grid-template-columns:1fr} }
+  .codigo{font:13px/1.6 ui-monospace,Consolas,monospace; margin:8px 0 0; padding:0; list-style:none}
+  .codigo li{padding:2px 8px; border-radius:6px}
+  .codigo li.ahora{background:var(--hl); color:#000}
+  .actor{display:inline-block; padding:2px 10px; border-radius:99px; font-weight:800; font-size:.8rem; color:#fff; background:var(--acento)}
+  .celdas{display:flex; gap:10px; flex-wrap:wrap; margin-top:8px}
+  .celda{border:2px solid var(--borde); border-radius:10px; padding:8px 12px; min-width:150px}
+  .celda b{display:block; font:700 1.2rem ui-monospace,Consolas,monospace}
+  .celda small{color:var(--suave)}
+  .celda.cambio{outline:3px solid var(--hl); outline-offset:1px}
+  .barra{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:10px}
+  .contador{margin-left:auto; color:var(--suave); font-size:.88rem}
+  .porque{border:1px solid var(--borde); border-left:5px solid var(--acento); border-radius:10px; padding:12px 14px; margin-top:10px}
+  .porque .t{font-weight:700; margin:0 0 4px}
+  table{border-collapse:collapse; width:100%; font-size:.88rem}
+  td,th{border-bottom:1px solid var(--borde); padding:6px 8px; text-align:left; vertical-align:top}
+  th{font-size:.72rem; color:var(--suave); text-transform:uppercase}
+  code{font-family:ui-monospace,Consolas,monospace}
+  .tablas{overflow-x:auto}
+  .ideas li{margin-bottom:5px}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <h1>Hardware de E/S: cómo habla la CPU con los dispositivos</h1>
+  <p class="sub">Cada controlador tiene <b>registros de control</b> (comandos y estado) y a veces un <b>búfer de datos</b>. La CPU llega a ellos de tres formas (fig. 5-2). Probá una instrucción en cada esquema y mirá el problema de la caché. Tanenbaum 5.1, págs. 329–336.</p>
+
+  <div class="pest">
+    <button id="t1" class="on">1 · Los tres esquemas</button>
+    <button id="t2">2 · El problema de la caché</button>
+    <button id="t3">3 · Bloque vs. carácter</button>
+  </div>
+
+  <section id="s1">
+    <div class="tarjeta">
+      <div class="datos">
+        <label>Esquema
+          <select id="esq">
+            <option value="sep">(a) Puertos de E/S separados</option>
+            <option value="map">(b) E/S por asignación de memoria</option>
+            <option value="hib">(c) Híbrido (Pentium)</option>
+          </select>
+        </label>
+        <label>Instrucción
+          <select id="ins">
+            <option value="MOV">MOV R0, dir   (instrucción común de memoria)</option>
+            <option value="IN">IN R0, puerto   (instrucción especial de E/S)</option>
+          </select>
+        </label>
+        <label>Qué querés leer
+          <select id="obj">
+            <option value="ram">una palabra de RAM (dirección 4)</option>
+            <option value="ctrl">el registro de estado del disco</option>
+            <option value="buf">el búfer de video (RAM de video)</option>
+          </select>
+        </label>
+      </div>
+      <div id="res"></div>
+    </div>
+    <div class="tres" id="paneles"></div>
+  </section>
+
+  <section id="s2" class="oculto">
+    <div class="tarjeta">
+      <div class="datos">
+        <label>¿La caché está activa para la página del registro?
+          <select id="cache"><option value="si">Sí (error de diseño)</option><option value="no">No: caché deshabilitada por página</option></select>
+        </label>
+      </div>
+      <div class="barra">
+        <button class="prim" id="cSig">Siguiente paso ▶</button>
+        <button id="cRei">Reiniciar</button>
+        <span class="contador" id="cCont"></span>
+      </div>
+    </div>
+    <div class="grilla">
+      <div class="tarjeta">
+        <h2>Ciclo de sondeo con E/S por asignación de memoria</h2>
+        <span class="actor" id="cActor">CPU</span>
+        <ol class="codigo" id="cCod"></ol>
+        <div class="celdas">
+          <div class="celda" id="cDev"><small>PUERTO_4 en el dispositivo</small><b id="cDevV">1</b><small>1 = ocupado · 0 = listo</small></div>
+          <div class="celda" id="cCac"><small>copia en la caché</small><b id="cCacV">—</b><small>lo que lee la CPU</small></div>
+        </div>
+      </div>
+      <div class="tarjeta">
+        <h2>Por qué</h2>
+        <div class="porque" id="cPq"></div>
+        <div id="cEst"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="s3" class="oculto">
+    <div class="tarjeta">
+      <h2>Dispositivos de bloque vs. de carácter (5.1.1)</h2>
+      <div class="tablas"><table>
+        <tr><th></th><th>De bloque</th><th>De carácter</th></tr>
+        <tr><td>Qué transfieren</td><td>bloques de tamaño fijo (512 a 32.768 B), cada uno con dirección</td><td>un flujo de caracteres, sin estructura</td></tr>
+        <tr><td>¿Direccionable?</td><td>sí: se lee o escribe cada bloque por separado</td><td>no</td></tr>
+        <tr><td>¿Tiene seek?</td><td>sí</td><td>no</td></tr>
+        <tr><td>Ejemplos</td><td>discos, CD-ROM, memorias USB</td><td>teclado, ratón, impresora, interfaz de red</td></tr>
+        <tr><td>En <code>ls -l /dev</code></td><td>la línea empieza con <b>b</b> (ej. <code>sda</code>, <code>sda1</code>)</td><td>la línea empieza con <b>c</b> (ej. <code>tty</code>, <code>null</code>, <code>random</code>)</td></tr>
+        <tr><td>No encajan</td><td colspan="2">el <b>reloj</b> (solo interrumpe) y la pantalla por asignación de memoria</td></tr>
+      </table></div>
+      <span class="marca cer">🧠 En <code>ls -l /dev</code>, donde va el tamaño aparecen <b>dos números</b>: el <b>mayor</b> (qué driver) y el <b>menor</b> (qué unidad). Ej.: <code>brw-rw---- 1 root disk 8, 1 … sda1</code>.</span>
+      <span class="marca ojo">⚠️ La cinta tiene bloques y «puede» rebobinar hasta el bloque N, pero <b>en la práctica no se usa como dispositivo de bloque de acceso aleatorio</b>: tarda muchísimo.</span>
+    </div>
+  </section>
+
+  <div class="tarjeta">
+    <h2>Ideas clave</h2>
+    <ul class="ideas">
+      <li>🧠 <b>Controlador ≠ driver.</b> El controlador (adaptador) es <b>hardware</b>: convierte el flujo serial de bits en bloques y corrige errores con el ECC. El driver es <b>software</b> que le escribe en sus registros.</li>
+      <li>🧠 <b>Puertos separados:</b> <code>IN R0,4</code> y <code>MOV R0,4</code> son cosas <b>distintas</b> (dos espacios de direcciones). <b>Asignación de memoria:</b> los registros son direcciones de memoria sin RAM detrás.</li>
+      <li>⚠️ Ventajas de la asignación de memoria: drivers <b>en C</b>, protección <b>por páginas</b>, cualquier instrucción sirve. Desventajas: la <b>caché</b> (hay que deshabilitarla por página) y los <b>buses separados</b>.</li>
+      <li>⚠️ El Pentium es <b>híbrido</b>: búferes de datos mapeados en memoria (640K a 1M) y registros de control por puertos (0 a 64K).</li>
+    </ul>
+  </div>
+</div>
+
+<script id="motor">
+// ---------- motor puro ----------
+// Devuelve a qué espacio va un acceso y si tiene sentido
+function acceso(esq, ins, obj){
+  // dónde vive cada objeto en cada esquema
+  const lugar = {
+    sep: {ram:"mem", ctrl:"es", buf:"es"},
+    map: {ram:"mem", ctrl:"mem", buf:"mem"},
+    hib: {ram:"mem", ctrl:"es", buf:"mem"}
+  }[esq][obj];
+  if(ins === "IN" && esq === "map") return {ok:false, espacio:null, motivo:"En E/S por asignación de memoria no hay espacio de puertos: no existe la instrucción IN. Se usa MOV a la dirección del registro."};
+  const espacio = ins === "IN" ? "es" : "mem";
+  if(espacio !== lugar) return {ok:false, espacio, motivo: espacio === "es"
+    ? "IN va al espacio de puertos, pero eso está en el espacio de memoria en este esquema."
+    : "MOV va al espacio de memoria, pero eso está en el espacio de puertos en este esquema: con MOV R0,4 leerías la palabra 4 de RAM, otra cosa."};
+  return {ok:true, espacio, motivo: espacio === "es" ? "Correcto: instrucción especial IN sobre el espacio de puertos (solo el SO puede usarla)." : "Correcto: instrucción común de memoria; responde el módulo cuyo rango contiene la dirección."};
+}
+// Simulación del ciclo TEST PUERTO_4 / BEQ LISTO / BRANCH CICLO
+function cicloSondeo(cacheActiva, pasos){
+  // el dispositivo queda listo (0) después de la 3.ª lectura
+  const ev = []; let dev = 1, cache = null, lecturas = 0, listo = false;
+  for(let k = 0; k < pasos && !listo; k++){
+    lecturas++;
+    if(lecturas === 3) dev = 0;          // el dispositivo termina
+    let leido, deCache = false;
+    if(cacheActiva && cache !== null){ leido = cache; deCache = true; }
+    else { leido = dev; cache = cacheActiva ? dev : null; }
+    ev.push({k, dev, leido, deCache});
+    if(leido === 0) listo = true;
+  }
+  return {ev, listo};
+}
+if(typeof module !== "undefined") module.exports = {acceso, cicloSondeo};
+</script>
+
+<script>
+const $ = id => document.getElementById(id);
+for(const k of [1,2,3]) $("t" + k).onclick = () => { for(const j of [1,2,3]){ $("t" + j).classList.toggle("on", j === k); $("s" + j).classList.toggle("oculto", j !== k); } };
+
+const ESQ = [
+  {id:"sep", nom:"(a) Puertos de E/S separados", sub:"IBM 360 y casi todas las mainframes",
+   esp:[["Memoria",[["RAM",1,"mem","ram"]]],["Puertos de E/S (0…64K)",[["registros de control",1,"es","ctrl"],["búferes de datos",1,"es","buf"]]]],
+   mas:["el espacio de memoria queda entero para RAM","no hay problema de caché sobre los registros"],
+   menos:["hace falta ensamblador (IN/OUT no existen en C)","protección especial para que los usuarios no hagan E/S"]},
+  {id:"map", nom:"(b) E/S por asignación de memoria", sub:"PDP-11 · registros arriba del espacio",
+   esp:[["Un solo espacio",[["registros + búferes (sin RAM detrás)",1,"mem","ctrl"],["RAM",3,"mem","ram"]]]],
+   mas:["drivers totalmente en C","protección por páginas: no mapear esa página al usuario","cualquier instrucción sirve (TEST PUERTO_4)"],
+   menos:["la caché puede guardar un registro → hay que deshabilitarla por página","con bus de memoria dedicado, los dispositivos no ven las direcciones"]},
+  {id:"hib", nom:"(c) Híbrido", sub:"Pentium: búferes 640K–1M en memoria + puertos 0–64K",
+   esp:[["Memoria",[["búferes de datos (640K–1M)",1,"mem","buf"],["RAM",3,"mem","ram"]]],["Puertos",[["registros de control",1,"es","ctrl"]]]],
+   mas:["el búfer de video se maneja como memoria","los registros de control siguen protegidos como puertos"],
+   menos:["hay que averiguar al arrancar qué direcciones no son RAM (registros de rango en el puente PCI)"]}
+];
+function dib(){
+  const e = $("esq").value, ins = $("ins").value, obj = $("obj").value;
+  const r = acceso(e, ins, obj);
+  $("paneles").innerHTML = ESQ.map(s => `<div class="esq ${s.id === e ? "sel" : ""}">
+    <h3>${s.nom}</h3><small style="color:var(--suave)">${s.sub}</small>
+    <div class="espacios">${s.esp.map(([t, fr]) => `<div class="espacio"><div class="tit">${t}</div>${fr.map(([n, f, c, o]) => `<div class="franja ${c} ${s.id === e && r.ok && o === obj ? "hit" : ""}" style="flex:${f}">${n}</div>`).join("")}</div>`).join("")}</div>
+    <ul>${s.mas.map(x => `<li class="mas">+ ${x}</li>`).join("")}${s.menos.map(x => `<li class="menos">− ${x}</li>`).join("")}</ul></div>`).join("");
+  $("res").innerHTML = `<div class="estado ${r.ok ? "ok" : "mal"}">${r.ok ? "✔" : "✘"} ${r.motivo}</div>`;
+}
+$("esq").onchange = $("ins").onchange = $("obj").onchange = dib; dib();
+
+// ===== caché =====
+const COD = ["CICLO: TEST PUERTO_4    // ¿el registro vale 0?", "       BEQ  LISTO       // si es 0, listo", "       BRANCH CICLO     // si no, probar de nuevo", "LISTO: …                // mandar el próximo comando"];
+let SIM = null, I = -1;
+function cIni(){ SIM = cicloSondeo($("cache").value === "si", 8); I = -1; cDib(); }
+$("cache").onchange = cIni;
+$("cSig").onclick = () => { if(I < SIM.ev.length - 1){ I++; cDib(); } };
+$("cRei").onclick = () => { I = -1; cDib(); };
+function cDib(){
+  const ca = $("cache").value === "si";
+  const e = I >= 0 ? SIM.ev[I] : null;
+  const fin = I === SIM.ev.length - 1;
+  $("cCod").innerHTML = COD.map((c, k) => `<li class="${e && ((fin && SIM.listo && k === 3) || (!(fin && SIM.listo) && k === (e.leido === 0 ? 1 : 0))) ? "ahora" : ""}">${c}</li>`).join("");
+  $("cDevV").textContent = e ? e.dev : 1;
+  $("cCacV").textContent = ca ? (e ? (e.deCache ? e.leido : e.leido) : "—") : "(sin caché)";
+  $("cDev").classList.toggle("cambio", !!e && e.k === 2);
+  $("cCac").classList.toggle("cambio", !!e && e.deCache);
+  $("cCont").textContent = `Lectura ${I + 1} de ${SIM.ev.length}`;
+  $("cSig").disabled = I >= SIM.ev.length - 1;
+  let t, x;
+  if(!e){ t = "El dispositivo está ocupado (PUERTO_4 = 1)"; x = "La CPU hace un ciclo de sondeo: lee el registro hasta que valga 0. Va a quedar listo después de la tercera lectura."; }
+  else if(!ca){ t = `Lectura ${e.k + 1}: TEST lee el registro real → ${e.leido}`; x = e.leido === 0 ? "El dispositivo terminó y la CPU lo ve enseguida: sale del ciclo." : "Sin caché, cada TEST va hasta el dispositivo."; }
+  else if(!e.deCache){ t = `Lectura ${e.k + 1}: primera vez → va al dispositivo y lo guarda en la caché (${e.leido})`; x = "Desde ahora, la CPU va a leer la copia de la caché sin preguntarle al dispositivo."; }
+  else { t = `Lectura ${e.k + 1}: TEST lee la CACHÉ → ${e.leido}`; x = e.dev === 0 ? "⚠️ El dispositivo ya está listo (vale 0), pero la caché sigue diciendo 1. <b>La CPU nunca se entera.</b>" : "La caché devuelve el valor viejo."; }
+  $("cPq").innerHTML = `<p class="t">${t}</p>${x}`;
+  $("cEst").innerHTML = fin ? (SIM.listo ? `<div class="estado ok">Salió del ciclo en la lectura ${SIM.ev.length}.</div>` : `<div class="estado mal">Ciclo infinito: después de ${SIM.ev.length} lecturas sigue esperando. Por eso el hardware tiene que poder <b>deshabilitar la caché por página</b>.</div>`) : "";
+}
+cIni();
+</script>
+</body>
+</html>

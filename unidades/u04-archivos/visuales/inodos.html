@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nodos-i e indirectos</title>
+<style>
+  :root{
+    --bg:#f4f5f8; --panel:#fff; --borde:#d6dae2; --texto:#1b1f24; --suave:#5b6572; --acento:#3d63c9;
+    --ok:#15803d; --ok-bg:#e9f8ee; --fal:#dc2626; --fal-bg:#fdecec; --lim:#b45309; --lim-bg:#fff6e0;
+    --cer:#7c3aed; --cer-bg:#f3edff; --hl:#facc15;
+    --dir:#0e7490; --s:#2563eb; --d:#7c3aed; --t:#c2410c; --dato:#15803d;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+      --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+      --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308;
+      --dir:#22d3ee; --s:#60a5fa; --d:#a78bfa; --t:#fb923c; --dato:#4ade80;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+    --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+    --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308;
+    --dir:#22d3ee; --s:#60a5fa; --d:#a78bfa; --t:#fb923c; --dato:#4ade80;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--texto); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .envoltura{max-width:1150px; margin:0 auto; padding:18px 16px 48px}
+  h1{font-size:1.35rem; margin:0 0 4px}
+  h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave); margin:0 0 8px}
+  .sub{color:var(--suave); margin:0 0 14px; font-size:.92rem}
+  .tarjeta{background:var(--panel); border:1px solid var(--borde); border-radius:12px; padding:14px 16px; margin-bottom:12px; min-width:0}
+  button,select,input{font:inherit; font-size:.86rem; padding:6px 10px; border-radius:8px; border:1px solid var(--borde); background:var(--panel); color:var(--texto); max-width:100%}
+  button{cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--acento)}
+  button:disabled{opacity:.4; cursor:not-allowed}
+  button.prim{background:var(--acento); color:#fff; border-color:var(--acento); font-weight:650}
+  input[type=number]{width:130px}
+  input[type=range]{width:100%; padding:0}
+  label{font-size:.82rem; color:var(--suave); display:flex; flex-direction:column; gap:3px; min-width:0}
+  .controles{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px}
+  @media (max-width:820px){ .controles{grid-template-columns:1fr 1fr} }
+  .controles b{color:var(--texto); font:700 .95rem ui-monospace,Consolas,monospace}
+  .chk{flex-direction:row; align-items:center; gap:6px; color:var(--texto)}
+  .barra{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:10px 0 2px}
+  .contador{margin-left:auto; color:var(--suave); font-size:.88rem}
+  table{border-collapse:collapse; width:100%; font-size:.9rem}
+  th,td{border-bottom:1px solid var(--borde); padding:5px 8px; text-align:right}
+  th:first-child,td:first-child{text-align:left}
+  th{font-size:.75rem; color:var(--suave); text-transform:uppercase; letter-spacing:.04em}
+  td.m{font-family:ui-monospace,Consolas,monospace}
+  .tabla{overflow-x:auto}
+  .pila{display:flex; height:26px; border-radius:6px; overflow:hidden; border:1px solid var(--borde); margin-top:10px}
+  .pila div{height:100%}
+  .estado{margin-top:10px; padding:8px 12px; border-radius:8px; font-weight:650}
+  .estado.ok{background:var(--ok-bg); border:1px solid var(--ok)}
+  .estado.mal{background:var(--fal-bg); border:1px solid var(--fal)}
+  .estado.lim{background:var(--lim-bg); border:1px solid var(--lim)}
+  .total{font:800 1.25rem ui-monospace,Consolas,monospace; margin-top:8px; overflow-wrap:anywhere}
+  .grilla{display:grid; grid-template-columns:1.3fr 1fr; gap:12px}
+  @media (max-width:880px){ .grilla{grid-template-columns:1fr} }
+  svg{width:100%; height:auto; display:block}
+  svg text{font:12px system-ui,sans-serif; fill:var(--texto)}
+  svg .caja{fill:var(--panel); stroke:var(--borde); stroke-width:1.5}
+  svg .on{stroke:var(--hl) !important; stroke-width:4}
+  svg .ent{font:700 11px ui-monospace,Consolas,monospace; fill:var(--lim)}
+  svg .fl{stroke:var(--borde); stroke-width:1.5; fill:none}
+  svg .fl.on{stroke:var(--hl); stroke-width:3.5}
+  .codigo{font:13px/1.5 ui-monospace,Consolas,monospace; margin:8px 0 0; padding:0; list-style:none}
+  .codigo li{padding:2px 6px; border-radius:6px}
+  .codigo li.ahora{background:var(--hl); color:#000}
+  .actor{display:inline-block; padding:2px 10px; border-radius:99px; font-weight:800; font-size:.8rem; color:#fff; background:var(--acento)}
+  .porque{border:1px solid var(--borde); border-left:5px solid var(--acento); border-radius:10px; padding:12px 14px; margin-top:10px}
+  .porque .tit{font-weight:700; font-size:1.02rem; margin:0 0 4px}
+  .marca{display:block; margin-top:8px; border-radius:8px; padding:7px 10px; font-size:.88rem}
+  .marca.ojo{background:var(--fal-bg); border:1px solid var(--fal)}
+  .marca.cer{background:var(--cer-bg); border:1px solid var(--cer)}
+  .celdas{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:10px}
+  .celda{border:1px solid var(--borde); border-radius:9px; padding:6px 9px; min-width:0}
+  .celda .k{font-size:.72rem; color:var(--suave); text-transform:uppercase; letter-spacing:.04em}
+  .celda .v{font:700 .92rem ui-monospace,Consolas,monospace; overflow-wrap:anywhere}
+  .ideas li{margin-bottom:5px}
+  .mini{font-size:.8rem; color:var(--suave)}
+  .ley span{display:inline-block; width:11px; height:11px; border-radius:3px; margin:0 4px 0 10px; vertical-align:-1px}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <h1>Nodos-i: directos, indirecto simple, doble y triple</h1>
+  <p class="sub">Tanenbaum 4.3.2 (fig. 4-13, págs. 278–280), 4.5.3 (fig. 4-34, nodo-i de UNIX V7, págs. 321–322) y 10.6.3 (ext2) · Resumen de la cátedra, págs. 14–15 · ejercicios de la práctica. El nodo-i guarda los atributos y <b>D direcciones directas</b>. Después vienen tres punteros a <b>bloques índice</b>: cada bloque índice tiene <b>P = tamaño de bloque / tamaño de puntero</b> direcciones. Cambiá los datos y mirá los tres cálculos.</p>
+
+  <div class="tarjeta">
+    <h2>Datos del sistema de archivos</h2>
+    <div class="barra" style="margin-top:0">
+      <span class="mini">Cargar ejemplo:</span>
+      <button data-pre="catedra">Práctica: 10 directos, 4 KB, punteros de 4 B</button>
+      <button data-pre="practica2k">Práctica: 12 directos, 2 KB, 4 B</button>
+      <button data-pre="ext2">Linux ext2: 12 directos, 1 KB, 4 B</button>
+      <button data-pre="chico">⚠️ Punteros de 2 B</button>
+    </div>
+    <div class="controles" style="margin-top:10px">
+      <label>Directos en el nodo-i (D): <b id="vD"></b><input type="range" id="D" min="1" max="15" step="1"></label>
+      <label>Tamaño de bloque: <b id="vB"></b><input type="range" id="B" min="0" max="4" step="1"></label>
+      <label>Tamaño de puntero: <b id="vp"></b><input type="range" id="p" min="0" max="3" step="1"></label>
+      <div>
+        <label class="chk"><input type="checkbox" id="n1" checked> indirecto simple</label>
+        <label class="chk"><input type="checkbox" id="n2" checked> indirecto doble</label>
+        <label class="chk"><input type="checkbox" id="n3" checked> indirecto triple</label>
+      </div>
+    </div>
+    <div class="mini" style="margin-top:6px">Direcciones por bloque índice: <b id="vP"></b></div>
+  </div>
+
+  <div class="tarjeta">
+    <h2>1 · Tamaño máximo de un archivo = (D + P + P² + P³) × B</h2>
+    <div class="tabla"><table id="tMax"></table></div>
+    <div class="pila" id="pila"></div>
+    <div class="mini ley"><span style="background:var(--dir)"></span>directos<span style="background:var(--s)"></span>simple<span style="background:var(--d)"></span>doble<span style="background:var(--t)"></span>triple <i>(la barra es proporcional: el triple se lleva casi todo)</i></div>
+    <div class="total" id="totMax"></div>
+    <div id="estMax"></div>
+  </div>
+
+  <div class="tarjeta">
+    <h2>2 · Un archivo de tamaño dado: ¿cuántos bloques de datos y cuántos bloques índice?</h2>
+    <div class="barra" style="margin-top:0">
+      <label>Tamaño del archivo
+        <span style="display:flex;gap:6px"><input type="number" id="tamV" min="0" step="any"><select id="tamU"><option value="1">B</option><option value="1024">KB</option><option value="1048576">MB</option><option value="1073741824">GB</option></select></span>
+      </label>
+    </div>
+    <div class="tabla"><table id="tIdx"></table></div>
+    <div id="estIdx"></div>
+  </div>
+
+  <div class="grilla">
+    <div class="tarjeta">
+      <h2>3 · ¿Dónde está un byte? (lseek + read)</h2>
+      <div class="barra" style="margin-top:0">
+        <label>Byte (desplazamiento en el archivo)<input type="number" id="off" min="0"></label>
+        <button class="prim" id="sig">Siguiente paso ▶</button>
+        <button id="todo">Hasta el final ⏭</button>
+        <button id="rei">Reiniciar</button>
+        <span class="contador" id="cont"></span>
+      </div>
+      <svg id="arbol" viewBox="0 0 640 300"></svg>
+    </div>
+    <div class="tarjeta">
+      <span class="actor">Sistema de archivos (kernel)</span>
+      <ol class="codigo" id="codigo">
+        <li>n = byte / B ; desp = byte % B</li>
+        <li>si n &lt; D: dato = inodo.directo[n]</li>
+        <li>n -= D ; si n &lt; P: leer bloque simple</li>
+        <li>n -= P ; si n &lt; P²: leer doble, luego sencillo</li>
+        <li>n -= P² ; leer triple, doble, sencillo</li>
+        <li>leer el bloque de datos</li>
+      </ol>
+      <div class="celdas">
+        <div class="celda"><div class="k">bloque lógico n</div><div class="v" id="cN">—</div></div>
+        <div class="celda"><div class="k">desplazamiento</div><div class="v" id="cDesp">—</div></div>
+        <div class="celda"><div class="k">nivel</div><div class="v" id="cNiv">—</div></div>
+        <div class="celda"><div class="k">lecturas de disco</div><div class="v" id="cLec">0</div></div>
+      </div>
+      <div class="porque" id="porque"><p class="tit">Listo</p><div>Elegí un byte y apretá «Siguiente paso».</div></div>
+    </div>
+  </div>
+
+  <div class="tarjeta">
+    <h2>Ideas clave y frases de examen</h2>
+    <ul class="ideas">
+      <li><b>Tamaño máximo = (D + P + P² + P³) × B</b>, con <b>P = B / tamaño de puntero</b>. Con 10 directos, 4 KB y punteros de 4 B: P = 1024 y el máximo es ≈ <b>4 TiB</b>, casi todo gracias al triple.</li>
+      <li>⚠️ <b>Los bloques índice no son datos.</b> «¿Cuántos bloques índice?» cuenta el simple, el doble <i>y</i> cada sencillo que cuelga del doble. El ejercicio de 5,5 MB de la práctica da 2816 de datos + <b>7 índice</b>.</li>
+      <li>⚠️ El ancho del puntero también pone un techo: con <i>p</i> bytes se pueden nombrar 2<sup>8p</sup> bloques. Si la fórmula da más que eso, manda el límite del puntero (probá «Punteros de 2 B»).</li>
+      <li>🧠 Con el nodo-i en RAM (se carga al abrir): un directo cuesta <b>1</b> lectura, el simple <b>2</b>, el doble <b>3</b> y el triple <b>4</b>. Contra la FAT, el nodo-i ocupa RAM <b>proporcional a los archivos abiertos</b>, no al tamaño del disco.</li>
+    </ul>
+  </div>
+</div>
+
+<script id="motor">
+// ---------- Motor (sin DOM) ----------
+var BLOQUES = [512, 1024, 2048, 4096, 8192];
+var PUNTEROS = [2, 3, 4, 8];
+var PRESETS = {
+  catedra:    {D:10, B:4096, p:4, niv:[1,1,1], tam:5.5, tamU:1048576, off:300000},
+  practica2k: {D:12, B:2048, p:4, niv:[1,1,1], tam:5.5, tamU:1048576, off:1048576},
+  ext2:       {D:12, B:1024, p:4, niv:[1,1,1], tam:300,  tamU:1024,    off:300000},
+  chico:      {D:10, B:1024, p:2, niv:[1,1,1], tam:100,  tamU:1048576, off:5000}
+};
+
+function maxTam(D, B, p, niv){
+  var P = BigInt(Math.floor(B/p)), b = BigInt(B);
+  var filas = [
+    {nivel:"directos", bloques:BigInt(D)},
+    {nivel:"simple",   bloques:niv[0]?P:0n},
+    {nivel:"doble",    bloques:niv[1]?P*P:0n},
+    {nivel:"triple",   bloques:niv[2]?P*P*P:0n}
+  ];
+  var tot = 0n;
+  filas.forEach(function(f){ f.bytes = f.bloques*b; tot += f.bloques; });
+  return {P:Number(P), filas:filas, bloques:tot, bytes:tot*b};
+}
+
+// Bloques direccionables con punteros de p bytes (techo del disco)
+function limitePuntero(B, p){ var n = 1n << BigInt(8*p); return {bloques:n, bytes:n*BigInt(B)}; }
+
+function ceilDiv(a,b){ return Math.floor((a+b-1)/b); }
+
+// Cuántos bloques índice necesita un archivo de nDatos bloques
+function bloquesIndice(nDatos, D, P, niv){
+  var r = nDatos, pasos = [], idx = 0;
+  var enDir = Math.min(r, D); r -= enDir;
+  pasos.push({nivel:"directos", datos:enDir, indice:0, detalle:"van directo en el nodo-i"});
+  if (r>0 && niv[0]){
+    var s = Math.min(r, P); r -= s; idx += 1;
+    pasos.push({nivel:"simple", datos:s, indice:1, detalle:"1 bloque indirecto simple"});
+  }
+  if (r>0 && niv[1]){
+    var d = Math.min(r, P*P); r -= d; var sec = ceilDiv(d, P); idx += 1 + sec;
+    pasos.push({nivel:"doble", datos:d, indice:1+sec, detalle:"1 bloque doble + ⌈"+d+" / "+P+"⌉ = "+sec+(sec===1?" sencillo":" sencillos")});
+  }
+  if (r>0 && niv[2]){
+    var t = Math.min(r, P*P*P); r -= t; var dob = ceilDiv(t, P*P), sen = ceilDiv(t, P); idx += 1 + dob + sen;
+    pasos.push({nivel:"triple", datos:t, indice:1+dob+sen, detalle:"1 triple + "+dob+" dobles + "+sen+" sencillos"});
+  }
+  return {pasos:pasos, indice:idx, sobran:r, entra:r===0};
+}
+
+function datosNecesarios(bytes, B){ return Math.ceil(bytes/B); }
+
+// Ubica un byte: nivel, índices en cada bloque índice y lecturas de disco (nodo-i ya en RAM)
+function ubicar(off, D, B, p, niv){
+  var P = Math.floor(B/p), n = Math.floor(off/B), desp = off % B, r = n;
+  if (r < D) return {n:n, desp:desp, nivel:"directo", camino:[{donde:"nodo-i", entrada:r}], lecturas:1};
+  r -= D;
+  if (niv[0]){ if (r < P) return {n:n, desp:desp, nivel:"simple", camino:[{donde:"nodo-i", entrada:"simple"},{donde:"bloque simple", entrada:r}], lecturas:2}; r -= P; }
+  if (niv[1]){ if (r < P*P) return {n:n, desp:desp, nivel:"doble", camino:[{donde:"nodo-i", entrada:"doble"},{donde:"bloque doble", entrada:Math.floor(r/P)},{donde:"sencillo", entrada:r%P}], lecturas:3}; r -= P*P; }
+  if (niv[2]){ if (r < P*P*P) return {n:n, desp:desp, nivel:"triple", camino:[{donde:"nodo-i", entrada:"triple"},{donde:"bloque triple", entrada:Math.floor(r/(P*P))},{donde:"doble", entrada:Math.floor((r%(P*P))/P)},{donde:"sencillo", entrada:r%P}], lecturas:4}; }
+  return {n:n, desp:desp, nivel:"fuera", camino:[], lecturas:0};
+}
+
+function fmtBig(b){ return b.toString().replace(/\B(?=(\d{3})+(?!\d))/g,"."); }
+function unidadBin(b){
+  var u=["B","KiB","MiB","GiB","TiB","PiB","EiB"], i=0, x=Number(b);
+  while (x>=1024 && i<u.length-1){ x/=1024; i++; }
+  return (Math.round(x*100)/100).toString().replace(".",",")+" "+u[i];
+}
+</script>
+
+<script>
+var $=function(id){return document.getElementById(id);};
+var COL={directos:"var(--dir)", simple:"var(--s)", doble:"var(--d)", triple:"var(--t)"};
+var paso=0, ub=null;
+
+function leer(){
+  return {D:+$("D").value, B:BLOQUES[+$("B").value], p:PUNTEROS[+$("p").value], niv:[+$("n1").checked,+$("n2").checked,+$("n3").checked]};
+}
+function cargar(k){
+  var pr=PRESETS[k];
+  $("D").value=pr.D; $("B").value=BLOQUES.indexOf(pr.B); $("p").value=PUNTEROS.indexOf(pr.p);
+  $("n1").checked=!!pr.niv[0]; $("n2").checked=!!pr.niv[1]; $("n3").checked=!!pr.niv[2];
+  $("tamV").value=pr.tam; $("tamU").value=pr.tamU; $("off").value=pr.off;
+  todo();
+}
+function todo(){
+  var c=leer(), P=Math.floor(c.B/c.p);
+  $("vD").textContent=c.D; $("vB").textContent=(c.B>=1024?(c.B/1024)+" KB":c.B+" B"); $("vp").textContent=c.p+" B"; $("vP").textContent=c.B+" / "+c.p+" = "+P;
+  // 1. máximo
+  var m=maxTam(c.D,c.B,c.p,c.niv), h='<tr><th>Nivel</th><th>Bloques de datos</th><th>Expresión</th><th>Bytes</th></tr>';
+  var expr={directos:"D = "+c.D, simple:"P = "+P, doble:"P² = "+P+"²", triple:"P³ = "+P+"³"};
+  m.filas.forEach(function(f){ h+='<tr><td><b style="color:'+COL[f.nivel]+'">'+f.nivel+'</b></td><td class="m">'+fmtBig(f.bloques)+'</td><td class="m">'+(f.bloques>0n?expr[f.nivel]:"—")+'</td><td class="m">'+fmtBig(f.bytes)+' ('+unidadBin(f.bytes)+')</td></tr>'; });
+  $("tMax").innerHTML=h;
+  var tot=Number(m.bloques);
+  $("pila").innerHTML=m.filas.map(function(f){ var w=tot?Number(f.bloques)/tot*100:0; return '<div title="'+f.nivel+'" style="width:'+Math.max(w, f.bloques>0n?0.6:0)+'%;background:'+COL[f.nivel]+'"></div>'; }).join("");
+  $("totMax").textContent="("+fmtBig(m.bloques)+" bloques) × "+c.B+" B = "+fmtBig(m.bytes)+" B ≈ "+unidadBin(m.bytes);
+  var lim=limitePuntero(c.B,c.p), ratio=Number(m.bytes)/Number(lim.bytes);
+  var cls = ratio<=0.5?"ok":(ratio<=1?"lim":"mal");
+  var txt = ratio<=0.5 ? "✔ OK: con punteros de "+c.p+" B se pueden nombrar 2^"+(8*c.p)+" bloques (disco de hasta "+unidadBin(lim.bytes)+"). El máximo del nodo-i entra cómodo."
+          : ratio<=1 ? "⚠ Al límite: el máximo del nodo-i ya usa más de la mitad de lo que los punteros de "+c.p+" B pueden direccionar ("+unidadBin(lim.bytes)+")."
+          : "✘ Saturado: la fórmula da "+unidadBin(m.bytes)+", pero con punteros de "+c.p+" B solo hay 2^"+(8*c.p)+" = "+fmtBig(lim.bloques)+" números de bloque, o sea "+unidadBin(lim.bytes)+" de disco. El límite real lo pone el ancho del puntero.";
+  $("estMax").innerHTML='<div class="estado '+cls+'">'+txt+'</div>';
+  // 2. bloques índice
+  var bytes=Math.round((+$("tamV").value||0)*(+$("tamU").value)), nD=datosNecesarios(bytes,c.B);
+  var bi=bloquesIndice(nD,c.D,P,c.niv);
+  var g='<tr><th>Nivel</th><th>Bloques de datos que cubre</th><th>Bloques índice</th><th>Por qué</th></tr>';
+  bi.pasos.forEach(function(s){ g+='<tr><td><b style="color:'+COL[s.nivel]+'">'+s.nivel+'</b></td><td class="m">'+s.datos+'</td><td class="m">'+s.indice+'</td><td>'+s.detalle+'</td></tr>'; });
+  g+='<tr><td><b>Total</b></td><td class="m"><b>'+nD+'</b></td><td class="m"><b>'+bi.indice+'</b></td><td></td></tr>';
+  $("tIdx").innerHTML=g;
+  $("estIdx").innerHTML = bi.entra
+    ? '<div class="estado ok">'+fmtBig(BigInt(bytes))+' B → ⌈'+bytes+' / '+c.B+'⌉ = <b>'+nD+' bloques de datos</b> + <b>'+bi.indice+' bloques índice</b> = '+(nD+bi.indice)+' bloques en disco. Fragmentación interna del último bloque: '+(nD*c.B-bytes)+' B.</div>'
+    : '<div class="estado mal">✘ No entra: faltan '+bi.sobran+' bloques más allá de los niveles habilitados.</div>';
+  // 3. ubicar
+  ub=ubicar(+$("off").value||0,c.D,c.B,c.p,c.niv); paso=0; dibUb();
+}
+
+function pasosUb(){
+  if (!ub) return [];
+  var c=leer(), P=Math.floor(c.B/c.p), s=[];
+  s.push({l:1, tit:"Bloque lógico "+ub.n+", desplazamiento "+ub.desp, txt:"n = ⌊"+($("off").value||0)+" / "+c.B+"⌋ = "+ub.n+" y desp = "+($("off").value||0)+" mod "+c.B+" = "+ub.desp+". El nodo-i ya está en RAM desde el open.", hl:[], lec:0});
+  if (ub.nivel==="fuera"){ s.push({l:5, tit:"Fuera del máximo", txt:"Ese byte supera el tamaño máximo con los niveles habilitados.", hl:[], lec:0, err:true}); return s; }
+  if (ub.nivel==="directo"){
+    s.push({l:2, tit:"Es un bloque directo", txt:"n = "+ub.n+" < D = "+c.D+": la dirección está en la entrada "+ub.n+" del propio nodo-i. Cero lecturas de índice.", hl:["ino","f-dato"], lec:0});
+  } else {
+    var r=ub.n-c.D;
+    s.push({l:3, tit:"No es directo", txt:"n = "+ub.n+" ≥ D = "+c.D+". Le resto los directos: "+ub.n+" − "+c.D+" = "+r+".", hl:["ino"], lec:0});
+    if (ub.nivel==="simple"){
+      s.push({l:3, tit:"Cae en el indirecto simple", txt:r+" < P = "+P+". Leo del disco el bloque indirecto simple y tomo su entrada "+ub.camino[1].entrada+".", hl:["ino","f-s","s"], lec:1});
+    } else {
+      var r2=r-P;
+      s.push({l:4, tit:"Tampoco es simple", txt:r+" ≥ P = "+P+". Le resto: "+r+" − "+P+" = "+r2+".", hl:["ino"], lec:0});
+      if (ub.nivel==="doble"){
+        s.push({l:4, tit:"Leo el bloque indirecto doble", txt:r2+" < P² = "+(P*P)+". Entrada del doble: ⌊"+r2+" / "+P+"⌋ = "+ub.camino[1].entrada+".", hl:["ino","f-d","d1"], lec:1});
+        s.push({l:4, tit:"Leo el bloque sencillo que cuelga del doble", txt:"Entrada dentro del sencillo: "+r2+" mod "+P+" = "+ub.camino[2].entrada+".", hl:["ino","f-d","d1","f-d2","d2"], lec:2});
+      } else {
+        var r3=r2-P*P;
+        s.push({l:5, tit:"Cae en el triple", txt:r2+" ≥ P². Le resto: "+r2+" − "+(P*P)+" = "+r3+".", hl:["ino"], lec:0});
+        s.push({l:5, tit:"Leo el bloque triple", txt:"Entrada: ⌊"+r3+" / P²⌋ = "+ub.camino[1].entrada+".", hl:["ino","f-t","t1"], lec:1});
+        s.push({l:5, tit:"Leo el doble", txt:"Entrada: ⌊("+r3+" mod P²) / P⌋ = "+ub.camino[2].entrada+".", hl:["ino","f-t","t1","f-t2","t2"], lec:2});
+        s.push({l:5, tit:"Leo el sencillo", txt:"Entrada: "+r3+" mod P = "+ub.camino[3].entrada+".", hl:["ino","f-t","t1","f-t2","t2","f-t3","t3"], lec:3});
+      }
+    }
+  }
+  var prev=s[s.length-1].hl.slice(), fl={directo:"f-dato",simple:"f-sd",doble:"f-dd",triple:"f-td"}[ub.nivel];
+  s.push({l:6, tit:"Leo el bloque de datos: "+ub.lecturas+" lectura"+(ub.lecturas>1?"s":"")+" en total", txt:"Con el nodo-i en RAM, el nivel "+ub.nivel+" cuesta "+ub.lecturas+" acceso"+(ub.lecturas>1?"s":"")+" al disco ("+(ub.lecturas-1)+" de índice + 1 de dato). El byte buscado está en el desplazamiento "+ub.desp+" de ese bloque.", hl:prev.concat([fl,"dato"]), lec:ub.lecturas, fin:true,
+    marca: ub.nivel==="directo" ? {tipo:"cer", txt:"🧠 Por eso los archivos chicos (la mayoría) son rapidísimos: todo está en el nodo-i."} : {tipo:"ojo", txt:"⚠️ Si el nodo-i NO estuviera en RAM habría que sumar 1 lectura más (la del nodo-i). Leé bien qué supone el enunciado."}});
+  return s;
+}
+
+function svgArbol(hl){
+  var on=function(id){return hl.indexOf(id)>=0?" on":"";};
+  var c=leer();
+  var caja=function(id,x,y,w,h,t,col){return '<rect class="caja'+on(id)+'" x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="6"'+(col?' style="stroke:'+col+'"':'')+'/><text x="'+(x+w/2)+'" y="'+(y+h/2+4)+'" text-anchor="middle">'+t+'</text>';};
+  var fl=function(id,x1,y1,x2,y2){return '<path class="fl'+on(id)+'" d="M'+x1+' '+y1+' C'+(x1+30)+' '+y1+' '+(x2-30)+' '+y2+' '+x2+' '+y2+'"/>';};
+  var s='';
+  s+=caja("ino",10,20,120,260,"",null);
+  s+='<text x="70" y="38" text-anchor="middle" style="font-weight:700">nodo-i</text><text x="70" y="56" text-anchor="middle" class="mini">atributos</text>';
+  s+='<text x="70" y="90" text-anchor="middle" style="fill:var(--dir)">'+c.D+' directos</text><text x="70" y="106" text-anchor="middle" class="mini">(0 a '+(c.D-1)+')</text>';
+  s+='<text x="70" y="160" text-anchor="middle" style="fill:var(--s)">simple</text><text x="70" y="205" text-anchor="middle" style="fill:var(--d)">doble</text><text x="70" y="250" text-anchor="middle" style="fill:var(--t)">triple</text>';
+  s+=caja("s",180,140,110,30,"bloque simple","var(--s)");
+  s+=caja("d1",180,190,110,30,"bloque doble","var(--d)");
+  s+=caja("d2",330,190,110,30,"sencillo","var(--s)");
+  s+=caja("t1",180,240,110,30,"bloque triple","var(--t)");
+  s+=caja("t2",330,240,110,30,"doble","var(--d)");
+  s+=caja("t3",470,240,90,30,"sencillo","var(--s)");
+  s+=caja("dato",520,80,110,40,"bloque de datos","var(--dato)");
+  s+=fl("f-dato",130,96,520,100)+fl("f-s",130,155,180,155)+fl("f-d",130,200,180,205)+fl("f-t",130,245,180,255);
+  s+=fl("f-d2",290,205,330,205)+fl("f-t2",290,255,330,255)+fl("f-t3",440,255,470,255);
+  s+=fl("f-sd",290,155,520,110)+fl("f-dd",440,205,520,112)+fl("f-td",560,250,575,120);
+  // número de entrada usada en cada bloque del camino
+  if (ub && ub.camino.length){
+    var pos={directo:[[70,124]], simple:[[70,176],[235,136]], doble:[[70,221],[235,186],[385,186]], triple:[[70,266],[235,236],[385,236],[515,236]]}[ub.nivel]||[];
+    var ids={directo:["ino"], simple:["ino","s"], doble:["ino","d1","d2"], triple:["ino","t1","t2","t3"]}[ub.nivel]||[];
+    ub.camino.forEach(function(k,i){ if(pos[i] && hl.indexOf(ids[i])>=0) s+='<text class="ent" x="'+pos[i][0]+'" y="'+pos[i][1]+'" text-anchor="middle">entrada '+k.entrada+'</text>'; });
+  }
+  return s;
+}
+
+function dibUb(){
+  var s=pasosUb(), p=paso>0?s[paso-1]:null;
+  $("arbol").innerHTML=svgArbol(p?p.hl:[]);
+  [].forEach.call($("codigo").children,function(li,i){li.className=(p&&p.l===i+1)?"ahora":"";});
+  $("cN").textContent=p?ub.n:"—"; $("cDesp").textContent=p?ub.desp:"—";
+  $("cNiv").textContent=(p&&paso>=2)?ub.nivel:"—"; $("cLec").textContent=p?p.lec:0;
+  if(!p){$("porque").innerHTML='<p class="tit">Listo</p><div>Elegí un byte y apretá «Siguiente paso».</div>'; $("porque").style.borderLeftColor="";}
+  else { $("porque").innerHTML='<p class="tit">'+p.tit+'</p><div>'+p.txt+'</div>'+(p.marca?'<span class="marca '+p.marca.tipo+'">'+p.marca.txt+'</span>':''); $("porque").style.borderLeftColor=p.err?"var(--fal)":(p.fin?"var(--ok)":""); }
+  $("cont").textContent="Paso "+paso+" de "+s.length; $("sig").disabled=$("todo").disabled=paso>=s.length;
+}
+
+["D","B","p","n1","n2","n3","tamV","tamU","off"].forEach(function(id){ $(id).addEventListener("input",todo); });
+document.querySelectorAll("[data-pre]").forEach(function(b){ b.onclick=function(){cargar(b.dataset.pre);}; });
+$("sig").onclick=function(){paso++; dibUb();};
+$("todo").onclick=function(){paso=pasosUb().length; dibUb();};
+$("rei").onclick=function(){paso=0; dibUb();};
+cargar("catedra");
+</script>
+</body>
+</html>

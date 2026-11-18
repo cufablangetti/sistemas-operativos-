@@ -15,7 +15,7 @@ const { chromium } = require(path.join(process.env.APPDATA, "npm/node_modules/@p
   const ok = (cond, msg) => { console.log((cond ? "OK   " : "FALLA") + "  " + msg); if (!cond) fallos++; };
 
   const secciones = await page.$$eval("section.u", s => s.length);
-  ok(secciones === 4, `secciones de primer nivel = ${secciones} (guía, ideas, U1, U2)`);
+  ok(secciones === 6, `secciones de primer nivel = ${secciones} (guía, ideas, U1, U2, U3, U4)`);
   const temas = await page.$$eval("#indice a", a => a.length);
   ok(temas > 25, `entradas del índice = ${temas}`);
 

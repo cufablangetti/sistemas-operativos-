@@ -1,0 +1,61 @@
+// Verifica el motor de proteccion.html (ejemplo resuelto 9, fig. 9-7/9-9, ACL ordenada, BLP/Biba) y la página en Chrome
+const fs = require('fs'), vm = require('vm'), path = require('path');
+const F = path.resolve(__dirname, '../unidades/u04-archivos/visuales/proteccion.html');
+const src = fs.readFileSync(F, 'utf8').match(/<script id="motor">([\s\S]*?)<\/script>/)[1];
+const ctx = {module:{exports:{}}}; vm.createContext(ctx); vm.runInContext(src, ctx);
+const M = ctx.module.exports;
+let ok = 0, mal = 0; const t = (n, c) => { c ? ok++ : mal++; console.log(c ? 'OK  ' : 'FALLA', n); };
+const J = x => JSON.stringify(x);
+const e9 = M.ESC_MATRIZ.ej9;
+t('ej.9 ACL', J(M.aACL(e9.dom, e9.obj, e9.m)) === J({F1:[["A","RW"],["B","R"]], F2:[["A","R"]], F3:[["B","X"]]}));
+t('ej.9 capacidades', J(M.aCap(e9.dom, e9.obj, e9.m)) === J({A:[["F1","RW"],["F2","R"]], B:[["F1","R"],["F3","X"]]}));
+const f7 = M.ESC_MATRIZ.fig97;
+t('fig 9-7 ACL F2 = A:R; B:RW; C:R', J(M.aACL(f7.dom, f7.obj, f7.m).F2) === J([["A","R"],["B","RW"],["C","R"]]));
+t('fig 9-7 ACL F3 = B:RWX; C:RX', J(M.aACL(f7.dom, f7.obj, f7.m).F3) === J([["B","RWX"],["C","RX"]]));
+t('fig 9-9 lista-C de B = F1:R; F2:RW; F3:RWX', J(M.aCap(f7.dom, f7.obj, f7.m).B) === J([["F1","R"],["F2","RW"],["F3","RWX"]]));
+const f4 = M.ESC_MATRIZ.fig95;
+t('fig 9-4: Archivo1 en D1 (R) y D2 (RW)', J(M.aACL(f4.dom, f4.obj, f4.m).Archivo1) === J([["D1","R"],["D2","RW"]]));
+t('fig 9-4: Impresora1 en D2 y D3 con W', J(M.aACL(f4.dom, f4.obj, f4.m).Impresora1) === J([["D2","W"],["D3","W"]]));
+t('normDer ordena y filtra', M.normDer('xwr') === 'RWX' && M.normDer('') === '');
+const ev = (k) => { const e = M.ESC_ACL[k]; return M.evaluarACL(M.parseACL(e.acl), e.usr, e.gru, e.op); };
+t('tana sysadm escribe contraseñas', ev('tanaAdm').permitido === true);
+t('tana fanpichones NO lee contraseñas', ev('tanaPich').permitido === false && ev('tanaPich').decide === -1);
+t('comodín tana,* deja escribir', ev('comodin').permitido === true);
+t('virgil bloqueado por la entrada 1', ev('virgil').permitido === false && ev('virgil').decide === 0);
+t('debbie pasa por *,*', ev('otro').permitido === true && ev('otro').decide === 1);
+t('orden invertido: virgil entra por *,*', ev('orden').permitido === true && ev('orden').decide === 0);
+t('parseACL rechaza basura', M.parseACL('tana RW') === null);
+// BLP y Biba
+t('BLP: general (3) lee teniente (1)', M.blp(3, 1, 'R') && !M.blp(1, 3, 'R'));
+t('BLP: teniente escribe al general', M.blp(1, 3, 'W') && !M.blp(3, 1, 'W'));
+t('Biba: al revés', M.biba(1, 3, 'R') && !M.biba(3, 1, 'R') && M.biba(3, 1, 'W') && !M.biba(1, 3, 'W'));
+let conflicto = true;
+for(let s = 0; s < 4; s++) for(let o = 0; o < 4; o++) for(const op of ['R','W']) if(s !== o && M.blp(s, o, op) === M.biba(s, o, op)) conflicto = false;
+t('BLP y Biba se contradicen en todo nivel distinto', conflicto);
+t('mismo nivel: ambos permiten leer y escribir', [0,1,2,3].every(n => M.blp(n,n,'R') && M.blp(n,n,'W') && M.biba(n,n,'R') && M.biba(n,n,'W')));
+t('canal 11010100', J(M.canal('11010100')) === J([1,1,0,1,0,1,0,0]) && M.canal('12') === null);
+(async () => {
+  const { chromium } = require(path.join(process.env.APPDATA, 'npm/node_modules/@playwright/mcp/node_modules/playwright-core'));
+  const b = await chromium.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe' });
+  const errs = [];
+  for (const w of [1200, 380]) {
+    const p = await b.newPage({ viewport: { width: w, height: 900 } });
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto('file:///' + F.split(path.sep).join('/'));
+    await p.click('#mRev');
+    t(`${w}: revocar B/F1 actualiza ACL`, (await p.textContent('#mACL')).includes('F1: A: RW') && !(await p.textContent('#mACL')).includes('B: R;'));
+    t(`${w}: explica revocación`, (await p.textContent('#mRevTxt')).includes('invalida también la de A'));
+    await p.click('#t2'); await p.click('#aFin');
+    t(`${w}: virgil denegado`, (await p.textContent('#aPq')).includes('DENEGADO'));
+    await p.selectOption('#aEsc', 'orden'); await p.click('#aFin');
+    t(`${w}: orden invertido avisa`, (await p.textContent('#aPq')).includes('El orden importa'));
+    await p.click('#t3');
+    t(`${w}: 8 niveles dibujados`, (await p.$$('.nivel')).length === 8);
+    await p.click('#t4');
+    t(`${w}: canal 8 bits`, (await p.$$('#cLinea .bar')).length === 8);
+    const sw = await p.evaluate(() => document.documentElement.scrollWidth);
+    t(`${w}: sin scroll horizontal (${sw})`, sw <= w);
+  }
+  t('sin errores JS', errs.length === 0); if (errs.length) console.log(errs);
+  await b.close(); console.log(`\n${ok} OK, ${mal} fallos`);
+})();

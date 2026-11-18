@@ -1,0 +1,22 @@
+// Verifica el motor de unidades/u04-archivos/visuales/fat.html
+const fs=require('fs'), vm=require('vm');
+const html=fs.readFileSync('unidades/u04-archivos/visuales/fat.html','utf8');
+const src=html.match(/<script id="motor">([\s\S]*?)<\/script>/)[1];
+const ctx={}; vm.createContext(ctx); vm.runInContext(src+';this.R={ESCENARIOS,parseFAT,simular,espacio,ubicar};',ctx);
+const {ESCENARIOS,parseFAT,simular,espacio,ubicar}=ctx.R;
+let ok=0,mal=0; const chk=(c,m)=>{ if(c){ok++;console.log('OK  ',m);} else {mal++;console.log('FALLA',m);} };
+const run=id=>{const e=ESCENARIOS.find(x=>x.id===id); return simular(parseFAT(e.tabla),e.ini,e.tb);};
+let s=run('figA'); chk(s.estado==='ok' && s.cadena.join()==='4,7,2,10,12','Fig 4-12 A: 4,7,2,10,12');
+s=run('figB'); chk(s.estado==='ok' && s.cadena.join()==='6,3,11,14','Fig 4-12 B: 6,3,11,14');
+s=run('final'); chk(s.estado==='ok' && s.cadena.join()==='4,9,24,14,16,10,21,7','Final: 4,9,24,14,16,10,21,7');
+chk(s.cadena.at(-1)===7,'Final termina en 7'); chk(espacio(s.cadena.length,256).bytes===2048,'Final 8x256=2048');
+let u=ubicar(s.cadena,256,1000); chk(u.k===3&&u.cluster===14&&u.desp===232&&u.lecturasEnlazada===4,'byte 1000 -> b3, cl 14, desp 232, 4 lecturas');
+chk(ubicar(s.cadena,256,2048).fuera===true,'byte 2048 fuera');
+let es=espacio(8,256,1900); chk(es.coherente&&es.frag===148,'1900 B: coherente, frag 148');
+chk(espacio(8,256,1700).coherente===false,'1700 B incoherente (7 clusters)');
+s=run('rota'); chk(s.estado==='libre' && s.cadena.join()==='4,7,2,10','Rota: libre en 10');
+s=run('ciclo'); chk(s.estado==='ciclo' && s.cadena.join()==='4,7,2,10,12','Ciclo detectado');
+s=simular(parseFAT('1 2 FF'),5,512); chk(s.estado==='rango','inicio fuera de rango');
+s=simular(parseFAT('0 22 71'),2,512); chk(s.estado==='rango','valor 71 fuera de la tabla');
+s=simular(parseFAT('FF'),0,512); chk(s.estado==='ok'&&s.cadena.length===1,'archivo de 1 cluster');
+console.log(`\n${ok} OK, ${mal} fallos`); process.exit(mal?1:0);

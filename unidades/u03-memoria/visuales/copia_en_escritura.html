@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Copia en escritura</title>
+<style>
+  :root{
+    --bg:#f4f5f8; --panel:#fff; --borde:#d6dae2; --texto:#1b1f24; --suave:#5b6572; --acento:#3d63c9;
+    --ok:#15803d; --ok-bg:#e9f8ee; --fal:#dc2626; --fal-bg:#fdecec; --lim:#b45309; --lim-bg:#fff6e0;
+    --ins:#2563eb; --ins-bg:#e8f0ff; --cer:#7c3aed; --cer-bg:#f3edff; --hl:#facc15;
+    --pad:#2563eb; --hij:#c2410c;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+      --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+      --ins:#60a5fa; --ins-bg:#15233d; --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308;
+      --pad:#60a5fa; --hij:#fb923c;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+    --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+    --ins:#60a5fa; --ins-bg:#15233d; --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308;
+    --pad:#60a5fa; --hij:#fb923c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--texto); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .envoltura{max-width:1150px; margin:0 auto; padding:18px 16px 48px}
+  h1{font-size:1.35rem; margin:0 0 4px}
+  h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave); margin:0 0 6px}
+  h3{font-size:1rem; margin:0 0 6px}
+  .sub{color:var(--suave); margin:0 0 14px; font-size:.92rem}
+  .tarjeta{background:var(--panel); border:1px solid var(--borde); border-radius:12px; padding:14px 16px; margin-bottom:12px}
+  .pestanas{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px}
+  .pestanas button{font-weight:650}
+  .pestanas button.act{background:var(--acento); color:#fff; border-color:var(--acento)}
+  button{font:inherit; font-size:.9rem; padding:7px 12px; border-radius:8px; border:1px solid var(--borde); background:var(--panel); color:var(--texto); cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--acento)}
+  button:disabled{opacity:.45; cursor:not-allowed}
+  button.prim{background:var(--acento); color:#fff; border-color:var(--acento); font-weight:650}
+  label{font-size:.83rem; font-weight:650; display:block; margin-bottom:3px}
+  select,input{width:100%; font:inherit; padding:6px 9px; border-radius:8px; border:1px solid var(--borde); background:var(--bg); color:var(--texto)}
+  input[type=range]{padding:0}
+  .barra{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:10px 0 2px}
+  .contador{margin-left:auto; color:var(--suave); font-size:.88rem}
+  @media (max-width:820px){ .contador{margin-left:0} }
+  .acciones{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px}
+  .acciones button{font-size:.8rem; padding:4px 9px}
+  .ayuda{font-size:.76rem; color:var(--suave); margin-top:2px}
+  .grilla{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  .tres{display:grid; grid-template-columns:repeat(3,1fr); gap:12px}
+  @media (max-width:880px){ .grilla,.tres{grid-template-columns:1fr} }
+  .mem{display:grid; grid-template-columns:1fr 1.1fr 1fr; gap:10px; align-items:start}
+  @media (max-width:700px){ .mem{grid-template-columns:1fr} }
+  table{border-collapse:collapse; font-size:.85rem; width:100%}
+  th,td{border:1px solid var(--borde); padding:3px 6px; text-align:center}
+  th{background:var(--bg); font-size:.76rem}
+  .mono{font-family:ui-monospace,Consolas,monospace}
+  td.ro{color:var(--lim); font-weight:700}
+  td.rw{color:var(--ok); font-weight:700}
+  td.cambio, .marco.cambio{outline:2px solid var(--cer); outline-offset:-2px; background:var(--cer-bg)}
+  .pad h3{color:var(--pad)} .hij h3{color:var(--hij)}
+  .marcos{display:grid; grid-template-columns:repeat(2,1fr); gap:6px}
+  .marco{border:2px solid var(--borde); border-radius:8px; padding:4px 6px; font:700 .82rem ui-monospace,Consolas,monospace; text-align:center}
+  .marco small{display:block; font:600 .7rem system-ui,sans-serif; color:var(--suave)}
+  .marco.libre{opacity:.45; border-style:dashed}
+  .marco.comp{border-color:var(--cer)}
+  .codigo{font:13px/1.5 ui-monospace,Consolas,monospace; margin:0; padding:0; list-style:none}
+  .codigo li{display:flex; gap:8px; padding:2px 6px; border-radius:6px; white-space:pre-wrap}
+  .codigo .nl{color:var(--suave); flex:0 0 18px; text-align:right}
+  .codigo li.ahora{background:var(--hl); color:#000}
+  .codigo li.ahora .nl{color:#000}
+  .quien{font-size:.82rem; margin-top:8px}
+  .quien b{padding:1px 7px; border-radius:99px; border:1px solid var(--borde)}
+  .porque{border:1px solid var(--borde); border-left:5px solid var(--acento); border-radius:10px; padding:12px 14px; margin-top:10px}
+  .porque .tit{font-weight:700; font-size:1.02rem; margin:0 0 4px}
+  .marca{display:block; margin-top:8px; border-radius:8px; padding:7px 10px; font-size:.88rem}
+  .marca.ojo{background:var(--fal-bg); border:1px solid var(--fal)}
+  .marca.cer{background:var(--cer-bg); border:1px solid var(--cer)}
+  .stats{display:flex; gap:10px; flex-wrap:wrap; margin-top:8px}
+  .stat{border:1px solid var(--borde); border-radius:10px; padding:6px 12px; text-align:center; min-width:110px}
+  .stat b{display:block; font-size:1.3rem}
+  .pm{margin:10px 0 0; padding-left:0; list-style:none; font-size:.88rem}
+  .pm li{margin-bottom:3px}
+  .mas{color:var(--ok); font-weight:800} .menos{color:var(--fal); font-weight:800}
+  .espacio{border:1px solid var(--borde); border-radius:8px; overflow:hidden; font-size:.8rem}
+  .espacio div{padding:4px 8px; border-bottom:1px solid var(--borde)}
+  .espacio .lib{background:var(--cer-bg); font-weight:700}
+  .res{border-radius:10px; padding:10px 14px; margin-top:10px; border:1px solid var(--borde)}
+  .res.ok{background:var(--ok-bg); border-color:var(--ok)}
+  .res.sat{background:var(--fal-bg); border-color:var(--fal)}
+  .ideas li{margin-bottom:5px}
+  .oculto{display:none}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <h1>Copia en escritura y bibliotecas compartidas</h1>
+  <p class="sub">Tanenbaum 3.5.4–3.5.6 (págs. 221–225). <b>Pestaña 1:</b> después de un <code>fork</code>, padre e hijo comparten las páginas como <b>solo lectura</b>, y se copia una página recién cuando alguien escribe. Avanzá con «Siguiente paso» (guion de ejemplo) o probá tus propias acciones con los botones. <b>Pestaña 2:</b> enlazado estático, biblioteca compartida y código independiente de la posición, en paneles lado a lado.</p>
+
+  <div class="pestanas">
+    <button data-tab="cow" class="act">1 · fork y copia en escritura</button>
+    <button data-tab="lib">2 · Bibliotecas compartidas</button>
+  </div>
+
+  <section id="tab-cow">
+    <div class="tarjeta">
+      <div class="tres">
+        <div><label for="modo">Escenario</label><select id="modo"><option value="cow">Con copia en escritura</option><option value="sin">Sin copia en escritura (fork copia todo)</option></select><div class="ayuda">Cambiá el escenario para comparar cuántas páginas se copian.</div></div>
+        <div style="grid-column:span 2"><label>Acciones libres (se agregan al final del guion)</label>
+          <div class="acciones" id="acciones"></div></div>
+      </div>
+      <div class="barra"><button id="ant">◀ Anterior</button><button class="prim" id="sig">Siguiente paso ▶</button><button id="rei">Reiniciar</button><span class="contador" id="cont"></span></div>
+    </div>
+    <div class="grilla">
+      <div class="tarjeta">
+        <h2>Tablas de páginas y RAM</h2>
+        <div class="mem" id="vista"></div>
+        <div class="stats" id="stats"></div>
+      </div>
+      <div class="tarjeta">
+        <h2>Qué se ejecuta</h2><ol class="codigo" id="cod"></ol>
+        <div class="quien" id="quien"></div>
+        <div class="porque" id="porque"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-lib" class="oculto">
+    <div class="tres">
+      <div class="tarjeta"><h3>Enlazado estático</h3>
+        <p class="mono" style="font-size:.85rem">ld *.o -lc -lm</p>
+        <p style="font-size:.88rem">El enlazador busca las <b>externas indefinidas</b> (por ejemplo <code>printf</code>, que a su vez necesita <code>write</code>) en <code>libc.a</code> y <b>copia</b> esas funciones dentro del ejecutable.</p>
+        <div class="espacio"><div>prog1: código + <b>copia de libgráf</b></div><div>prog2: código + <b>copia de libgráf</b></div><div>prog3: código + <b>copia de libgráf</b></div></div>
+        <ul class="pm"><li><span class="mas">+</span> Al cargarlo, todo lo que necesita ya está ahí.</li><li><span class="mas">+</span> Solo incluye las funciones que se llaman.</li><li><span class="menos">−</span> Con 20–50 MB de bibliotecas gráficas en cientos de programas, se desperdicia muchísimo <b>disco</b> y también <b>RAM</b> (el SO no sabe que puede compartirlas).</li><li><span class="menos">−</span> Para corregir un error de la biblioteca hay que volver a enlazar cada programa.</li></ul>
+      </div>
+      <div class="tarjeta"><h3>Biblioteca compartida (DLL)</h3>
+        <p style="font-size:.88rem">El enlazador pone una <b>pequeña rutina auxiliar</b> que se vincula con la función <b>en tiempo de ejecución</b>. La biblioteca se carga al arrancar el programa o en la primera llamada, y si otro programa ya la cargó, <b>se reutiliza</b>.</p>
+        <div class="espacio"><div>prog1: código + rutina auxiliar →</div><div>prog2: código + rutina auxiliar →</div><div class="lib">libgráf: UNA sola copia en RAM, paginada bajo demanda</div></div>
+        <ul class="pm"><li><span class="mas">+</span> Ejecutables más chicos y una sola copia en memoria.</li><li><span class="mas">+</span> No se carga entera: se pagina <b>una página a la vez</b>, y las funciones que no se llaman no entran a la RAM.</li><li><span class="mas">+</span> Si se corrige la DLL (por ejemplo, con Windows Update), todos los programas usan la versión nueva la próxima vez que arrancan, <b>sin recompilar</b>.</li><li><span class="menos">−</span> El «pequeño problema»: la biblioteca queda en una <b>dirección virtual distinta</b> en cada proceso (abajo).</li></ul>
+      </div>
+      <div class="tarjeta"><h3>Código independiente de la posición</h3>
+        <p style="font-size:.88rem">Se compila la biblioteca con una bandera especial: <b>sin direcciones absolutas</b>, solo saltos <b>relativos</b> («saltar n bytes hacia adelante o hacia atrás»).</p>
+        <div class="espacio"><div><b>absoluto:</b> JMP 36K+16 ← sirve solo para el proceso 1</div><div><b>relativo:</b> JMP +16 desde el inicio ← sirve en cualquier lado</div></div>
+        <ul class="pm"><li><span class="mas">+</span> Funciona en cualquier dirección virtual: la biblioteca se comparte de verdad.</li><li><span class="menos">−</span> Otra salida sería copia en escritura y reubicar cada copia, pero eso <b>arruina el propósito</b> de compartir.</li></ul>
+      </div>
+    </div>
+    <div class="tarjeta">
+      <h2>Calculadora del problema de la fig. 3-27 (páginas de 4 KB, biblioteca de 20 KB)</h2>
+      <div class="tres">
+        <div><label>Inicio de la biblioteca en el proceso 1: <span class="mono" id="b1-v"></span></label><input type="range" id="b1" min="0" max="15" value="9"></div>
+        <div><label>Inicio de la biblioteca en el proceso 2: <span class="mono" id="b2-v"></span></label><input type="range" id="b2" min="0" max="15" value="3"></div>
+        <div><label>Destino del salto dentro de la biblioteca: <span class="mono" id="off-v"></span> bytes</label><input type="range" id="off" min="0" max="4096" step="16" value="16"></div>
+      </div>
+      <div id="b-res"></div>
+    </div>
+  </section>
+
+  <div class="tarjeta ideas">
+    <h2>Ideas clave para el examen</h2>
+    <ul>
+      <li><b>Solo se comparten de entrada las páginas de solo lectura</b>, como el texto del programa. Con espacios <b>I y D separados</b> es fácil: los procesos usan la misma tabla del espacio I y una tabla propia para el espacio D (fig. 3-26). ⚠️ Si el SO desaloja todas las páginas de A, el otro proceso que las compartía empieza a dar fallos. Al terminar A, hay que saber que las páginas <b>siguen en uso</b> para no liberarlas.</li>
+      <li><b>Copia en escritura</b>: después de un <code>fork</code> no se copia nada. Padre e hijo apuntan a los mismos marcos, <b>todos en SOLO LECTURA</b>. La primera escritura produce un <b>trap</b> por violación de protección; el SO <b>copia solo esa página</b> y deja las dos copias en <b>LECTURA-ESCRITURA</b>. Las páginas que nunca se escriben (todo el código) no se copian nunca.</li>
+      <li>🧠 Conexión con la U2: con <code>fork</code> + <code>execve</code> el hijo descarta enseguida todo su espacio. Sin copia en escritura, el <code>fork</code> habría copiado todo para nada.</li>
+      <li><b>Bibliotecas compartidas (DLL)</b>: una sola copia en RAM, paginada bajo demanda, y se actualizan sin recompilar. ⚠️ El «pequeño problema»: cada proceso la ve en otra dirección virtual. La solución es el <b>código independiente de la posición</b> (solo saltos relativos). La dirección física no importa: la resuelve la MMU.</li>
+    </ul>
+  </div>
+</div>
+
+<script id="motor">
+// ======== MOTOR (sin DOM: se verifica con Node) ========
+const PAGINAS = [
+  { pag: "T0", tipo: "texto" }, { pag: "T1", tipo: "texto" },
+  { pag: "D0", tipo: "datos" }, { pag: "D1", tipo: "datos" }, { pag: "P0", tipo: "pila" }
+];
+const CODIGO = [
+  "fork():  crear la tabla de páginas del hijo",
+  "  COW: copiar las ENTRADAS (mismos marcos)",
+  "  COW: marcar todo como SOLO LECTURA",
+  "  sin COW: copiar datos y pila a marcos nuevos",
+  "lectura: la MMU traduce, sin trap",
+  "escritura en página SOLO LECTURA → TRAP",
+  "  SO: ¿es una página compartida por COW?",
+  "    sí → copiar la página a un marco libre",
+  "         ambas copias → LECTURA-ESCRITURA",
+  "         reiniciar la instrucción",
+  "    no (texto) → violación: señal al proceso",
+  "escritura en página LECTURA-ESCRITURA: sin trap",
+  "execve(): descartar el espacio del proceso"
+];
+function nuevoEstado(modo) {
+  const marcos = {}, padre = {};
+  PAGINAS.forEach((p, i) => { marcos[i] = { cont: p.pag + "·padre", refs: 1 }; padre[p.pag] = { marco: i, prot: p.tipo === "texto" ? "R" : "RW", cow: false }; });
+  return { modo, marcos, tablas: { padre }, sig: PAGINAS.length, copias: 0, traps: 0, forked: false, errores: 0 };
+}
+const clonar = e => JSON.parse(JSON.stringify(e));
+const tipoDe = pag => (PAGINAS.find(p => p.pag === pag) || {}).tipo;
+function marcoLibre(e) { const libres = Object.keys(e.marcos).filter(k => e.marcos[k].refs === 0).map(Number); if (libres.length) return libres[0]; return e.sig++; }
+
+function aplicar(e0, acc) {
+  const e = clonar(e0), cambios = [];
+  const [quien, op, pag] = acc.split(" ");
+  const res = (linea, actor, tit, texto, extra = {}) => ({ estado: e, linea, actor, tit, texto, cambios, ...extra });
+  if (op === "fork") {
+    if (e.forked) return res(0, "SO", "Ya hay un hijo", "Este simulador muestra un solo fork.", { invalida: true });
+    e.forked = true; e.tablas.hijo = {};
+    if (e.modo === "cow") {
+      for (const p of PAGINAS) {
+        const ent = e.tablas.padre[p.pag];
+        e.marcos[ent.marco].refs++;
+        if (p.tipo !== "texto") { ent.prot = "R"; ent.cow = true; cambios.push("padre:" + p.pag); }
+        e.tablas.hijo[p.pag] = { marco: ent.marco, prot: ent.prot, cow: p.tipo !== "texto" };
+        cambios.push("hijo:" + p.pag);
+      }
+      return res(2, "SO", "fork() con copia en escritura: no se copia ninguna página",
+        "El SO crea la tabla del hijo copiando solo las ENTRADAS: los dos apuntan a los mismos marcos. Las páginas de datos y pila pasan a SOLO LECTURA en las dos tablas (el texto ya lo era). El fork es rapidísimo.",
+        { cer: "Lo que se copia es la tabla (unas pocas entradas), no las páginas." });
+    } else {
+      for (const p of PAGINAS) {
+        const ent = e.tablas.padre[p.pag];
+        if (p.tipo === "texto") { e.marcos[ent.marco].refs++; e.tablas.hijo[p.pag] = { marco: ent.marco, prot: "R", cow: false }; }
+        else { const m = marcoLibre(e); e.marcos[m] = { cont: p.pag + "·hijo", refs: 1 }; e.tablas.hijo[p.pag] = { marco: m, prot: "RW", cow: false }; e.copias++; cambios.push("m:" + m); }
+        cambios.push("hijo:" + p.pag);
+      }
+      return res(3, "SO", "fork() sin copia en escritura: se copian datos y pila",
+        "El texto es de solo lectura y se comparte, pero cada página de datos y de pila se copia a un marco nuevo en el momento del fork, aunque el hijo nunca la vaya a tocar.",
+        { ojo: "Si el hijo hace execve enseguida, todas estas copias se tiran sin haberse usado." });
+    }
+  }
+  const t = e.tablas[quien];
+  if (!t) return res(0, "SO", "El hijo todavía no existe", "Primero hay que hacer fork().", { invalida: true });
+  if (op === "execve") {
+    for (const p of Object.keys(t)) { const m = t[p].marco; e.marcos[m].refs--; }
+    const nuevo = {};
+    for (const p of PAGINAS) { const m = marcoLibre(e); e.marcos[m] = { cont: p.pag + "·nuevo", refs: 1 }; nuevo[p.pag] = { marco: m, prot: p.tipo === "texto" ? "R" : "RW", cow: false }; cambios.push(quien + ":" + p.pag); }
+    e.tablas[quien] = nuevo;
+    const otro = quien === "hijo" ? "padre" : "hijo";
+    if (e.tablas[otro]) for (const p of PAGINAS) { const ent = e.tablas[otro][p.pag]; if (ent.cow && e.marcos[ent.marco].refs === 1) { ent.prot = "RW"; ent.cow = false; cambios.push(otro + ":" + p.pag); } }
+    return res(12, "SO", quien + " hace execve(): su espacio se reemplaza por el del programa nuevo",
+      "Se descartan todas sus entradas y se cargan las del programa nuevo (en realidad se paginan bajo demanda; acá se dibujan juntas). Las páginas que solo usaba el otro proceso vuelven a ser suyas y pasan a LECTURA-ESCRITURA.",
+      { cer: "Conexión con la U2: fork + execve. Con copia en escritura, el fork no copió nada que después se tirara." });
+  }
+  const ent = t[pag];
+  if (op === "lee") {
+    return res(4, "MMU", quien + " lee " + pag + ": traducción normal",
+      "La MMU traduce " + pag + " al marco " + ent.marco + " sin problemas: leer una página de solo lectura está permitido. " + (e.marcos[ent.marco].refs > 1 ? "La página sigue compartida." : ""));
+  }
+  if (op === "escribe") {
+    if (ent.prot === "RW") {
+      e.marcos[ent.marco].cont = pag + "·" + quien + "✎";
+      cambios.push("m:" + ent.marco);
+      return res(11, "MMU", quien + " escribe " + pag + ": página propia en LECTURA-ESCRITURA",
+        "La entrada permite escribir, así que no hay trap y la escritura se hace directo en el marco " + ent.marco + ".");
+    }
+    e.traps++;
+    if (!ent.cow) {
+      e.errores++;
+      return res(10, "SO", quien + " escribe " + pag + ": TRAP y violación real",
+        pag + " es TEXTO del programa: es de solo lectura de verdad, no por copia en escritura. El SO le manda una señal al proceso (en UNIX, típicamente lo termina con «segmentation fault»).",
+        { ojo: "El mismo trap («escritura en página de solo lectura») puede ser copia en escritura o un error. El SO los distingue con su propia información de la página." });
+    }
+    const viejo = ent.marco, m = marcoLibre(e);
+    e.marcos[m] = { cont: pag + "·" + quien + "✎", refs: 1 }; e.marcos[viejo].refs--;
+    ent.marco = m; ent.prot = "RW"; ent.cow = false; e.copias++;
+    cambios.push(quien + ":" + pag, "m:" + m);
+    const otro = quien === "hijo" ? "padre" : "hijo", eo = e.tablas[otro] && e.tablas[otro][pag];
+    if (eo && eo.marco === viejo && e.marcos[viejo].refs === 1) { eo.prot = "RW"; eo.cow = false; cambios.push(otro + ":" + pag); }
+    return res(8, "MMU → SO", quien + " escribe " + pag + ": TRAP → copia de la página",
+      "La MMU ve un intento de escribir en una página de SOLO LECTURA y hace un trap al SO. El SO ve que es una página compartida por copia en escritura: copia el marco " + viejo + " al marco libre " + m + " y apunta ahí la entrada de " + quien + ". Las dos copias quedan en LECTURA-ESCRITURA y la instrucción se reinicia.",
+      { cer: "Se copió UNA página, la que se escribió. Las demás siguen compartidas." });
+  }
+  throw new Error("Acción desconocida: " + acc);
+}
+const GUION = ["padre fork", "hijo lee D0", "padre escribe D0", "hijo escribe D0", "hijo escribe P0", "hijo lee T0", "hijo escribe T0", "hijo execve"];
+function correr(modo, acciones) {
+  let e = nuevoEstado(modo); const pasos = [{ estado: clonar(e), linea: -1, actor: "—", tit: "Estado inicial: solo el padre", texto: "El padre tiene 2 páginas de texto (solo lectura), 2 de datos y 1 de pila, cada una en su marco.", cambios: [] }];
+  for (const a of acciones) { const r = aplicar(e, a); if (!r.invalida) e = r.estado; pasos.push({ ...r, estado: clonar(r.invalida ? e : r.estado), acc: a }); }
+  return pasos;
+}
+function bibliotecaAbs(ini1, ini2, off) {
+  const destino1 = ini1 + off;
+  return { absolutoP1: destino1, absolutoP2Esperado: ini2 + off, absolutoP2Real: destino1, fallaEnP2: ini1 !== ini2, relativoP1: ini1 + off, relativoP2: ini2 + off };
+}
+if (typeof module !== "undefined") module.exports = { nuevoEstado, aplicar, correr, GUION, bibliotecaAbs, PAGINAS };
+</script>
+
+<script>
+// ======== INTERFAZ ========
+const $ = id => document.getElementById(id);
+document.querySelectorAll(".pestanas button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".pestanas button").forEach(x => x.classList.toggle("act", x === b));
+  ["cow", "lib"].forEach(t => $("tab-" + t).classList.toggle("oculto", t !== b.dataset.tab));
+});
+let acciones = GUION.slice(), pasos = [], idx = 0;
+const LIBRES = ["padre fork", "padre lee D1", "hijo lee D1", "padre escribe D1", "hijo escribe D1", "padre escribe P0", "hijo escribe T1", "hijo execve"];
+$("acciones").innerHTML = LIBRES.map(a => `<button data-a="${a}">${a.replace("fork", "fork()").replace("execve", "execve()")}</button>`).join("") + `<button id="vaciar">Empezar de cero (sin guion)</button>`;
+document.querySelectorAll("[data-a]").forEach(b => b.onclick = () => { acciones.push(b.dataset.a); recalcular(acciones.length); });
+$("vaciar").onclick = () => { acciones = []; recalcular(0); };
+$("modo").onchange = () => recalcular(idx);
+function recalcular(ir) { pasos = correr($("modo").value, acciones); idx = Math.min(ir, pasos.length - 1); mostrar(); }
+function tablaHTML(nom, t, cambios) {
+  if (!t) return `<div class="${nom === "padre" ? "pad" : "hij"}"><h3>${nom}</h3><p class="ayuda">todavía no existe</p></div>`;
+  return `<div class="${nom === "padre" ? "pad" : "hij"}"><h3>Tabla del ${nom}</h3><table><tr><th>pág.</th><th>marco</th><th>prot.</th></tr>` +
+    Object.entries(t).map(([p, x]) => `<tr><td>${p}</td><td class="mono ${cambios.includes(nom + ":" + p) ? "cambio" : ""}">${x.marco}</td><td class="${x.prot === "R" ? "ro" : "rw"} ${cambios.includes(nom + ":" + p) ? "cambio" : ""}">${x.prot === "R" ? "solo L" : "L-E"}${x.cow ? " (COW)" : ""}</td></tr>`).join("") + `</table></div>`;
+}
+function mostrar() {
+  const p = pasos[idx], e = p.estado;
+  $("cont").textContent = `paso ${idx + 1} de ${pasos.length}`;
+  $("ant").disabled = idx === 0; $("sig").disabled = idx >= pasos.length - 1;
+  const ram = `<div><h3>RAM (marcos)</h3><div class="marcos">` + Object.entries(e.marcos).map(([m, x]) => `<div class="marco ${x.refs === 0 ? "libre" : (x.refs > 1 ? "comp" : "")} ${p.cambios.includes("m:" + m) ? "cambio" : ""}">${m}: ${x.refs ? x.cont : "libre"}<small>${x.refs > 1 ? "compartido ×" + x.refs : (x.refs ? "1 dueño" : "")}</small></div>`).join("") + `</div></div>`;
+  $("vista").innerHTML = tablaHTML("padre", e.tablas.padre, p.cambios) + ram + tablaHTML("hijo", e.tablas.hijo, p.cambios);
+  const usados = Object.values(e.marcos).filter(x => x.refs > 0).length;
+  $("stats").innerHTML = `<div class="stat"><b>${e.copias}</b>páginas copiadas</div><div class="stat"><b>${e.traps}</b>traps</div><div class="stat"><b>${usados}</b>marcos ocupados</div>`;
+  $("cod").innerHTML = CODIGO.map((l, i) => `<li class="${i === p.linea || (p.linea === 8 && (i === 5 || i === 6 || i === 7 || i === 9)) || (p.linea === 10 && (i === 5 || i === 6)) || (p.linea === 2 && (i === 0 || i === 1)) || (p.linea === 3 && i === 0) ? "ahora" : ""}"><span class="nl">${i + 1}</span><span>${l}</span></li>`).join("");
+  $("quien").innerHTML = `Lo ejecuta: <b>${p.actor}</b>` + (p.acc ? ` · acción: <span class="mono">${p.acc}</span>` : "");
+  $("porque").innerHTML = `<p class="tit">${p.tit}</p><div>${p.texto}</div>` + (p.ojo ? `<span class="marca ojo">⚠️ ${p.ojo}</span>` : "") + (p.cer ? `<span class="marca cer">🧠 ${p.cer}</span>` : "");
+}
+$("sig").onclick = () => { idx++; mostrar(); };
+$("ant").onclick = () => { idx--; mostrar(); };
+$("rei").onclick = () => { acciones = GUION.slice(); recalcular(0); };
+
+// --- bibliotecas ---
+function dibujarB() {
+  const i1 = Number($("b1").value) * 4096, i2 = Number($("b2").value) * 4096, off = Number($("off").value);
+  $("b1-v").textContent = i1 / 1024 + "K"; $("b2-v").textContent = i2 / 1024 + "K"; $("off-v").textContent = off;
+  const r = bibliotecaAbs(i1, i2, off);
+  $("b-res").innerHTML = `<div class="res ${r.fallaEnP2 ? "sat" : "ok"}"><b>Salto absoluto</b> reubicado al cargar para el proceso 1: <span class="mono">JMP ${i1 / 1024}K + ${off} = ${r.absolutoP1}</span>.<br>
+    El proceso 2 ejecuta el mismo código compartido: salta a <span class="mono">${r.absolutoP2Real}</span>, pero su biblioteca empieza en ${i2 / 1024}K y debía ir a <span class="mono">${r.absolutoP2Esperado}</span>. ${r.fallaEnP2 ? "<b>Salta a cualquier lado.</b>" : "Coinciden solo porque la biblioteca está en la misma dirección en los dos."}</div>
+    <div class="res ok"><b>Salto relativo</b> (código independiente de la posición): «saltar +${off} desde el inicio de la biblioteca» → proceso 1 llega a <span class="mono">${r.relativoP1}</span>, proceso 2 llega a <span class="mono">${r.relativoP2}</span>. Funciona en los dos.</div>`;
+}
+["b1", "b2", "off"].forEach(id => $(id).oninput = dibujarB);
+recalcular(0); dibujarB();
+</script>
+</body>
+</html>

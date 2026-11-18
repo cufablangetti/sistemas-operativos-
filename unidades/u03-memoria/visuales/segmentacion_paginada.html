@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Segmentación con paginación</title>
+<style>
+  :root{
+    --bg:#f4f5f8; --panel:#fff; --borde:#d6dae2; --texto:#1b1f24; --suave:#5b6572; --acento:#3d63c9;
+    --ok:#15803d; --ok-bg:#e9f8ee; --fal:#dc2626; --fal-bg:#fdecec; --lim:#b45309; --lim-bg:#fff6e0;
+    --cer:#7c3aed; --cer-bg:#f3edff; --hl:#facc15;
+    --hw:#0e7490; --so:#2563eb; --seg:#c2410c; --pag:#0f766e; --off:#7c3aed;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+      --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+      --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308;
+      --hw:#22d3ee; --so:#60a5fa; --seg:#fb923c; --pag:#2dd4bf; --off:#a78bfa;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+    --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+    --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308;
+    --hw:#22d3ee; --so:#60a5fa; --seg:#fb923c; --pag:#2dd4bf; --off:#a78bfa;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--texto); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .envoltura{max-width:1150px; margin:0 auto; padding:18px 16px 48px}
+  h1{font-size:1.35rem; margin:0 0 4px}
+  h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave); margin:0 0 6px}
+  .sub{color:var(--suave); margin:0 0 14px; font-size:.92rem}
+  .tarjeta{background:var(--panel); border:1px solid var(--borde); border-radius:12px; padding:14px 16px; margin-bottom:12px; min-width:0}
+  button{font:inherit; font-size:.9rem; padding:7px 12px; border-radius:8px; border:1px solid var(--borde); background:var(--panel); color:var(--texto); cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--acento)}
+  button:disabled{opacity:.45; cursor:not-allowed}
+  button.prim{background:var(--acento); color:#fff; border-color:var(--acento); font-weight:650}
+  .pest{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px}
+  .pest button.act{background:var(--acento); color:#fff; border-color:var(--acento)}
+  label{font-size:.83rem; font-weight:650; display:block; margin-bottom:3px}
+  select,input,textarea{width:100%; font:inherit; padding:6px 9px; border-radius:8px; border:1px solid var(--borde); background:var(--bg); color:var(--texto)}
+  textarea{font:13px/1.45 ui-monospace,Consolas,monospace; resize:vertical}
+  .campos{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:8px}
+  @media (max-width:700px){ .campos{grid-template-columns:1fr 1fr} }
+  .barra{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:10px 0 2px}
+  .contador{margin-left:auto; color:var(--suave); font-size:.88rem}
+  .grilla{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  @media (max-width:880px){ .grilla{grid-template-columns:1fr} }
+  .celdas{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px}
+  .celda{border:1px solid var(--borde); border-radius:9px; padding:6px 9px; min-width:0}
+  .celda.ancha{grid-column:1/-1}
+  .celda .k{font-size:.72rem; color:var(--suave); text-transform:uppercase; letter-spacing:.04em}
+  .celda .v{font:700 .9rem ui-monospace,Consolas,monospace; overflow-wrap:anywhere}
+  .celda.cambio{outline:2px solid var(--cer); background:var(--cer-bg)}
+  .mono{font-family:ui-monospace,Consolas,monospace}
+  .codigo{font:13px/1.5 ui-monospace,Consolas,monospace; margin:0; padding:0; list-style:none}
+  .codigo li{display:flex; gap:8px; padding:2px 6px; border-radius:6px; white-space:pre-wrap}
+  .codigo .nl{color:var(--suave); flex:0 0 22px; text-align:right}
+  .codigo li.ahora{background:var(--hl); color:#000}
+  .codigo li.ahora .nl{color:#000}
+  .codigo li.hecho{opacity:.55}
+  .actor{display:inline-block; padding:2px 10px; border-radius:99px; font-weight:800; font-size:.82rem; color:#fff}
+  .a-HARDWARE{background:var(--hw)} .a-SO{background:var(--so)}
+  .quien{margin-top:8px; font-size:.85rem}
+  .porque{border:1px solid var(--borde); border-left:5px solid var(--acento); border-radius:10px; padding:12px 14px; margin-top:10px}
+  .porque.ok{border-left-color:var(--ok); background:var(--ok-bg)}
+  .porque.trap{border-left-color:var(--fal); background:var(--fal-bg)}
+  .porque.fallo{border-left-color:var(--lim); background:var(--lim-bg)}
+  .porque .tit{font-weight:700; font-size:1.02rem; margin:0 0 4px}
+  .marca{display:block; margin-top:8px; border-radius:8px; padding:7px 10px; font-size:.88rem}
+  .marca.ojo{background:var(--fal-bg); border:1px solid var(--fal)}
+  .marca.cer{background:var(--cer-bg); border:1px solid var(--cer)}
+  .bits{display:flex; flex-wrap:wrap; gap:3px; margin-top:4px}
+  .bits span{font:700 .8rem ui-monospace,Consolas,monospace; padding:3px 6px; border-radius:6px; color:#fff}
+  .b-seg{background:var(--seg)} .b-pag{background:var(--pag)} .b-off{background:var(--off)} .b-otro{background:var(--suave)}
+  .error{color:var(--fal); font-weight:650; margin-top:6px}
+  .ideas li{margin-bottom:5px}
+  .anillos{display:grid; grid-template-columns:260px 1fr; gap:14px; align-items:center}
+  @media (max-width:700px){ .anillos{grid-template-columns:1fr} }
+  .anillos svg{width:100%; max-width:260px; height:auto; margin:auto; display:block}
+  .res{font-weight:800; font-size:1.05rem; padding:8px 12px; border-radius:9px; margin-top:10px}
+  .res.ok{background:var(--ok-bg); color:var(--ok); border:1px solid var(--ok)}
+  .res.trap{background:var(--fal-bg); color:var(--fal); border:1px solid var(--fal)}
+  .oculto{display:none}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <h1>Segmentación con paginación: MULTICS y Pentium</h1>
+  <p class="sub">Tanenbaum 3.7.2–3.7.3 (págs. 238–247). Cada segmento se <b>pagina</b>: lo lógico de la segmentación (crecer, compartir, proteger) más lo práctico de la paginación (tamaño fijo, no hace falta tener el segmento entero en memoria, se acaba el tablero de ajedrez). Elegí un escenario, editá los datos si querés y avanzá con «Siguiente paso».</p>
+
+  <div class="pest" id="pest">
+    <button data-t="mul" class="act">1 · MULTICS</button>
+    <button data-t="pen">2 · Pentium</button>
+    <button data-t="ani">3 · Anillos de protección</button>
+  </div>
+
+  <!-- ===================== MULTICS ===================== -->
+  <section id="t-mul">
+    <div class="tarjeta">
+      <label for="m-esc">Escenario</label>
+      <select id="m-esc">
+        <option value="normal">Normal: (3, 2, 100) escribir → falla el TLB, se recorren las tablas</option>
+        <option value="tlb">Acierto en el TLB: (0, 1, 40) ejecutar</option>
+        <option value="tlbProt">Acierto en el TLB pero sin permiso: (0, 1, 40) escribir</option>
+        <option value="falloSeg">Fallo de SEGMENTO: (1, 0, 5) leer</option>
+        <option value="falloPag">Fallo de PÁGINA: (3, 1, 0) leer</option>
+        <option value="prot">Violación de protección: (0, 0, 10) escribir en código</option>
+        <option value="long">Página fuera del segmento: (3, 5, 0) leer</option>
+      </select>
+      <div class="grilla" style="margin-top:8px">
+        <div><label for="m-desc">Segmento de descriptores: <span class="mono">seg presente longitud prot : marcos</span> («-» = página no presente)</label>
+          <textarea id="m-desc" rows="4"></textarea></div>
+        <div><label for="m-tlb">TLB (16 entradas): <span class="mono">seg pág marco prot</span></label>
+          <textarea id="m-tlb" rows="4"></textarea></div>
+      </div>
+      <div class="campos">
+        <div><label for="m-s">Segmento (18 bits)</label><input id="m-s" type="number" min="0"></div>
+        <div><label for="m-p">Página (6 bits)</label><input id="m-p" type="number" min="0"></div>
+        <div><label for="m-d">Desplazamiento (10 bits)</label><input id="m-d" type="number" min="0"></div>
+        <div><label for="m-op">Operación</label><select id="m-op"><option>leer</option><option>escribir</option><option>ejecutar</option></select></div>
+      </div>
+      <div class="error" id="m-err"></div>
+      <div class="barra"><button id="m-ant">◀ Anterior</button><button class="prim" id="m-sig">Siguiente paso ▶</button><button id="m-rei">Reiniciar</button><span class="contador" id="m-cont"></span></div>
+    </div>
+    <div class="grilla">
+      <div class="tarjeta"><h2>Casillas de la MMU</h2><div class="celdas" id="m-celdas"></div></div>
+      <div class="tarjeta"><h2>Algoritmo de referencia (pág. 240)</h2><ol class="codigo" id="m-cod"></ol><div class="quien" id="m-quien"></div><div class="porque" id="m-porque"></div></div>
+    </div>
+  </section>
+
+  <!-- ===================== PENTIUM ===================== -->
+  <section id="t-pen" class="oculto">
+    <div class="tarjeta">
+      <label for="p-esc">Escenario</label>
+      <select id="p-esc">
+        <option value="normal">Normal: selector 0x000F, desplazamiento 0x3A5C (paginación activa)</option>
+        <option value="tlb">Acierto en el TLB: selector 0x0017, desplazamiento 0x0123</option>
+        <option value="libro">Ejemplo del libro: selector 72 → entrada 9 de la GDT (paginación deshabilitada)</option>
+        <option value="nulo">Selector 0 (descriptor prohibido)</option>
+        <option value="noPres">Segmento no presente (P = 0)</option>
+        <option value="limite">Fuera del límite (G = 0, en bytes)</option>
+        <option value="falloPag">Fallo de página en el segundo nivel</option>
+      </select>
+      <div class="grilla" style="margin-top:8px">
+        <div><label for="p-desc">LDT/GDT: <span class="mono">tabla índice base límite G P</span> (G o L)</label>
+          <textarea id="p-desc" rows="5"></textarea></div>
+        <div><label for="p-pag">Páginas: <span class="mono">dir pág marco</span> («-» = no presente)</label>
+          <textarea id="p-pag" rows="5"></textarea></div>
+      </div>
+      <div class="campos">
+        <div><label for="p-sel">Selector (16 bits)</label><input id="p-sel"></div>
+        <div><label for="p-off">Desplazamiento</label><input id="p-off"></div>
+        <div><label for="p-tlb">TLB: <span class="mono">dir pág marco</span></label><input id="p-tlb"></div>
+        <div><label for="p-pg">Paginación</label><select id="p-pg"><option value="1">habilitada</option><option value="0">deshabilitada</option></select></div>
+      </div>
+      <div class="error" id="p-err"></div>
+      <div class="barra"><button id="p-ant">◀ Anterior</button><button class="prim" id="p-sig">Siguiente paso ▶</button><button id="p-rei">Reiniciar</button><span class="contador" id="p-cont"></span></div>
+    </div>
+    <div class="grilla">
+      <div class="tarjeta"><h2>Casillas de la MMU</h2><div class="celdas" id="p-celdas"></div></div>
+      <div class="tarjeta"><h2>Traducción (figs. 3-39 a 3-42)</h2><ol class="codigo" id="p-cod"></ol><div class="quien" id="p-quien"></div><div class="porque" id="p-porque"></div></div>
+    </div>
+  </section>
+
+  <!-- ===================== ANILLOS ===================== -->
+  <section id="t-ani" class="oculto">
+    <div class="tarjeta anillos">
+      <svg viewBox="0 0 260 260" id="a-svg" aria-label="Anillos de protección"></svg>
+      <div>
+        <h2>¿Se permite el acceso? (fig. 3-43, págs. 246–247)</h2>
+        <div class="campos" style="grid-template-columns:1fr 1fr 1fr">
+          <div><label for="a-cpl">Nivel del programa (PSW)</label><select id="a-cpl"><option>0</option><option>1</option><option>2</option><option selected>3</option></select></div>
+          <div><label for="a-dpl">Nivel del segmento destino</label><select id="a-dpl"><option selected>0</option><option>1</option><option>2</option><option>3</option></select></div>
+          <div><label for="a-op">Qué intenta</label><select id="a-op"><option value="datos">acceder a datos</option><option value="call">CALL directo a una dirección</option><option value="compuerta">CALL con selector de compuerta</option></select></div>
+        </div>
+        <div id="a-res"></div>
+        <p class="sub" style="margin-top:10px">0 = kernel · 1 = llamadas al sistema · 2 = bibliotecas compartidas · 3 = programas de usuario. <b>Número más chico = más privilegio.</b></p>
+      </div>
+    </div>
+  </section>
+
+  <div class="tarjeta ideas">
+    <h2>Ideas clave para el examen</h2>
+    <ul>
+      <li><b>MULTICS</b>: hasta 2<sup>18</sup> segmentos de hasta 64K palabras de 36 bits. La dirección virtual tiene 34 bits: <b>segmento (18) | página (6) | desplazamiento (10)</b>, con páginas de 1024 palabras. La tabla de segmentos es tan grande que <b>es un segmento, y se pagina</b>. El descriptor tiene un puntero de 18 bits a la tabla de páginas, la longitud, la protección y si está en memoria; <b>la dirección en disco NO está en el descriptor</b>. El TLB tiene 16 entradas y se busca en paralelo.</li>
+      <li>⚠️ <b>Hay dos fallos distintos</b>: el <b>fallo de segmento</b> se da cuando la tabla de páginas del segmento no está en memoria, y el <b>fallo de página</b> cuando la página no está. Y el <b>trap de protección</b> es otro caso más.</li>
+      <li><b>Pentium</b>: una <b>LDT</b> por programa (código, datos, pila) y una <b>GDT</b> única (sistema y SO). El selector tiene 16 bits: <b>índice (13) | TI (1: 0 = GDT, 1 = LDT) | nivel de privilegio (2)</b>, así que hay 8K descriptores por tabla. El descriptor 0 está prohibido. El orden es: descriptor → ¿presente? → ¿límite? (con <b>G</b>: bytes o páginas de 4 KB) → <b>Base + desplazamiento = dirección lineal</b> → si hay paginación, <b>Dir (10) | Página (10) | Desp (12)</b> en dos niveles.</li>
+      <li>🧠 Con la paginación deshabilitada queda <b>segmentación pura</b>. Con todos los segmentos en <b>Base 0 y Límite máximo</b> queda <b>paginación pura</b>, y así funcionan todos los SO actuales en el Pentium; solo OS/2 usó todo. ⚠️ Los anillos van al revés de lo intuitivo: el 0 es el kernel. Se puede acceder a datos de un nivel <b>más alto</b> (menos privilegiado); para llamar a otro nivel hace falta una <b>compuerta de llamada</b>, que vienen de los anillos de MULTICS.</li>
+    </ul>
+  </div>
+</div>
+
+<script id="motor">
+// ======== MOTOR (sin DOM: se verifica con Node) ========
+const M_LINEAS = [
+  "0. ¿(seg, pág) está en el TLB? sí → saltar a 4",
+  "1. nº de segmento → descriptor",
+  "2. ¿tabla de páginas en memoria? no → FALLO DE SEGMENTO",
+  "   ¿longitud y protección ok? no → TRAP",
+  "3. entrada de la página: ¿presente? no → FALLO DE PÁGINA",
+  "   sí → origen del marco",
+  "4. origen del marco + desplazamiento",
+  "5. lectura/escritura (y se carga el TLB)"
+];
+const P_LINEAS = [
+  "1. selector en CS/DS: TI → LDT/GDT, índice = sel >> 3",
+  "   descriptor en tabla + (sel con 3 bits bajos en 0)",
+  "2. ¿selector 0 o P = 0? → TRAP",
+  "3. ¿desplazamiento dentro del Límite (G)? no → TRAP",
+  "4. dirección lineal = Base + desplazamiento",
+  "5. ¿paginación deshabilitada? → física = lineal",
+  "6. ¿(Dir, Página) en el TLB? sí → marco",
+  "7. Dir → directorio de páginas → tabla de páginas",
+  "8. Página → entrada: ¿presente? no → FALLO DE PÁGINA",
+  "9. física = marco + desplazamiento"
+];
+
+function ent(x) {
+  x = String(x).trim();
+  const v = /^0x[0-9a-f]+$/i.test(x) ? parseInt(x, 16) : (/^\d+$/.test(x) ? Number(x) : NaN);
+  if (!Number.isSafeInteger(v) || v < 0) throw new Error("Número inválido: «" + x + "»");
+  return v;
+}
+function hex(v, d) { return "0x" + v.toString(16).toUpperCase().padStart(d, "0"); }
+function bin(v, n) { return v.toString(2).padStart(n, "0"); }
+function lineas(txt) { return String(txt).split("\n").map(l => l.replace(/#.*/, "").trim()).filter(Boolean); }
+function permite(prot, op) {
+  const need = { leer: "R", escribir: "W", ejecutar: "X" }[op];
+  if (!need) throw new Error("Operación inválida: " + op);
+  return prot.includes(need);
+}
+function leerProt(p, l) {
+  p = String(p).toUpperCase();
+  if (!/^[RWX]+$/.test(p)) throw new Error("Protección inválida (usá R, W, X): " + l);
+  return p;
+}
+
+// ---------- MULTICS ----------
+function parseDescM(txt) {
+  const d = {};
+  for (const l of lineas(txt)) {
+    const [izq, der] = l.split(":");
+    const t = izq.trim().split(/\s+/);
+    if (t.length !== 4) throw new Error("Descriptor mal escrito: " + l);
+    const seg = ent(t[0]), pres = ent(t[1]), lon = ent(t[2]), prot = leerProt(t[3], l);
+    if (seg >= 2 ** 18) throw new Error("Segmento fuera de rango (máx. 2^18 − 1): " + l);
+    if (pres > 1) throw new Error("presente debe ser 0 o 1: " + l);
+    if (lon < 1 || lon > 64) throw new Error("La longitud va de 1 a 64 páginas: " + l);
+    let marcos = null;
+    if (pres === 1) {
+      if (der === undefined) throw new Error("Segmento presente sin tabla de páginas: " + l);
+      marcos = der.trim().split(/\s+/).map(x => x === "-" ? null : ent(x));
+      if (marcos.length !== lon) throw new Error(`El segmento ${seg} tiene longitud ${lon} pero ${marcos.length} entradas`);
+    }
+    if (d[seg]) throw new Error("Segmento repetido: " + seg);
+    d[seg] = { seg, pres, lon, prot, marcos };
+  }
+  return d;
+}
+function parseTlbM(txt) {
+  return lineas(txt).map(l => {
+    const t = l.split(/\s+/);
+    if (t.length !== 4) throw new Error("Entrada de TLB mal escrita: " + l);
+    return { seg: ent(t[0]), pag: ent(t[1]), marco: ent(t[2]), prot: leerProt(t[3], l) };
+  });
+}
+
+function multics(descTxt, tlbTxt, seg, pag, desp, op) {
+  seg = ent(seg); pag = ent(pag); desp = ent(desp);
+  if (seg >= 2 ** 18) throw new Error("El segmento tiene 18 bits (0 a 262143)");
+  if (pag >= 64) throw new Error("La página tiene 6 bits (0 a 63)");
+  if (desp >= 1024) throw new Error("El desplazamiento tiene 10 bits (0 a 1023)");
+  permite("RWX", op);
+  const D = parseDescM(descTxt), T = parseTlbM(tlbTxt);
+  const c = {
+    dir: `(${seg}, ${pag}, ${desp}) ${op}`,
+    bits: [[bin(seg, 18), "seg"], [bin(pag, 6), "pag"], [bin(desp, 10), "off"]],
+    tlb: "—", desc: "—", tabla: "—", marco: "—", fisica: "—"
+  };
+  const pasos = [];
+  const push = (linea, actor, tit, txt, cambios, fin) => {
+    Object.assign(c, cambios || {});
+    pasos.push({ linea, actor, tit, txt, celdas: JSON.parse(JSON.stringify(c)), cambio: Object.keys(cambios || {}), fin: fin || null });
+  };
+  const fin = (tipo, fisica) => ({ pasos, tipo, fisica: fisica ?? null });
+
+  const hit = T.find(e => e.seg === seg && e.pag === pag);
+  if (hit) {
+    if (!permite(hit.prot, op)) {
+      push(0, "HARDWARE", "TLB: acierto… pero sin permiso", `La entrada (${seg}, ${pag}) está en el TLB con protección ${hit.prot}. «${op}» no está permitido: el TLB también guarda los bits de protección, así que el trap salta sin mirar el descriptor.`, { tlb: `ACIERTO (${hit.prot}) ✗` }, "trap");
+      return fin("trap");
+    }
+    push(0, "HARDWARE", "TLB: acierto", `Las 16 entradas se comparan en paralelo y (${seg}, ${pag}) está en el TLB → marco ${hit.marco}. No hace falta leer el descriptor ni la tabla de páginas: por eso el TLB hace rápido a MULTICS.`, { tlb: `ACIERTO → marco ${hit.marco}`, marco: String(hit.marco) });
+    const f = hit.marco * 1024 + desp;
+    push(6, "HARDWARE", "Marco + desplazamiento", `${hit.marco} · 1024 + ${desp} = ${f}. Las páginas son de 1024 palabras.`, { fisica: String(f) });
+    push(7, "HARDWARE", "Se completa el acceso", `Se hace la operación «${op}» en la palabra ${f}.`, {}, "ok");
+    return fin("ok", f);
+  }
+  push(0, "HARDWARE", "TLB: fallo", `(${seg}, ${pag}) no está en ninguna de las entradas del TLB. Hay que hacer el recorrido completo por el segmento de descriptores y la tabla de páginas.`, { tlb: "FALLO (no está)" });
+
+  const d = D[seg];
+  if (!d) {
+    push(1, "HARDWARE", "El segmento no existe", `No hay descriptor para el segmento ${seg} → trap.`, { desc: "no existe" }, "trap");
+    return fin("trap");
+  }
+  push(1, "HARDWARE", "Buscar el descriptor", `El número de segmento ${seg} indexa el segmento de descriptores (que a su vez está paginado y se ubica con el registro base del descriptor). Descriptor: ${d.pres ? "en memoria" : "NO en memoria"}, longitud ${d.lon} páginas, protección ${d.prot}.`, { desc: `pres ${d.pres} · lon ${d.lon} · ${d.prot}` });
+
+  if (!d.pres) {
+    push(2, "HARDWARE", "FALLO DE SEGMENTO", `La tabla de páginas del segmento ${seg} no está en memoria. El manejador de fallos de segmento la trae; la dirección en disco la saca de OTRA tabla, no del descriptor.`, { tabla: "no está → fallo de segmento" }, "fallo");
+    return fin("falloSeg");
+  }
+  push(2, "HARDWARE", "Tabla de páginas en memoria", `El descriptor apunta a la tabla de páginas con 18 bits: las direcciones físicas son de 24 bits y las tablas se alinean a 64 bytes, así que los 6 bits bajos valen 0 y no se guardan.`, { tabla: d.marcos.map((m, i) => `${i}:${m === null ? "-" : m}`).join("  ") });
+
+  if (pag >= d.lon) {
+    push(3, "HARDWARE", "TRAP: fuera del segmento", `La página ${pag} no existe: el segmento mide ${d.lon} páginas (0 a ${d.lon - 1}).`, {}, "trap");
+    return fin("trap");
+  }
+  if (!permite(d.prot, op)) {
+    push(3, "HARDWARE", "TRAP: violación de protección", `El segmento ${seg} es ${d.prot} y se intenta «${op}». Como el segmento contiene un solo tipo de objeto, la protección por segmento tiene sentido.`, {}, "trap");
+    return fin("trap");
+  }
+  push(3, "HARDWARE", "Longitud y protección ok", `${pag} < ${d.lon} y ${d.prot} permite «${op}».`, {});
+
+  const m = d.marcos[pag];
+  if (m === null) {
+    push(4, "HARDWARE", "FALLO DE PÁGINA", `La tabla de páginas sí está, pero la página ${pag} no. Es un fallo de página común: se maneja con los 10 pasos del tema 9.`, { marco: "no presente" }, "fallo");
+    return fin("falloPag");
+  }
+  push(5, "HARDWARE", "Página presente", `Entrada ${pag} → marco ${m}.`, { marco: String(m) });
+  const f = m * 1024 + desp;
+  push(6, "HARDWARE", "Marco + desplazamiento", `${m} · 1024 + ${desp} = ${f}.`, { fisica: String(f) });
+  push(7, "HARDWARE", "Se completa el acceso y se carga el TLB", `Se hace «${op}» en la palabra ${f} y (${seg}, ${pag}) → ${m} entra al TLB. Si está lleno, sale la entrada de uso menos reciente (campo edad).`, { tlb: `cargado (${seg}, ${pag}) → ${m}` }, "ok");
+  return fin("ok", f);
+}
+
+// ---------- PENTIUM ----------
+function parseDescP(txt) {
+  const D = { GDT: {}, LDT: {} };
+  for (const l of lineas(txt)) {
+    const t = l.split(/\s+/);
+    if (t.length !== 6) throw new Error("Descriptor mal escrito: " + l);
+    const tabla = { G: "GDT", L: "LDT" }[t[0].toUpperCase()];
+    if (!tabla) throw new Error("La tabla es G o L: " + l);
+    const idx = ent(t[1]), base = ent(t[2]), lim = ent(t[3]), G = ent(t[4]), P = ent(t[5]);
+    if (idx >= 8192) throw new Error("El índice tiene 13 bits (0 a 8191): " + l);
+    if (base >= 2 ** 32) throw new Error("La base tiene 32 bits: " + l);
+    if (lim >= 2 ** 20) throw new Error("El límite tiene 20 bits: " + l);
+    if (G > 1 || P > 1) throw new Error("G y P son 0 o 1: " + l);
+    D[tabla][idx] = { base, lim, G, P };
+  }
+  return D;
+}
+function parsePagP(txt) {
+  const dir = {};
+  for (const l of lineas(txt)) {
+    const t = l.split(/\s+/);
+    if (t.length !== 3) throw new Error("Entrada de página mal escrita: " + l);
+    const d = ent(t[0]), p = ent(t[1]);
+    if (d >= 1024 || p >= 1024) throw new Error("Dir y página tienen 10 bits: " + l);
+    dir[d] = dir[d] || {};
+    dir[d][p] = t[2] === "-" ? null : ent(t[2]);
+  }
+  return dir;
+}
+function parseTlbP(txt) {
+  return String(txt).split(/[,;\n]/).map(s => s.trim()).filter(Boolean).map(s => {
+    const t = s.split(/\s+/);
+    if (t.length !== 3) throw new Error("TLB mal escrito (dir pág marco): " + s);
+    return { dir: ent(t[0]), pag: ent(t[1]), marco: ent(t[2]) };
+  });
+}
+
+function pentium(descTxt, pagTxt, tlbTxt, paginacion, sel, off) {
+  sel = ent(sel); off = ent(off);
+  if (sel >= 65536) throw new Error("El selector tiene 16 bits");
+  if (off >= 2 ** 32) throw new Error("El desplazamiento tiene 32 bits");
+  const D = parseDescP(descTxt), PG = parsePagP(pagTxt), T = parseTlbP(tlbTxt);
+  const idx = sel >> 3, ti = (sel >> 2) & 1, rpl = sel & 3, tabla = ti ? "LDT" : "GDT";
+  const c = {
+    sel: `${hex(sel, 4)} (${sel})`,
+    selBits: [[bin(idx, 13), "seg"], [String(ti), "pag"], [bin(rpl, 2), "off"]],
+    desc: "—", limite: "—", lineal: "—", linBits: null, tlb: "—", marco: "—", fisica: "—"
+  };
+  const pasos = [];
+  const push = (linea, actor, tit, txt, cambios, fin) => {
+    Object.assign(c, cambios || {});
+    pasos.push({ linea, actor, tit, txt, celdas: JSON.parse(JSON.stringify(c)), cambio: Object.keys(cambios || {}), fin: fin || null });
+  };
+  const fin = (tipo, extra) => Object.assign({ pasos, tipo, tabla, idx, rpl, lineal: null, fisica: null }, extra || {});
+
+  push(0, "HARDWARE", "Decodificar el selector", `Selector ${hex(sel, 4)} = índice ${idx} (13 bits) | TI = ${ti} → ${tabla} | nivel de privilegio ${rpl} (2 bits). Cuando el selector se carga en un registro de segmento, el descriptor se copia a registros del microprograma.`, {});
+  push(1, "HARDWARE", "Ubicar el descriptor", `Se ponen en 0 los 3 bits bajos del selector: ${sel} → ${sel & ~7} = ${idx} · 8, porque cada descriptor ocupa 8 bytes. El descriptor está en ${tabla} + ${sel & ~7}.`, { desc: `${tabla}[${idx}] en ${tabla} + ${sel & ~7}` });
+
+  if (idx === 0 && ti === 0) {
+    push(2, "HARDWARE", "TRAP: selector 0", "El descriptor 0 está prohibido. Se puede cargar en un registro de segmento para marcarlo como «no disponible», pero usarlo produce un trap.", { desc: "selector nulo" }, "trap");
+    return fin("trap");
+  }
+  const d = D[tabla][idx];
+  if (!d) {
+    push(2, "HARDWARE", "TRAP: el segmento no existe", `No hay descriptor ${idx} en la ${tabla}.`, { desc: `${tabla}[${idx}] no existe` }, "trap");
+    return fin("trap");
+  }
+  const tam = d.G ? d.lim * 4096 : d.lim;
+  const dTxt = `base ${hex(d.base, 8)} · lím ${hex(d.lim, 5)} · G ${d.G} · P ${d.P}`;
+  if (!d.P) {
+    push(2, "HARDWARE", "TRAP: segmento no presente", `El descriptor tiene P = 0: el segmento se paginó para sacarlo de memoria. Trap para que el SO lo traiga.`, { desc: dTxt }, "trap");
+    return fin("trap");
+  }
+  push(2, "HARDWARE", "Descriptor válido y presente", `${tabla}[${idx}]: ${dTxt}.`, { desc: dTxt });
+
+  const limTxt = d.G ? `G = 1 → ${d.lim} páginas · 4 KB = ${tam} bytes` : `G = 0 → ${tam} bytes exactos`;
+  if (off >= tam) {
+    push(3, "HARDWARE", "TRAP: fuera del límite", `${limTxt}. El desplazamiento ${hex(off, 8)} (${off}) se pasa del final del segmento.`, { limite: `${tam} B ✗` }, "trap");
+    return fin("trap");
+  }
+  push(3, "HARDWARE", "Dentro del límite", `${limTxt}. El Límite tiene solo 20 bits, y por eso el bit G permite contar en páginas de 4 KB (hasta 2^32 bytes). ${off} < ${tam} ✓`, { limite: `${tam} B ✓` });
+
+  const lin = (d.base + off) % 2 ** 32;
+  const dir = Math.floor(lin / 2 ** 22), pg = Math.floor(lin / 4096) % 1024, dd = lin % 4096;
+  push(4, "HARDWARE", "Dirección LINEAL = Base + desplazamiento", `${hex(d.base, 8)} + ${hex(off, 8)} = ${hex(lin, 8)}. Se SUMA la base, como en la segmentación pura.`, { lineal: hex(lin, 8) });
+
+  if (!paginacion) {
+    push(5, "HARDWARE", "Sin paginación: física = lineal", `La paginación está deshabilitada (bit de un registro de control global), así que ${hex(lin, 8)} va directo a memoria. Esto es SEGMENTACIÓN PURA. El hardware no impide que los segmentos se superpongan.`, { fisica: hex(lin, 8) }, "ok");
+    return fin("ok", { lineal: lin, fisica: lin });
+  }
+  push(5, "HARDWARE", "Con paginación: la lineal es VIRTUAL", `Se parte en Dir (10) = ${dir} | Página (10) = ${pg} | Desp (12) = ${hex(dd, 3)}. Son dos niveles para no tener una tabla de 1 millón de entradas en segmentos chicos.`, { linBits: [[bin(dir, 10), "seg"], [bin(pg, 10), "pag"], [bin(dd, 12), "off"]] });
+
+  const hit = T.find(e => e.dir === dir && e.pag === pg);
+  if (hit) {
+    const f = hit.marco * 4096 + dd;
+    push(6, "HARDWARE", "TLB: acierto", `(Dir ${dir}, Pág ${pg}) está en el TLB → marco ${hex(hit.marco, 5)}. Se saltea el recorrido de la fig. 3-42.`, { tlb: `ACIERTO → ${hex(hit.marco, 5)}`, marco: hex(hit.marco, 5) });
+    push(9, "HARDWARE", "Física = marco + desplazamiento", `${hex(hit.marco, 5)} · 4096 + ${hex(dd, 3)} = ${hex(f, 8)}.`, { fisica: hex(f, 8) }, "ok");
+    return fin("ok", { lineal: lin, fisica: f });
+  }
+  push(6, "HARDWARE", "TLB: fallo", `(Dir ${dir}, Pág ${pg}) no está en el TLB: se hace el recorrido completo.`, { tlb: "FALLO" });
+
+  const tablaP = PG[dir];
+  if (!tablaP) {
+    push(7, "HARDWARE", "FALLO DE PÁGINA (no hay tabla)", `La entrada ${dir} del directorio de páginas (1024 entradas de 32 bits) no apunta a ninguna tabla. Lo atiende el SO.`, { marco: "sin tabla" }, "fallo");
+    return fin("falloPag", { lineal: lin });
+  }
+  push(7, "HARDWARE", "Directorio → tabla de páginas", `Entrada ${dir} del directorio → tabla de páginas (1024 entradas; cada tabla cubre 4 MB).`, {});
+  const m = tablaP[pg];
+  if (m === undefined || m === null) {
+    push(8, "HARDWARE", "FALLO DE PÁGINA", `La página ${pg} de esa tabla no está presente. Es el fallo de página del tema 9.`, { marco: "no presente" }, "fallo");
+    return fin("falloPag", { lineal: lin });
+  }
+  push(8, "HARDWARE", "Entrada presente", `Página ${pg} → marco ${hex(m, 5)}. La entrada tiene 32 bits: 20 para el marco y el resto para los bits de acceso, sucio y protección.`, { marco: hex(m, 5) });
+  const f = m * 4096 + dd;
+  push(9, "HARDWARE", "Física = marco + desplazamiento", `${hex(m, 5)} · 4096 + ${hex(dd, 3)} = ${hex(f, 8)}. La combinación (Dir, Pág) se carga en el TLB.`, { fisica: hex(f, 8), tlb: `cargado (${dir}, ${pg})` }, "ok");
+  return fin("ok", { lineal: lin, fisica: f });
+}
+
+// ---------- ANILLOS ----------
+function anillos(cpl, dpl, op) {
+  cpl = Number(cpl); dpl = Number(dpl);
+  if (![0, 1, 2, 3].includes(cpl) || ![0, 1, 2, 3].includes(dpl)) throw new Error("Niveles de 0 a 3");
+  if (op === "datos") {
+    if (dpl >= cpl) return { ok: true, txt: dpl === cpl ? "Mismo nivel: todo funciona bien." : `Se permite acceder a datos de un nivel MÁS ALTO (${dpl} es menos privilegiado que ${cpl}).` };
+    return { ok: false, txt: `TRAP: acceder a datos de un nivel INFERIOR (${dpl}, más privilegiado que ${cpl}) es ilegal.` };
+  }
+  if (op === "call") {
+    if (dpl === cpl) return { ok: true, txt: "Llamar a un procedimiento del mismo nivel con una dirección común está permitido." };
+    return { ok: false, txt: "TRAP: para llamar a OTRO nivel, el CALL tiene que llevar un selector de compuerta de llamada, no una dirección. Así no se puede saltar al medio de un segmento de código." };
+  }
+  if (op === "compuerta") return { ok: true, txt: dpl === cpl ? "Permitido (aunque en el mismo nivel no hace falta compuerta)." : `Permitido de manera controlada: la compuerta de llamada da la dirección del procedimiento, que es un punto de entrada oficial en el nivel ${dpl}. Las llamadas al sistema y los traps usan este mecanismo.` };
+  throw new Error("Operación inválida");
+}
+
+const ESC_M = {
+  desc: "0 1 2 X  : 5 9        # código (solo ejecución)\n1 0 3 RW               # tabla de páginas fuera de memoria\n3 1 4 RW : 7 - 12 2    # datos; la página 1 no está",
+  tlb: "0 1 9 X",
+  casos: { normal: [3, 2, 100, "escribir"], tlb: [0, 1, 40, "ejecutar"], tlbProt: [0, 1, 40, "escribir"], falloSeg: [1, 0, 5, "leer"], falloPag: [3, 1, 0, "leer"], prot: [0, 0, 10, "escribir"], long: [3, 5, 0, "leer"] }
+};
+const ESC_P = {
+  desc: "G 9 0x00100000 0x00200 1 1   # selector 72 del libro\nL 1 0x00400000 0x00010 1 1   # código: 16 páginas = 64 KB\nL 2 0x00800000 0x01000 0 1   # datos: 4096 bytes (G = 0)\nL 3 0x00C00000 0x00004 1 0   # pila, fuera de memoria (P = 0)",
+  pag: "1 3 0x0002B\n1 4 -\n2 0 0x00051",
+  tlb: "2 0 0x00051",
+  casos: { normal: ["0x000F", "0x3A5C", 1], tlb: ["0x0017", "0x0123", 1], libro: ["72", "0x0010", 0], nulo: ["0x0000", "0x0000", 1], noPres: ["0x001F", "0x0000", 1], limite: ["0x0017", "0x1000", 1], falloPag: ["0x000F", "0x4000", 1] }
+};
+if (typeof module !== "undefined") module.exports = { multics, pentium, anillos, ESC_M, ESC_P, M_LINEAS, P_LINEAS, parseDescM, parseDescP };
+</script>
+
+<script>
+// ======== INTERFAZ ========
+const $ = id => document.getElementById(id);
+document.querySelectorAll("#pest button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("#pest button").forEach(x => x.classList.toggle("act", x === b));
+  ["mul", "pen", "ani"].forEach(t => $("t-" + t).classList.toggle("oculto", t !== b.dataset.t));
+});
+
+const NOMBRES = {
+  dir: "Dirección virtual", bits: "Bits: segmento 18 | página 6 | desplazamiento 10", tlb: "TLB", desc: "Descriptor", tabla: "Tabla de páginas del segmento", marco: "Marco", fisica: "Dirección física",
+  sel: "Selector", selBits: "Bits: índice 13 | TI 1 | privilegio 2", limite: "Tamaño según Límite y G", lineal: "Dirección lineal", linBits: "Lineal: Dir 10 | Página 10 | Desp 12"
+};
+const ANCHAS = ["bits", "selBits", "linBits", "tabla", "desc", "dir"];
+
+function pintarBits(arr) {
+  if (!arr) return "—";
+  return '<div class="bits">' + arr.map(([b, k]) => `<span class="b-${k}">${b}</span>`).join("") + "</div>";
+}
+function armarSim(pref, lineasCod, correr) {
+  let res = null, i = 0;
+  const cod = $(pref + "-cod");
+  cod.innerHTML = lineasCod.map((l, k) => `<li data-k="${k}"><span class="nl">${k + 1}</span><span>${l.replace(/</g, "&lt;")}</span></li>`).join("");
+  function pintar() {
+    if (!res) return;
+    const p = res.pasos[i];
+    $(pref + "-cont").textContent = `Paso ${i + 1} de ${res.pasos.length}`;
+    $(pref + "-ant").disabled = i === 0;
+    $(pref + "-sig").disabled = i === res.pasos.length - 1;
+    const hechas = new Set(res.pasos.slice(0, i).map(x => x.linea));
+    cod.querySelectorAll("li").forEach(li => {
+      const k = +li.dataset.k;
+      li.className = k === p.linea ? "ahora" : (hechas.has(k) ? "hecho" : "");
+    });
+    $(pref + "-quien").innerHTML = `Ejecuta: <span class="actor a-${p.actor}">${p.actor === "HARDWARE" ? "HARDWARE (MMU)" : p.actor}</span>` + (p.fin === "fallo" ? ' → después atiende el <span class="actor a-SO">SO</span>' : "");
+    let extra = "";
+    if (p.fin === "trap") extra = '<span class="marca ojo">⚠️ TRAP: el hardware cancela el acceso. El proceso recibe una señal (SIGSEGV) o se elimina.</span>';
+    if (p.fin === "fallo") extra = '<span class="marca cer">🧠 No es un error del programa: el SO trae lo que falta y la instrucción se reinicia.</span>';
+    if (p.fin === "ok") extra = '<span class="marca cer">✅ Traducción completa.</span>';
+    const pq = $(pref + "-porque");
+    pq.className = "porque" + (p.fin ? " " + p.fin : "");
+    pq.innerHTML = `<p class="tit">${p.tit}</p><div>${p.txt}</div>${extra}`;
+    $(pref + "-celdas").innerHTML = Object.entries(p.celdas).map(([k, v]) => {
+      const val = Array.isArray(v) ? pintarBits(v) : (v === null ? "—" : v);
+      return `<div class="celda${ANCHAS.includes(k) ? " ancha" : ""}${p.cambio.includes(k) ? " cambio" : ""}"><div class="k">${NOMBRES[k] || k}</div><div class="v">${val}</div></div>`;
+    }).join("");
+  }
+  function rehacer() {
+    try { res = correr(); i = 0; $(pref + "-err").textContent = ""; pintar(); }
+    catch (e) { res = null; $(pref + "-err").textContent = e.message; $(pref + "-celdas").innerHTML = ""; $(pref + "-porque").innerHTML = ""; $(pref + "-cont").textContent = ""; }
+  }
+  $(pref + "-ant").onclick = () => { if (i > 0) { i--; pintar(); } };
+  $(pref + "-sig").onclick = () => { if (res && i < res.pasos.length - 1) { i++; pintar(); } };
+  $(pref + "-rei").onclick = () => { i = 0; pintar(); };
+  return rehacer;
+}
+
+// MULTICS
+const rehacerM = armarSim("m", M_LINEAS, () => multics($("m-desc").value, $("m-tlb").value, $("m-s").value, $("m-p").value, $("m-d").value, $("m-op").value));
+function cargarM() {
+  const [s, p, d, op] = ESC_M.casos[$("m-esc").value];
+  $("m-desc").value = ESC_M.desc; $("m-tlb").value = ESC_M.tlb;
+  $("m-s").value = s; $("m-p").value = p; $("m-d").value = d; $("m-op").value = op;
+  rehacerM();
+}
+$("m-esc").onchange = cargarM;
+["m-desc", "m-tlb", "m-s", "m-p", "m-d", "m-op"].forEach(id => $(id).addEventListener("input", rehacerM));
+cargarM();
+
+// PENTIUM
+const rehacerP = armarSim("p", P_LINEAS, () => pentium($("p-desc").value, $("p-pag").value, $("p-tlb").value, $("p-pg").value === "1", $("p-sel").value, $("p-off").value));
+function cargarP() {
+  const [s, o, pg] = ESC_P.casos[$("p-esc").value];
+  $("p-desc").value = ESC_P.desc; $("p-pag").value = ESC_P.pag; $("p-tlb").value = ESC_P.tlb;
+  $("p-sel").value = s; $("p-off").value = o; $("p-pg").value = String(pg);
+  rehacerP();
+}
+$("p-esc").onchange = cargarP;
+["p-desc", "p-pag", "p-tlb", "p-sel", "p-off", "p-pg"].forEach(id => $(id).addEventListener("input", rehacerP));
+cargarP();
+
+// ANILLOS
+const USOS = ["Kernel", "Llamadas al sistema", "Bibliotecas compartidas", "Usuario"];
+function pintarAnillos() {
+  const cpl = +$("a-cpl").value, dpl = +$("a-dpl").value, r = anillos(cpl, dpl, $("a-op").value);
+  const css = getComputedStyle(document.documentElement);
+  const col = n => n === cpl ? css.getPropertyValue("--acento") : (n === dpl ? css.getPropertyValue("--seg") : css.getPropertyValue("--borde"));
+  let s = "";
+  for (let n = 3; n >= 0; n--) {
+    const rad = 30 + n * 30;
+    s += `<circle cx="130" cy="130" r="${rad}" fill="${css.getPropertyValue("--panel")}" stroke="${css.getPropertyValue("--suave")}" stroke-width="1.5"/>`;
+    if (n === cpl || n === dpl) s += `<circle cx="130" cy="130" r="${rad}" fill="${col(n)}" fill-opacity=".35" stroke="none"/>`;
+  }
+  for (let n = 0; n < 4; n++) s += `<text x="130" y="${130 - n * 30 - (n ? 12 : -5)}" text-anchor="middle" font-size="${n ? 10 : 12}" font-weight="700" fill="${css.getPropertyValue("--texto")}">${n}${n ? " · " + USOS[n].split(" ")[0] : ""}</text>`;
+  s += `<text x="130" y="150" text-anchor="middle" font-size="10" fill="${css.getPropertyValue("--texto")}">Kernel</text>`;
+  $("a-svg").innerHTML = s;
+  $("a-res").innerHTML = `<div class="res ${r.ok ? "ok" : "trap"}">${r.ok ? "✅ Permitido" : "⛔ TRAP"}</div><p>${r.txt}</p><p class="sub">Azul = nivel del programa (${cpl}, ${USOS[cpl]}) · Naranja = nivel destino (${dpl}, ${USOS[dpl]}).</p>`;
+}
+["a-cpl", "a-dpl", "a-op"].forEach(id => $(id).onchange = pintarAnillos);
+pintarAnillos();
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+Formato: Explainer, en español rioplatense. Público: un estudiante universitario de Ingeniería en Sistemas que prepara el final de Sistemas Operativos y necesita entender la administración de memoria para resolver ejercicios.
+
+Recorré los temas en este orden: la jerarquía de memoria y la caché; por qué sin abstracción de memoria dos programas no pueden convivir y el problema de la reubicación; los registros base y límite; el intercambio, los huecos y los algoritmos de primer, mejor y peor ajuste; la memoria virtual y la paginación; la MMU y la tabla de páginas con sus bits (presente/ausente, referenciada, modificada, protección); el TLB y la diferencia entre fallo suave y fallo duro; las tablas multinivel e invertidas; los algoritmos de reemplazo (óptimo, NRU, FIFO, segunda oportunidad, reloj, LRU, envejecimiento, conjunto de trabajo y WSClock); la sobrepaginación; los diez pasos del manejo de un fallo de página; y la segmentación, con MULTICS y el Intel Pentium.
+
+Mostrá en pantalla, como diagramas animados, la figura de la MMU cortando la dirección virtual en número de página y desplazamiento, la tabla de páginas de 16 páginas y 8 marcos, la tabla de dos niveles y la lista circular del algoritmo del reloj.
+
+Resolvé paso a paso al menos dos ejemplos numéricos: traducir la dirección 0x2C3A con páginas de 1 KB (página 11, marco 5, resultado 0x143A) y aplicar segunda oportunidad sobre una tabla de páginas, diciendo qué página sale y cómo queda la tabla.

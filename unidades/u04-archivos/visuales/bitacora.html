@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bitácora y caídas</title>
+<style>
+  :root{
+    --bg:#f4f5f8; --panel:#fff; --borde:#d6dae2; --texto:#1b1f24; --suave:#5b6572; --acento:#3d63c9;
+    --ok:#15803d; --ok-bg:#e9f8ee; --fal:#dc2626; --fal-bg:#fdecec; --lim:#b45309; --lim-bg:#fff6e0;
+    --cer:#7c3aed; --cer-bg:#f3edff; --hl:#facc15; --usr:#0e7490; --vfs:#7c3aed; --fs:#c2410c;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+      --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+      --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308; --usr:#22d3ee; --vfs:#a78bfa; --fs:#fb923c;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+    --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+    --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308; --usr:#22d3ee; --vfs:#a78bfa; --fs:#fb923c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--texto); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .envoltura{max-width:1150px; margin:0 auto; padding:18px 16px 48px}
+  h1{font-size:1.35rem; margin:0 0 4px}
+  h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave); margin:0 0 8px}
+  .sub{color:var(--suave); margin:0 0 14px; font-size:.92rem}
+  .tarjeta{background:var(--panel); border:1px solid var(--borde); border-radius:12px; padding:14px 16px; margin-bottom:12px; min-width:0}
+  button,select{font:inherit; font-size:.86rem; padding:7px 11px; border-radius:8px; border:1px solid var(--borde); background:var(--panel); color:var(--texto); cursor:pointer; max-width:100%}
+  button:hover:not(:disabled){border-color:var(--acento)}
+  button:disabled{opacity:.4; cursor:not-allowed}
+  button.prim{background:var(--acento); color:#fff; border-color:var(--acento); font-weight:650}
+  label{font-size:.82rem; color:var(--suave); display:flex; flex-direction:column; gap:3px; min-width:0}
+  .datos{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px}
+  @media (max-width:820px){ .datos{grid-template-columns:1fr 1fr} }
+  @media (max-width:460px){ .datos{grid-template-columns:1fr} }
+  .barra{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:10px}
+  .contador{margin-left:auto; color:var(--suave); font-size:.88rem}
+  .grilla{display:grid; grid-template-columns:1.25fr 1fr; gap:12px}
+  @media (max-width:880px){ .grilla{grid-template-columns:1fr} }
+  .cajas{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px}
+  @media (max-width:560px){ .cajas{grid-template-columns:1fr} }
+  .caja{border:2px solid var(--borde); border-radius:10px; padding:8px 10px; min-width:0}
+  .caja .t{font-weight:700; font-size:.88rem; margin-bottom:4px}
+  .caja.cambio{outline:3px solid var(--hl); outline-offset:1px}
+  .caja.bit{border-color:var(--cer); background:var(--cer-bg)}
+  table{border-collapse:collapse; width:100%; font:13px ui-monospace,Consolas,monospace}
+  td,th{border-bottom:1px solid var(--borde); padding:3px 6px; text-align:left}
+  th{font:600 .7rem system-ui,sans-serif; color:var(--suave); text-transform:uppercase}
+  .tag{display:inline-block; padding:0 7px; border-radius:99px; font:700 .75rem ui-monospace,Consolas,monospace; margin:2px 3px 2px 0; border:1px solid var(--borde)}
+  .tag.libre{background:var(--ok-bg); border-color:var(--ok)}
+  .tag.mal{background:var(--fal-bg); border-color:var(--fal)}
+  .vacio{color:var(--suave); font-size:.85rem}
+  .codigo{font:13px/1.5 ui-monospace,Consolas,monospace; margin:8px 0 0; padding:0; list-style:none}
+  .codigo li{padding:2px 6px; border-radius:6px}
+  .codigo li.ahora{background:var(--hl); color:#000}
+  .codigo li.hecho{color:var(--suave)}
+  .codigo li.off{opacity:.35; text-decoration:line-through}
+  .actor{display:inline-block; padding:2px 10px; border-radius:99px; font-weight:800; font-size:.8rem; color:#fff; background:var(--acento)}
+  .porque{border:1px solid var(--borde); border-left:5px solid var(--acento); border-radius:10px; padding:12px 14px; margin-top:10px}
+  .porque .tit{font-weight:700; font-size:1.02rem; margin:0 0 4px}
+  .marca{display:block; margin-top:8px; border-radius:8px; padding:7px 10px; font-size:.88rem}
+  .marca.ojo{background:var(--fal-bg); border:1px solid var(--fal)}
+  .marca.cer{background:var(--cer-bg); border:1px solid var(--cer)}
+  .estado{margin-top:10px; padding:8px 12px; border-radius:8px; font-weight:600}
+  .estado.ok{background:var(--ok-bg); border:1px solid var(--ok)}
+  .estado.mal{background:var(--fal-bg); border:1px solid var(--fal)}
+  .estado ul{margin:4px 0 0; padding-left:18px; font-weight:400}
+  .capas{display:flex; flex-direction:column; gap:8px; max-width:640px; margin:0 auto}
+  .capa{border:2px solid var(--borde); border-radius:10px; padding:8px 12px; text-align:center}
+  .capa small{display:block; color:var(--suave)}
+  .fila{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px}
+  .flecha{text-align:center; color:var(--suave); font-size:.82rem}
+  .paneles{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px}
+  @media (max-width:760px){ .paneles{grid-template-columns:1fr} }
+  .paneles ul,.paneles ol{margin:6px 0 0; padding-left:20px; font-size:.9rem}
+  .mas{color:var(--ok)} .menos{color:var(--fal)}
+  .ideas li{margin-bottom:5px}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <h1>Bitácora (journaling): borrar un archivo y que se corte la luz</h1>
+  <p class="sub">Tanenbaum 4.3.6, págs. 287–288. Borrar <code>foobar</code> en UNIX son tres pasos: <b>A</b> quitar la entrada del directorio, <b>B</b> liberar su nodo-i (el 7) y <b>C</b> devolver sus bloques (20 y 21). Elegí el orden, si hay bitácora, cómo se liberan los bloques y en qué momento se cae el sistema. Después del re-arranque se crean dos archivos nuevos, que reusan lo que figure libre: ahí se ve si el disco quedó sano o roto.</p>
+
+  <div class="tarjeta">
+    <div class="datos">
+      <label>Orden de los pasos
+        <select id="orden">
+          <option value="ABC">A → B → C (directorio, nodo-i, bloques)</option>
+          <option value="BAC">B → A → C (nodo-i primero)</option>
+          <option value="CAB">C → A → B (bloques primero)</option>
+        </select>
+      </label>
+      <label>¿Bitácora?
+        <select id="bit">
+          <option value="0">Sin bitácora</option>
+          <option value="1">Con bitácora</option>
+        </select>
+      </label>
+      <label>Cómo se liberan los bloques (paso C)
+        <select id="modo">
+          <option value="bitmap">Marcar en el mapa de bits (idempotente)</option>
+          <option value="lista">Agregar al final de la lista libre (NO idempotente)</option>
+        </select>
+      </label>
+      <label>Caída del sistema
+        <select id="caida"></select>
+      </label>
+    </div>
+    <div class="barra">
+      <button class="prim" id="sig">Siguiente paso ▶</button>
+      <button id="todo">Hasta el final ⏭</button>
+      <button id="rei">Reiniciar</button>
+      <span class="contador" id="cont"></span>
+    </div>
+  </div>
+
+  <div class="grilla">
+    <div class="tarjeta">
+      <h2>Lo que está escrito en el disco</h2>
+      <div class="cajas">
+        <div class="caja" id="bxDir"><div class="t">Directorio</div><div id="vDir"></div></div>
+        <div class="caja" id="bxIno"><div class="t">Nodos-i</div><div id="vIno"></div></div>
+        <div class="caja" id="bxLib"><div class="t" id="tLib">Bloques libres</div><div id="vLib"></div></div>
+        <div class="caja bit" id="bxBit"><div class="t">Bitácora (en disco)</div><div id="vBit"></div></div>
+      </div>
+      <div id="diag"></div>
+    </div>
+    <div class="tarjeta">
+      <span class="actor" id="actor">Sistema de archivos (kernel)</span>
+      <ol class="codigo" id="codigo"></ol>
+      <div class="porque" id="porque"><p class="tit">Listo</p><div>Configurá arriba y apretá «Siguiente paso».</div></div>
+    </div>
+  </div>
+
+  <div class="tarjeta">
+    <h2>VFS: sistema de archivos virtual (fig. 4-18, págs. 288–291)</h2>
+    <div class="capas">
+      <div class="capa" style="border-color:var(--usr)"><b>Proceso de usuario</b><small>open, read, write, lseek, close (POSIX)</small></div>
+      <div class="flecha">▼ interfaz superior = POSIX</div>
+      <div class="capa" style="border-color:var(--vfs)"><b>Sistema de archivos virtual (VFS)</b><small>lo común a todos: tabla de montaje, descriptores de archivo, nodos-v en RAM</small></div>
+      <div class="flecha">▼ interfaz inferior = «interfaz de VFS» (docenas de funciones que cada FS concreto registra)</div>
+      <div class="fila">
+        <div class="capa" style="border-color:var(--fs)"><b>ext3</b><small>montado en /</small></div>
+        <div class="capa" style="border-color:var(--fs)"><b>FAT32</b><small>pendrive en /mnt</small></div>
+        <div class="capa" style="border-color:var(--fs)"><b>NFS</b><small>remoto en /home</small></div>
+      </div>
+      <div class="flecha">▼</div>
+      <div class="capa"><b>Caché de búfer</b> → controladores → disco / red</div>
+    </div>
+    <div class="paneles">
+      <div><b>open("/usr/include/unistd.h") con un FS montado en /usr</b>
+        <ol>
+          <li>Al arrancar o al montar, cada FS se <b>registra</b> en el VFS y entrega su vector de funciones.</li>
+          <li>Al analizar la ruta, el VFS ve que en <code>/usr</code> hay un FS montado y busca su <b>superbloque</b> en la lista de montados.</li>
+          <li>Desde la raíz de ese FS busca <code>include/unistd.h</code>.</li>
+          <li>Crea un <b>nodo-v</b> en RAM: copia los datos del nodo-i y guarda el puntero a la tabla de funciones de ese FS.</li>
+          <li>Crea la entrada en la <b>tabla de descriptores</b> del proceso, apuntando al nodo-v, y devuelve el <b>descriptor</b>.</li>
+          <li>Cada <code>read</code> posterior: descriptor → nodo-v → función <code>read</code> del FS concreto.</li>
+        </ol></div>
+      <div><b>Windows contra UNIX</b>
+        <ul>
+          <li>Windows: una <b>letra de unidad</b> por sistema de archivos (C:, D:). No los integra en un solo árbol.</li>
+          <li>UNIX: <b>un solo árbol</b> con los FS <b>montados</b> en directorios. El usuario no nota que son distintos.</li>
+          <li class="mas">+ Agregar un FS nuevo = implementar las funciones de la interfaz de VFS.</li>
+          <li class="mas">+ Al VFS no le importa si los datos vienen del disco, de la red (NFS: la motivación original de Sun), de un CD o de un USB.</li>
+          <li class="menos">− Una capa más de indirección (llamadas por punteros a funciones).</li>
+        </ul></div>
+    </div>
+  </div>
+
+  <div class="tarjeta">
+    <h2>Ideas clave y frases de examen</h2>
+    <ul class="ideas">
+      <li><b>Bitácora: primero se escribe en el disco QUÉ se va a hacer, después se hace y al final se borra la entrada.</b> Si se cae, al re-arrancar se rehace todo lo que quedó en la bitácora.</li>
+      <li>⚠️ <b>Sin bitácora, ningún orden es seguro.</b> A primero deja recursos en el limbo; B primero hace que un nombre abra otro archivo; C primero deja dos archivos compartiendo bloques.</li>
+      <li>⚠️ Las operaciones registradas tienen que ser <b>idempotentes</b> (repetirlas no cambia el resultado). «Marcar el bloque n como libre» lo es; «agregar el bloque n al final de la lista libre» no, porque al rehacerla lo duplica.</li>
+      <li>🧠 <b>Transacción atómica</b> (begin / end transaction): o se hacen todas las operaciones del grupo o ninguna. Usan bitácora NTFS, ext3 y ReiserFS; ext3 es compatible con ext2.</li>
+    </ul>
+  </div>
+</div>
+
+<script id="motor">
+// ---------- Motor (sin DOM) ----------
+function estadoInicial(modo){
+  return {
+    dir: {foobar:7, notas:3},
+    inodos: {3:{usado:true, nombre:"notas", bloques:[5]}, 7:{usado:true, nombre:"foobar", bloques:[20,21]}, 9:{usado:false, nombre:null, bloques:[]}},
+    libresBitmap: {},          // bloque -> true si libre (al inicio no hay bloques libres)
+    lista: [],                 // lista libre (modo lista)
+    modo: modo, bitacora: null, caido:false
+  };
+}
+function cl(e){ return JSON.parse(JSON.stringify(e)); }
+
+var OPS = {
+  A: function(e){ delete e.dir.foobar; },
+  B: function(e){ e.inodos[7].usado=false; },
+  C: function(e){ [20,21].forEach(function(b){ if (e.modo==="bitmap") e.libresBitmap[b]=true; else e.lista.push(b); }); }
+};
+var NOMBRE = {A:"A: quitar «foobar» del directorio", B:"B: liberar el nodo-i 7", C:"C: devolver los bloques 20 y 21"};
+
+// Lista de eventos según la configuración
+function eventos(orden, bit){
+  var ev=[]; if (bit) ev.push("J");
+  orden.split("").forEach(function(x){ ev.push(x); });
+  if (bit) ev.push("F");
+  return ev;
+}
+
+// Asigna un archivo nuevo: el nodo-i libre más bajo y 2 bloques libres
+function crearArchivo(e, nombre){
+  var libres=Object.keys(e.inodos).map(Number).filter(function(i){return !e.inodos[i].usado;}).sort(function(a,b){return a-b;});
+  if (!libres.length) return {ok:false, motivo:"no hay nodos-i libres"};
+  var bl=[];
+  if (e.modo==="bitmap"){
+    var lb=Object.keys(e.libresBitmap).map(Number).filter(function(b){return e.libresBitmap[b];}).sort(function(a,b){return a-b;});
+    bl=lb.slice(0,2); bl.forEach(function(b){ e.libresBitmap[b]=false; });
+  } else { bl=e.lista.splice(0,2); }
+  var i=libres[0]; e.inodos[i]={usado:true, nombre:nombre, bloques:bl};
+  e.dir[nombre]=i;
+  return {ok:true, ino:i, bloques:bl};
+}
+
+// Revisa la consistencia del disco
+function diagnosticar(e){
+  var p=[];
+  Object.keys(e.dir).forEach(function(n){
+    var i=e.dir[n], ino=e.inodos[i];
+    if (!ino || !ino.usado) p.push("La entrada «"+n+"» apunta al nodo-i "+i+", que figura LIBRE (entrada colgada).");
+    else if (ino.nombre!==n) p.push("La entrada «"+n+"» apunta al nodo-i "+i+", que ahora es de «"+ino.nombre+"»: abrir "+n+" abre OTRO archivo.");
+  });
+  var alcanzables={}; Object.keys(e.dir).forEach(function(n){ alcanzables[e.dir[n]]=true; });
+  Object.keys(e.inodos).forEach(function(i){ var ino=e.inodos[i]; if (ino.usado && !alcanzables[i]) p.push("El nodo-i "+i+" está en uso pero ningún directorio lo apunta: quedó en el limbo."); });
+  var uso={};
+  Object.keys(e.inodos).forEach(function(i){ var ino=e.inodos[i]; if (ino.usado || alcanzables[i]) ino.bloques.forEach(function(b){ (uso[b]=uso[b]||[]).push(i); }); });
+  Object.keys(uso).forEach(function(b){ var u=uso[b].filter(function(v,ix,a){return a.indexOf(v)===ix;}); if (u.length>1) p.push("El bloque "+b+" lo comparten los nodos-i "+u.join(" y ")+": dos archivos pisándose los datos."); });
+  [20,21].forEach(function(b){
+    var libre = e.modo==="bitmap" ? !!e.libresBitmap[b] : e.lista.indexOf(b)>=0;
+    if (!uso[b] && !libre) p.push("El bloque "+b+" no es de nadie y no figura libre: bloque perdido.");
+  });
+  if (e.modo==="lista"){ var vis={}; e.lista.forEach(function(b){ if (vis[b]) p.push("El bloque "+b+" aparece dos veces en la lista libre."); vis[b]=true; }); }
+  return p.filter(function(v,ix,a){return a.indexOf(v)===ix;});
+}
+
+// Simulación completa: devuelve la lista de pasos con el estado después de cada uno
+function simular(orden, bit, modo, caida){
+  var e=estadoInicial(modo), ev=eventos(orden,bit), pasos=[], hechos=0;
+  var limite = (caida===null || caida===undefined || caida>=ev.length) ? ev.length : caida;
+  pasos.push({ev:"ini", e:cl(e), linea:null, tit:"Estado inicial", txt:"«foobar» está en el directorio, usa el nodo-i 7 y los bloques 20 y 21. No hay bloques libres en el disco."});
+  for (var k=0;k<limite;k++){
+    var x=ev[k];
+    if (x==="J"){ e.bitacora={ops:orden.split(""), hechas:[]};
+      pasos.push({ev:"J", e:cl(e), linea:0, cambio:["bxBit"], tit:"Se escribe la bitácora en el disco", txt:"Antes de tocar nada, se graba una entrada con las tres acciones ("+orden.split("").join(", ")+"). Si hace falta, se relee para verificarla. Recién ahí empiezan las operaciones."}); }
+    else if (x==="F"){ e.bitacora=null;
+      pasos.push({ev:"F", e:cl(e), linea:4, cambio:["bxBit"], tit:"Todo salió bien: se borra la entrada de la bitácora", txt:"Las tres acciones ya están en el disco, así que la entrada ya no hace falta."}); }
+    else { OPS[x](e); if (e.bitacora) e.bitacora.hechas.push(x);
+      var cam={A:["bxDir"],B:["bxIno"],C:["bxLib"]}[x];
+      pasos.push({ev:x, e:cl(e), linea:{A:1,B:2,C:3}[x], cambio:cam, tit:NOMBRE[x], txt:"Se escribe en el disco."}); }
+    hechos++;
+  }
+  var cayo = limite<ev.length;
+  if (cayo){
+    e.caido=true;
+    pasos.push({ev:"X", e:cl(e), linea:5, error:true, tit:"⚡ Se corta la luz", txt:"El sistema cae después de "+hechos+" de "+ev.length+" escrituras. Lo que estaba solo en RAM se pierde; lo que ya estaba en el disco queda como está."});
+    if (e.bitacora){
+      var rep=e.bitacora.ops.slice();
+      rep.forEach(function(o){ OPS[o](e); });
+      e.bitacora=null;
+      var noIdem = modo==="lista" && hechos>0 && ev.slice(0,hechos).indexOf("C")>=0;
+      pasos.push({ev:"R", e:cl(e), linea:6, cambio:["bxDir","bxIno","bxLib","bxBit"], tit:"Re-arranque: la bitácora tiene una entrada pendiente → se rehace TODO",
+        txt:"El sistema no sabe exactamente qué alcanzó a hacer, así que vuelve a ejecutar las tres acciones ("+rep.join(", ")+") y después borra la entrada. Esto solo funciona si repetirlas no hace daño.",
+        marca: noIdem ? {tipo:"ojo", txt:"⚠️ C ya se había hecho antes de la caída y «agregar al final de la lista libre» NO es idempotente: ahora 20 y 21 están dos veces en la lista."} : {tipo:"cer", txt:"🧠 Quitar una entrada que ya no está, marcar libre lo que ya está libre: repetirlo no cambia nada (idempotente)."}});
+    } else {
+      pasos.push({ev:"R", e:cl(e), linea:6, tit:"Re-arranque sin bitácora", txt: bit ? "La caída fue antes de terminar de escribir la bitácora: no se había tocado nada, así que foobar sigue intacto." : "No hay nada que diga qué se estaba haciendo. El disco queda como lo dejó la caída (más adelante fsck podría detectar algo, tema 8)."});
+    }
+  }
+  var a1=crearArchivo(e,"nuevo1"), a2=crearArchivo(e,"nuevo2");
+  var d=diagnosticar(e);
+  pasos.push({ev:"N", e:cl(e), linea:7, cambio:["bxDir","bxIno","bxLib"], fin:true, problemas:d,
+    tit:"Se crean «nuevo1» y «nuevo2» (reusan lo que figure libre)",
+    txt:"nuevo1 → "+(a1.ok?"nodo-i "+a1.ino+", bloques ["+a1.bloques.join(", ")+"]":a1.motivo)+" · nuevo2 → "+(a2.ok?"nodo-i "+a2.ino+", bloques ["+a2.bloques.join(", ")+"]":a2.motivo)+"."});
+  return pasos;
+}
+</script>
+
+<script>
+var $=function(id){return document.getElementById(id);};
+var paso=0, pasos=[];
+var LINEAS=["escribir en la bitácora: [ops] (y verificar)","A: quitar «foobar» del directorio","B: liberar el nodo-i 7","C: devolver los bloques 20 y 21","borrar la entrada de la bitácora","⚡ caída","re-arranque: ¿hay bitácora pendiente? → rehacer","se crean archivos nuevos"];
+
+function opcionesCaida(){
+  var bit=$("bit").value==="1", ev=eventos($("orden").value,bit), prev=$("caida").value, h='<option value="">Sin caída</option>';
+  var nom={J:"escribir la bitácora",A:"A",B:"B",C:"C",F:"borrar la bitácora"};
+  for (var k=0;k<ev.length;k++) h+='<option value="'+k+'">'+(k===0?"Antes de empezar":"Después de "+nom[ev[k-1]])+'</option>';
+  $("caida").innerHTML=h; if ([].some.call($("caida").options,function(o){return o.value===prev;})) $("caida").value=prev;
+}
+function recalcular(){
+  var c=$("caida").value; pasos=simular($("orden").value, $("bit").value==="1", $("modo").value, c===""?null:+c); paso=0; dib();
+}
+function dib(){
+  var p=paso>0?pasos[paso-1]:pasos[0], e=p.e, cam=paso>0&&p.cambio?p.cambio:[];
+  var dir=Object.keys(e.dir); $("vDir").innerHTML='<table><tr><th>nombre</th><th>nodo-i</th></tr>'+dir.map(function(n){return '<tr><td>'+n+'</td><td>'+e.dir[n]+'</td></tr>';}).join("")+'</table>';
+  $("vIno").innerHTML='<table><tr><th>nº</th><th>estado</th><th>bloques</th></tr>'+Object.keys(e.inodos).map(function(i){var n=e.inodos[i]; return '<tr><td>'+i+'</td><td>'+(n.usado?"usado ("+n.nombre+")":"libre")+'</td><td>'+(n.usado?n.bloques.join(", "):"—")+'</td></tr>';}).join("")+'</table>';
+  if (e.modo==="bitmap"){ $("tLib").textContent="Mapa de bits (bloques libres)"; var lb=Object.keys(e.libresBitmap).filter(function(b){return e.libresBitmap[b];});
+    $("vLib").innerHTML= lb.length? lb.map(function(b){return '<span class="tag libre">'+b+'</span>';}).join("") : '<div class="vacio">(ningún bloque libre)</div>'; }
+  else { $("tLib").textContent="Lista libre (en orden)"; var vis={};
+    $("vLib").innerHTML= e.lista.length? e.lista.map(function(b){var d=vis[b]; vis[b]=1; return '<span class="tag '+(d?"mal":"libre")+'">'+b+'</span>';}).join("→ ") : '<div class="vacio">(vacía)</div>'; }
+  $("vBit").innerHTML= e.bitacora ? 'Pendiente: <b>'+e.bitacora.ops.join(", ")+'</b><br><span class="vacio">hechas: '+(e.bitacora.hechas.join(", ")||"ninguna")+'</span>' : '<div class="vacio">(vacía)</div>';
+  ["bxDir","bxIno","bxLib","bxBit"].forEach(function(id){$(id).classList.toggle("cambio",cam.indexOf(id)>=0);});
+  var bit=$("bit").value==="1", ord=$("orden").value;
+  var ordenLineas=[0].concat(ord.split("").map(function(x){return {A:1,B:2,C:3}[x];})).concat([4,5,6,7]);
+  $("codigo").innerHTML=ordenLineas.map(function(l){var off=(!bit&&(l===0||l===4)); var t=LINEAS[l].replace("[ops]","["+ord.split("").join(", ")+"]");
+    return '<li class="'+(off?"off":"")+(paso>0&&p.linea===l?" ahora":"")+'">'+t+'</li>';}).join("");
+  if (paso===0){ $("porque").innerHTML='<p class="tit">Listo</p><div>Configurá arriba y apretá «Siguiente paso».</div>'; $("porque").style.borderLeftColor=""; }
+  else { $("porque").innerHTML='<p class="tit">'+p.tit+'</p><div>'+p.txt+'</div>'+(p.marca?'<span class="marca '+p.marca.tipo+'">'+p.marca.txt+'</span>':''); $("porque").style.borderLeftColor=p.error?"var(--fal)":(p.fin?(p.problemas.length?"var(--fal)":"var(--ok)"):""); }
+  if (paso>0 && p.fin){
+    $("diag").innerHTML = p.problemas.length ? '<div class="estado mal">✘ El disco quedó INCONSISTENTE:<ul>'+p.problemas.map(function(x){return '<li>'+x+'</li>';}).join("")+'</ul></div>'
+                                             : '<div class="estado ok">✔ Disco consistente: no hay entradas colgadas, nodos-i en el limbo, bloques perdidos ni compartidos.</div>';
+  } else $("diag").innerHTML="";
+  $("cont").textContent="Paso "+paso+" de "+pasos.length; $("sig").disabled=$("todo").disabled=paso>=pasos.length;
+}
+["orden","bit"].forEach(function(id){$(id).onchange=function(){opcionesCaida(); recalcular();};});
+["modo","caida"].forEach(function(id){$(id).onchange=recalcular;});
+$("sig").onclick=function(){paso++;dib();}; $("todo").onclick=function(){paso=pasos.length;dib();}; $("rei").onclick=function(){paso=0;dib();};
+opcionesCaida(); $("caida").value="1"; recalcular();
+</script>
+</body>
+</html>

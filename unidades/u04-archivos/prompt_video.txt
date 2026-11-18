@@ -1,0 +1,14 @@
+Formato Explainer, en español rioplatense. Público: estudiante universitario de Ingeniería en Sistemas que prepara el final de Sistemas Operativos (UTN FRM). Usá solo la fuente seleccionada.
+
+Seguí este orden:
+1. Por qué existen los archivos y qué es un sistema de archivos (persistencia, tamaño, acceso concurrente).
+2. Archivos y directorios desde el usuario: nombres, estructura, tipos, acceso, atributos, operaciones y rutas absolutas y relativas.
+3. Distribución de una partición: MBR, bloque de arranque, superbloque, bloques libres, i-nodos, raíz.
+4. Los cuatro métodos de asignación, con diagramas: contigua, lista enlazada, FAT e i-nodos con indirectos sencillo, doble y triple.
+5. Vínculos duros y simbólicos y el contador de vínculos.
+6. Bitácora, transacciones atómicas y VFS.
+7. Tamaño de bloque, mapa de bits contra lista libre, fragmentación interna, respaldos, consistencia con fsck y caché de búfer.
+8. Ejemplos: MS-DOS con FAT, UNIX V7, NTFS y ext2 y ext3 de Linux, con las tres tablas de un read.
+9. Protección: dominios, matriz, ACL, capacidades, Bell-La Padula y canales encubiertos.
+
+Mostrá visualmente los diagramas: la cadena de una FAT, el i-nodo con sus bloques indirectos, la búsqueda de /usr/ast/mbox y las tablas de fsck. Resolvé paso a paso al menos dos ejemplos numéricos: seguir una cadena FAT desde el cluster 4 y calcular el espacio ocupado, y el tamaño máximo de un archivo con 10 punteros directos, bloques de 4 KB y punteros de 4 bytes (unos 4 TB). Cerrá con los errores típicos de examen.

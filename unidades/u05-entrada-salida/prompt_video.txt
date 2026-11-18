@@ -1,0 +1,12 @@
+Formato Explainer, en español rioplatense. Público: estudiante universitario de Ingeniería en Sistemas que prepara el final de Sistemas Operativos (UTN FRM). Usá solo la fuente seleccionada.
+
+Seguí este orden:
+1. Qué hace el sistema operativo con la E/S y la independencia de dispositivos.
+2. Hardware: dispositivos de bloque contra de carácter, controlador contra driver, puertos de E/S contra asignación de memoria, DMA e interrupciones precisas.
+3. Las tres formas de hacer E/S, imprimiendo "ABCDEFGH": programada, por interrupciones y con DMA.
+4. Las capas del software de E/S: manejadores de interrupciones, drivers, software independiente del dispositivo (búferes) y espacio de usuario (spooling).
+5. Discos: cilindros y sectores, RAID 0 a 5, formato, tiempo de acceso y planificación del brazo.
+6. Almacenamiento estable y relojes.
+7. Casos de estudio: redirección y tuberías en Linux, /dev, y la E/S de Windows con IRP, KMDF y UMDF.
+
+Mostrá visualmente el DMA en cuatro pasos, las capas de E/S, los niveles de RAID y el recorrido del brazo. Resolvé paso a paso dos ejemplos numéricos: el tiempo medio de acceso de un disco de 7200 RPM (6,8 ms de búsqueda + 4,165 ms de rotación + 0,0269 ms de transferencia + 2 ms de sobrecarga = 12,99 ms), y el movimiento del brazo desde el cilindro 11 con peticiones 1, 36, 16, 34, 9 y 12 (FCFS 111, SSF 61, elevador 60 cilindros). Cerrá con los errores típicos de examen.

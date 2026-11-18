@@ -1,0 +1,246 @@
+
+===== [PDF pag 1] =====
+ si y so altos indican uso frecuente de swap.​
+ id alto significa que la CPU está mayormente libre. 
+/proc/meminfo 
+Es un archivo virtual que muestra información detallada y actualizada sobre la memoria del 
+sistema. 
+cat /proc/meminfo 
+Datos principales: 
+●​ MemTotal: memoria RAM total. 
+●​ MemFree: RAM completamente libre. 
+●​ MemAvailable: memoria disponible para nuevos procesos sin usar swap. 
+●​ Buffers: memoria usada como búfer. 
+●​ Cached: memoria usada como caché. 
+●​ SwapTotal: memoria swap total. 
+●​ SwapFree: memoria swap libre. 
+●​ Active: memoria usada recientemente. 
+●​ Inactive: memoria poco utilizada, que puede recuperarse. 
+●​ Dirty: memoria modificada que todavía debe escribirse al disco. 
+●​ PageTables: memoria utilizada por las tablas de páginas. 
+/proc/meminfo ofrece información más detallada que free, mientras que 
+free toma esos datos y los presenta resumidos y de manera más legible. 
+Sistemas de archivos montados 
+Hay tres formas comunes de verlos: 
+cat /proc/mounts 
+cat /proc/mounts 
+Muestra los sistemas de archivos que el kernel tiene montados actualmente. 
+Columnas principales: 
+●​ dispositivo: partición o recurso montado. 
+●​ punto de montaje: carpeta donde está montado. 
+●​ tipo de sistema de archivos: por ejemplo ext4, tmpfs, proc. 
+●​ opciones: permisos y forma de montaje, como rw o ro. 
+mount 
+mount 
+
+===== [PDF pag 2] =====
+También muestra los sistemas de archivos montados, con un formato más legible. 
+findmnt 
+findmnt 
+Muestra los montajes en forma de árbol y suele ser el más claro. 
+Columnas comunes: 
+●​ TARGET: punto de montaje. 
+●​ SOURCE: dispositivo o recurso de origen. 
+●​ FSTYPE: tipo de sistema de archivos. 
+●​ OPTIONS: opciones de montaje. 
+Los tres muestran información similar; findmnt suele ser el más ordenado y 
+fácil de interpretar. 
+/etc/fstab 
+El archivo /etc/fstab contiene la configuración de los sistemas de archivos que deben 
+montarse automáticamente al iniciar Linux. 
+cat /etc/fstab 
+Cada línea suele tener estas columnas: 
+●​ Dispositivo o UUID: identifica la partición o disco. 
+●​ Punto de montaje: carpeta donde se monta, por ejemplo /, /home o /mnt/datos. 
+●​ Tipo de sistema de archivos: por ejemplo ext4, ntfs, vfat, swap. 
+●​ Opciones de montaje: por ejemplo defaults, ro, rw, noauto. 
+●​ Dump: indica si se incluye en copias de seguridad con dump. 
+●​ Pass: orden en que se revisa el sistema de archivos con fsck. 
+Ejemplo: 
+UUID=xxxx-xxxx   /home   ext4   defaults   0   2 
+Significa que esa partición: 
+●​ se identifica por su UUID, 
+●​ se monta en /home, 
+●​ usa ext4, 
+●​ se monta con opciones normales, 
+●​ y se revisa después de la partición raíz. 
+fstab no muestra solo lo que está montado ahora, sino lo que está 
+configurado para montarse automáticamente. 
+
+===== [PDF pag 3] =====
+lsblk -f 
+Muestra los dispositivos de bloque —discos y particiones— junto con información de sus 
+sistemas de archivos. 
+lsblk -f 
+Columnas principales: 
+●​ NAME: nombre del disco o partición. 
+●​ FSTYPE: tipo de sistema de archivos. 
+●​ FSVER: versión del sistema de archivos. 
+●​ LABEL: nombre o etiqueta asignada. 
+●​ UUID: identificador único. 
+●​ FSAVAIL: espacio disponible. 
+●​ FSUSE%: porcentaje de espacio utilizado. 
+●​ MOUNTPOINTS: directorio donde está montado. 
+En FSTYPE se pueden identificar, por ejemplo: 
+●​ ext4: sistema común de Linux. 
+●​ vfat o fat32: común en pendrives y particiones EFI. 
+●​ ntfs: usado principalmente por Windows. 
+●​ exfat: frecuente en discos extraíbles. 
+●​ swap: área de intercambio de Linux. 
+●​ xfs, btrfs: otros sistemas usados en Linux. 
+lsblk -f permite identificar qué discos y particiones existen, qué sistema de 
+archivos usa cada uno y dónde están montados. 
+Crear un archivo de imagen con dd 
+dd if=/dev/zero of=mi_imagen.img bs=1M count=100 
+●​ dd: copia datos byte a byte desde un origen hacia un destino. 
+●​ if=/dev/zero: archivo de entrada; /dev/zero genera ceros continuamente. 
+●​ of=mi_imagen.img: archivo de salida que se va a crear. 
+●​ bs=1M: tamaño de cada bloque: 1 MB. 
+●​ count=100: copia 100 bloques. 
+Resultado: 
+Crea un archivo de aproximadamente 100 MB lleno de ceros. 
+Importante: 
+
+===== [PDF pag 4] =====
+Todavía no es un sistema de archivos ni un disco montable. Es solo un archivo 
+vacío a nivel lógico, que después puede formatearse y usarse como una 
+imagen de disco. 
+Formatear la imagen 
+mkfs.ext4 mi_imagen.img 
+●​ mkfs: crea un sistema de archivos. 
+●​ ext4: tipo de sistema de archivos utilizado. 
+●​ mi_imagen.img: archivo donde se crea ese sistema de archivos. 
+Se utilizó el sistema de archivos ext4. Ahora el archivo puede tratarse como 
+una imagen de disco formateada. 
+Montar la imagen 
+sudo mkdir /mnt/mi_imagen 
+sudo mount -o loop mi_imagen.img /mnt/mi_imagen 
+●​ mkdir: crea el punto de montaje. 
+●​ mount: monta el sistema de archivos. 
+●​ -o loop: hace que Linux trate el archivo .img como si fuera un dispositivo de 
+bloque. 
+●​ /mnt/mi_imagen: carpeta donde se podrá acceder a su contenido. 
+Verificar el montaje 
+df -h | grep mi_imagen 
+●​ df -h: muestra espacio total, usado y disponible de los sistemas montados. 
+●​ grep mi_imagen: filtra únicamente la línea correspondiente a la imagen. 
+Resultado: mi_imagen.img, formateada como ext4, queda accesible desde 
+/mnt/mi_imagen. 
+Desmontar la imagen 
+sudo umount /mnt/mi_imagen 
+●​ umount: desmonta el sistema de archivos. 
+●​ Después de desmontarlo, el contenido deja de estar accesible desde 
+/mnt/mi_imagen. 
+Agregarla a /etc/fstab 
+
+===== [PDF pag 5] =====
+Ejemplo: 
+echo "$(pwd)/mi_imagen.img /mnt/mi_imagen ext4 loop 0 0" | sudo tee -a /etc/fstab 
+Campos agregados: 
+●​ $(pwd)/mi_imagen.img: ruta completa del archivo de imagen. 
+●​ /mnt/mi_imagen: punto de montaje. 
+●​ ext4: tipo de sistema de archivos. 
+●​ loop: trata el archivo como un dispositivo de bloque. 
+●​ primer 0: no usar dump. 
+●​ segundo 0: no comprobarlo automáticamente con fsck durante el arranque. 
+●​ tee -a: agrega la línea al final de /etc/fstab con permisos de administrador. 
+Probar la configuración 
+sudo mount -a 
+Monta todos los sistemas de archivos configurados en /etc/fstab que todavía no estén 
+montados. 
+Verificación: 
+df -h | grep mi_imagen 
+/etc/fstab guarda la configuración de montaje automático. loop permite 
+montar un archivo como si fuera un disco y mount -a prueba o aplica todas las 
+entradas del archivo. 
+Importante: antes de editar /etc/fstab, conviene hacer una copia: 
+sudo cp /etc/fstab /etc/fstab.bak 
+Enlace simbólico y enlace duro 
+Enlace simbólico 
+ln -s original.txt enlace_simbolico.txt 
+Es un archivo especial que apunta al nombre o ruta del archivo original. 
+●​ Tiene un inodo distinto. 
+●​ Puede apuntar a archivos o directorios. 
+●​ Puede apuntar a otro sistema de archivos. 
+●​ Si se borra el original, el enlace queda roto. 
+Enlace duro 
+
+===== [PDF pag 6] =====
+ln original.txt enlace_duro.txt 
+Es otro nombre para el mismo contenido físico. 
+●​ Comparte el mismo inodo que el original. 
+●​ No depende del nombre original. 
+●​ Normalmente no se usa para directorios. 
+●​ No puede cruzar sistemas de archivos. 
+Al modificar el archivo original 
+Si cambiás original.txt, el cambio se ve desde: 
+●​ enlace_simbolico.txt 
+●​ enlace_duro.txt 
+Ambos permiten acceder al mismo contenido mientras el original existe. 
+Al borrar el archivo original 
+rm original.txt 
+●​ Enlace simbólico: queda roto, porque apuntaba a la ruta eliminada. 
+●​ Enlace duro: sigue funcionando, porque todavía existe otro nombre asociado al 
+mismo inodo y contenido. 
+Comparación rápida 
+Característica 
+Simbólico 
+Duro 
+Apunta a 
+Ruta del archivo Mismo inodo 
+Inodo 
+Distinto 
+Igual 
+Si se borra el original 
+Se rompe 
+Sigue 
+funcionando 
+Puede cruzar discos 
+Sí 
+No 
+Puede enlazar 
+directorios 
+Sí 
+Generalmente no 
+El enlace simbólico es un acceso directo. El enlace duro es otro nombre para el 
+mismo archivo. 
+Glosario básico de comandos Linux 
+Estos son pocos, pero sirven para entender casi todos los ejercicios que hiciste: 
+
+===== [PDF pag 7] =====
+●​ cat archivo: muestra el contenido de un archivo en la terminal. No lo abre en un 
+editor; solamente lo imprime. 
+cat /etc/fstab 
+●​ ls: lista archivos y directorios. 
+ls 
+ls -l 
+●​ cd directorio: cambia de directorio. 
+cd /proc 
+●​ pwd: muestra la ruta del directorio actual. 
+pwd 
+●​ mkdir nombre: crea un directorio. 
+mkdir prueba 
+●​ cp origen destino: copia archivos o directorios. 
+cp archivo.txt copia.txt 
+●​ mv origen destino: mueve o renombra archivos. 
+mv viejo.txt nuevo.txt 
+●​ rm archivo: elimina un archivo. 
+rm archivo.txt 
+●​ grep texto archivo: busca líneas que contengan un texto. 
+grep ext4 /etc/fstab 
+También puede filtrar la salida de otro comando: 
+df -h | grep mi_imagen 
+●​ sudo comando: ejecuta un comando con permisos de administrador. 
+sudo mount -a 
+●​ man comando: muestra el manual de un comando. 
+man ps 
+
+===== [PDF pag 8] =====
+Símbolos muy usados 
+●​ |: envía la salida de un comando al siguiente. 
+●​ >: guarda la salida reemplazando el archivo. 
+●​ >>: agrega la salida al final del archivo. 
+●​ -: introduce opciones, como -h, -f o -r. 
+cat muestra contenido; ls lista; cd entra; pwd ubica; grep busca; sudo da 
+permisos; man explica comandos. 
+ 

@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Listas de páginas en Windows</title>
+<style>
+  :root{
+    --bg:#f4f5f8; --panel:#fff; --borde:#d6dae2; --texto:#1b1f24; --suave:#5b6572; --acento:#3d63c9;
+    --ok:#15803d; --ok-bg:#e9f8ee; --fal:#dc2626; --fal-bg:#fdecec; --lim:#b45309; --lim-bg:#fff6e0;
+    --cer:#7c3aed; --cer-bg:#f3edff; --hl:#facc15;
+    --ct:#2563eb; --mod:#dc2626; --esp:#15803d; --lib:#64748b; --cero:#0e7490; --def:#7c2d12;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+      --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+      --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308;
+      --ct:#60a5fa; --mod:#f87171; --esp:#4ade80; --lib:#94a3b8; --cero:#22d3ee; --def:#fb923c;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+    --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+    --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308;
+    --ct:#60a5fa; --mod:#f87171; --esp:#4ade80; --lib:#94a3b8; --cero:#22d3ee; --def:#fb923c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--texto); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .envoltura{max-width:1150px; margin:0 auto; padding:18px 16px 48px}
+  h1{font-size:1.35rem; margin:0 0 4px}
+  h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave); margin:0 0 6px}
+  .sub{color:var(--suave); margin:0 0 14px; font-size:.92rem}
+  .tarjeta{background:var(--panel); border:1px solid var(--borde); border-radius:12px; padding:14px 16px; margin-bottom:12px; min-width:0}
+  button{font:inherit; font-size:.86rem; padding:7px 11px; border-radius:8px; border:1px solid var(--borde); background:var(--panel); color:var(--texto); cursor:pointer; text-align:left}
+  button:hover:not(:disabled){border-color:var(--acento)}
+  button:disabled{opacity:.4; cursor:not-allowed}
+  button.prim{background:var(--acento); color:#fff; border-color:var(--acento); font-weight:650}
+  .barra{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:8px 0 2px}
+  .contador{margin-left:auto; color:var(--suave); font-size:.88rem}
+  .eventos{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; margin-top:8px}
+  @media (max-width:820px){ .eventos{grid-template-columns:1fr 1fr} }
+  @media (max-width:480px){ .eventos{grid-template-columns:1fr} }
+  .eventos b{display:inline-block; min-width:22px}
+  .grilla{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  @media (max-width:880px){ .grilla{grid-template-columns:1fr} }
+  svg{width:100%; height:auto; display:block}
+  .celdas{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px}
+  .celda{border:1px solid var(--borde); border-radius:9px; padding:6px 9px; min-width:0}
+  .celda .k{font-size:.72rem; color:var(--suave); text-transform:uppercase; letter-spacing:.04em}
+  .celda .v{font:700 .92rem ui-monospace,Consolas,monospace; overflow-wrap:anywhere}
+  .celda.cambio{outline:2px solid var(--cer); background:var(--cer-bg)}
+  .codigo{font:13px/1.5 ui-monospace,Consolas,monospace; margin:0; padding:0; list-style:none}
+  .codigo li{padding:2px 6px; border-radius:6px}
+  .codigo li.ahora{background:var(--hl); color:#000}
+  .actor{display:inline-block; padding:2px 10px; border-radius:99px; font-weight:800; font-size:.8rem; color:#fff; background:var(--acento)}
+  .porque{border:1px solid var(--borde); border-left:5px solid var(--acento); border-radius:10px; padding:12px 14px; margin-top:10px}
+  .porque .tit{font-weight:700; font-size:1.02rem; margin:0 0 4px}
+  .marca{display:block; margin-top:8px; border-radius:8px; padding:7px 10px; font-size:.88rem}
+  .marca.ojo{background:var(--fal-bg); border:1px solid var(--fal)}
+  .marca.cer{background:var(--cer-bg); border:1px solid var(--cer)}
+  .ideas li{margin-bottom:5px}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <h1>Windows: las listas de páginas físicas (fig. 11-36)</h1>
+  <p class="sub">Tanenbaum 11.5.3, págs. 889–894. Seguís la vida de <b>un marco de página</b>. Todo marco está en un <b>conjunto de trabajo</b> (lo apunta una tabla de páginas válida) o en una de las <b>cinco listas</b>; juntas forman la <b>base de datos PFN</b>. Probá los eventos a mano (solo se habilitan los que pueden pasar desde donde está el marco) o reproducí el recorrido guiado con «Siguiente paso».</p>
+
+  <div class="tarjeta">
+    <div class="barra">
+      <button class="prim" id="sig">Recorrido guiado: siguiente paso ▶</button>
+      <button id="ant">◀ Deshacer</button>
+      <button id="rei">Reiniciar</button>
+      <span class="contador" id="cont"></span>
+    </div>
+    <div class="eventos" id="eventos"></div>
+  </div>
+
+  <div class="grilla">
+    <div class="tarjeta">
+      <h2>Dónde está el marco</h2>
+      <svg viewBox="0 0 560 300" id="dia" aria-label="Listas de páginas"></svg>
+      <div class="celdas" id="celdas" style="margin-top:10px"></div>
+    </div>
+    <div class="tarjeta">
+      <h2>Las transiciones de la fig. 11-36</h2>
+      <ol class="codigo" id="cod"></ol>
+      <div style="margin-top:8px; font-size:.85rem" id="quien"></div>
+      <div class="porque" id="porque"></div>
+    </div>
+  </div>
+
+  <div class="tarjeta ideas">
+    <h2>Ideas clave para el examen</h2>
+    <ul>
+      <li>Las cinco listas son: <b>modificadas</b> (sucias), <b>en espera</b> (limpias, todavía con su contenido), <b>libres</b>, <b>en ceros</b> y <b>defectuosas</b> (errores de hardware). Junto con los conjuntos de trabajo forman la <b>base de datos PFN</b>, indexada por número de marco.</li>
+      <li>⚠️ <b>Fallo suave vs. fallo duro.</b> Es <b>suave</b> si la página se encuentra en memoria (en la lista de espera o de modificadas, compartida con otro proceso, o si solo hace falta una página en ceros), y es <b>duro</b> si hay que leerla del disco. Sacar una página del conjunto de trabajo <b>no</b> la manda al disco: va a una lista y se puede recuperar sin E/S.</li>
+      <li>🧠 Es el mismo truco de la <b>reserva de marcos libres</b> y del <b>demonio de paginación</b> de la limpieza (tema 8): el <b>escritor de páginas modificadas</b> limpia en segundo plano (4) y por eso casi siempre hay marcos limpios. El hilo <b>ZeroPage</b> tiene la <b>prioridad más baja</b> y pone páginas en ceros (7) por <b>seguridad</b>: una página nueva no puede mostrar datos de otro proceso.</li>
+      <li>El reemplazo se basa en el <b>conjunto de trabajo</b> por proceso, con mínimo y máximo, y solo actúa cuando escasea la memoria, en tres niveles: (1) <b>mucha memoria</b>, explora y envejece con el bit A; (2) <b>empieza a escasear</b>, reemplaza las más viejas en vez de crecer; (3) <b>escasa</b>, recorta los conjuntos por debajo del máximo. Hay 3 tipos de página virtual: <b>inválida</b>, <b>reservada</b> y <b>confirmada</b>.</li>
+    </ul>
+  </div>
+</div>
+
+<script id="motor">
+// ======== MOTOR (sin DOM: se verifica con Node) ========
+const LISTAS = {
+  CT: "Conjunto de trabajo", MOD: "Lista de modificadas", ESP: "Lista en espera",
+  LIB: "Lista de libres", CER: "Lista en ceros", DEF: "Lista defectuosa"
+};
+const TRANS = [
+  { n: 1, id: "desalojar", txt: "(1) Desalojar del conjunto de trabajo → modificadas o en espera", desde: ["CT"], actor: "Admin. del conjunto de trabajo" },
+  { n: 2, id: "suave", txt: "(2) Fallo de página SUAVE → vuelve al conjunto de trabajo", desde: ["MOD", "ESP"], actor: "Administrador de memoria (fallo)" },
+  { n: 3, id: "terminar", txt: "(3) Termina el proceso → libres", desde: ["CT", "MOD", "ESP"], actor: "Terminación del proceso" },
+  { n: 4, id: "escritor", txt: "(4) Escritor de páginas modificadas → en espera", desde: ["MOD"], actor: "Escritor de páginas modificadas" },
+  { n: 5, id: "desasignar", txt: "(5) El proceso desasigna la página → libres", desde: ["CT"], actor: "Proceso (VirtualFree)" },
+  { n: 6, id: "referenciada", txt: "(6) Página referenciada: leer del disco (fallo DURO)", desde: ["LIB"], actor: "Administrador de memoria (fallo)" },
+  { n: 7, id: "cero", txt: "(7) Hilo ZeroPage → en ceros", desde: ["LIB"], actor: "Hilo ZeroPage (prioridad mínima)" },
+  { n: 8, id: "pila", txt: "(8) Se necesita una página cero (crece la pila)", desde: ["CER"], actor: "Administrador de memoria (fallo)" },
+  { n: 0, id: "escribe", txt: "El proceso ESCRIBE en la página (D = 1)", desde: ["CT"], actor: "Proceso (hardware pone D = 1)" }
+];
+function inicial() {
+  return { lista: "LIB", sucia: false, contenido: "datos viejos de otro proceso", suaves: 0, duros: 0, escrituras: 0, ultima: null };
+}
+function posibles(e) { return TRANS.filter(t => t.desde.includes(e.lista)).map(t => t.id); }
+function aplicar(e, id) {
+  const t = TRANS.find(x => x.id === id);
+  if (!t) throw new Error("Evento desconocido: " + id);
+  if (!t.desde.includes(e.lista)) throw new Error(`«${id}» no puede ocurrir desde ${LISTAS[e.lista]}`);
+  const s = Object.assign({}, e, { ultima: { id, n: t.n, desde: e.lista } });
+  let tit, txt, ojo = null, cer = null;
+  switch (id) {
+    case "desalojar":
+      s.lista = e.sucia ? "MOD" : "ESP";
+      tit = e.sucia ? "Va a MODIFICADAS (está sucia)" : "Va a EN ESPERA (está limpia)";
+      txt = `El administrador del conjunto de trabajo saca la página del conjunto del proceso y la pone al final de la lista ${e.sucia ? "de modificadas" : "en espera"}, según su bit sucio. El contenido sigue en el marco.`;
+      ojo = "No se escribe al disco en este momento: la página queda en memoria, en una lista.";
+      break;
+    case "suave":
+      s.lista = "CT"; s.suaves++;
+      tit = "FALLO SUAVE: vuelve sin E/S";
+      txt = `El proceso vuelve a necesitar la página y todavía está en la lista ${e.lista === "MOD" ? "de modificadas" : "en espera"}. Se saca de ahí y vuelve al conjunto de trabajo. Solo se actualiza la tabla de páginas, sin leer el disco.`;
+      cer = "Fallo suave = la página se encontró en memoria. Tiene poco impacto en el rendimiento.";
+      break;
+    case "terminar":
+      s.lista = "LIB"; s.sucia = false; s.contenido = "datos viejos (sin dueño)";
+      tit = "Termina el proceso → LIBRES";
+      txt = "Sus páginas no compartidas ya no pueden volver a él por un fallo, así que pasan a la lista libre, tanto las del conjunto de trabajo como las de las listas de modificadas o en espera. También se libera su espacio en el archivo de paginación.";
+      if (e.sucia || e.lista === "MOD") ojo = "Aunque estaba sucia, NO se escribe: el proceso ya no existe y nadie va a leer esos datos.";
+      break;
+    case "escritor":
+      s.lista = "ESP"; s.sucia = false; s.escrituras++;
+      tit = "Se escribe al disco → EN ESPERA (limpia)";
+      txt = "El escritor de páginas modificadas (o el de páginas asignadas, si es un archivo mapeado) se despierta periódicamente cuando faltan páginas limpias. Escribe la página al disco y la pasa a la lista en espera. Es la política de limpieza del tema 8.";
+      break;
+    case "desasignar":
+      s.lista = "LIB"; s.sucia = false; s.contenido = "datos viejos (sin dueño)";
+      tit = "Desasignación → LIBRES";
+      txt = "El proceso libera la región, por ejemplo con VirtualFree. La página deja de estar asociada al proceso y pasa a libres, salvo que esté compartida.";
+      break;
+    case "referenciada":
+      s.lista = "CT"; s.duros++; s.sucia = false; s.contenido = "página leída del disco";
+      tit = "FALLO DURO: se lee del disco";
+      txt = "Un fallo necesita un marco para traer una página del disco y lo toma de la lista libre si puede. No importa que tenga datos viejos de otro proceso, porque la lectura lo sobrescribe por completo.";
+      cer = "Fallo duro = hay E/S de disco. Es el caro.";
+      break;
+    case "cero":
+      s.lista = "CER"; s.contenido = "todo en ceros";
+      tit = "Hilo ZeroPage → EN CEROS";
+      txt = "Un hilo del kernel con la prioridad más baja borra las páginas libres y las pasa a la lista en ceros. Lo hace cuando la CPU está ociosa, así que no cuesta nada.";
+      cer = "Motivo: seguridad. Una página nueva no puede mostrar datos de otro proceso.";
+      break;
+    case "pila":
+      s.lista = "CT"; s.suaves++; s.sucia = false; s.contenido = "todo en ceros (pila nueva)";
+      tit = "Crece la pila: se usa una página EN CEROS";
+      txt = "El hilo empuja un valor en su pila y toca una página reservada que todavía no tiene marco. El administrador de memoria da una página en ceros, la asigna y el hilo reintenta el acceso.";
+      cer = "Es un fallo suave: no hubo que leer nada del disco.";
+      break;
+    case "escribe":
+      s.sucia = true; s.contenido = "datos del proceso (modificados)";
+      tit = "El proceso escribe: D = 1";
+      txt = "El hardware pone en 1 el bit D (sucia) de la PTE. Si después se desaloja, la página va a la lista de modificadas, no a la de espera.";
+      break;
+  }
+  return { estado: s, tit, txt, ojo, cer, actor: t.actor, n: t.n };
+}
+const GUION = ["cero", "pila", "escribe", "desalojar", "escritor", "suave", "desalojar", "terminar", "referenciada"];
+function correr(ids) {
+  let e = inicial(); const pasos = [];
+  for (const id of ids) { const r = aplicar(e, id); pasos.push(r); e = r.estado; }
+  return { pasos, final: e };
+}
+if (typeof module !== "undefined") module.exports = { LISTAS, TRANS, inicial, posibles, aplicar, correr, GUION };
+</script>
+
+<script>
+// ======== INTERFAZ ========
+const $ = id => document.getElementById(id);
+let historia = [{ estado: inicial(), tit: "Estado inicial", txt: "El marco está en la lista de libres, con datos viejos de algún proceso anterior. Elegí un evento o seguí el recorrido guiado.", ojo: null, cer: null, actor: null, n: null }];
+let guia = 0;
+const POS = { CT: [20, 120], MOD: [210, 20], ESP: [400, 20], LIB: [210, 220], CER: [400, 220], DEF: [400, 120] };
+const COL = { CT: "--ct", MOD: "--mod", ESP: "--esp", LIB: "--lib", CER: "--cero", DEF: "--def" };
+const CORTO = { CT: "Conjunto de trabajo", MOD: "Modificadas", ESP: "En espera", LIB: "Libres", CER: "En ceros", DEF: "Defectuosas" };
+const W = 140, H = 60;
+const centro = k => [POS[k][0] + W / 2, POS[k][1] + H / 2];
+
+$("cod").innerHTML = TRANS.map(t => `<li data-id="${t.id}">${t.txt}</li>`).join("");
+$("eventos").innerHTML = TRANS.map(t => `<button data-id="${t.id}"><b>${t.n ? "(" + t.n + ")" : "✎"}</b> ${t.txt.replace(/^\(\d\)\s*/, "")}</button>`).join("");
+$("eventos").querySelectorAll("button").forEach(b => b.onclick = () => { mover(b.dataset.id); guia = -1; });
+
+function mover(id) { historia.push(aplicar(historia[historia.length - 1].estado, id)); pintar(); }
+$("sig").onclick = () => {
+  if (guia < 0) { historia = historia.slice(0, 1); guia = 0; }
+  if (guia < GUION.length) { mover(GUION[guia]); guia++; pintar(); }
+};
+$("ant").onclick = () => { if (historia.length > 1) { historia.pop(); if (guia > 0) guia--; pintar(); } };
+$("rei").onclick = () => { historia = historia.slice(0, 1); guia = 0; pintar(); };
+
+function pintar() {
+  const r = historia[historia.length - 1], e = r.estado, prev = historia.length > 1 ? historia[historia.length - 2].estado : null;
+  const css = getComputedStyle(document.documentElement), v = n => css.getPropertyValue(n).trim();
+  let s = `<defs><marker id="pta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="${v("--hl")}"/></marker></defs>`;
+  for (const k of Object.keys(POS)) {
+    const [x, y] = POS[k], act = e.lista === k;
+    s += `<rect x="${x}" y="${y}" width="${W}" height="${H}" rx="10" fill="${act ? v(COL[k]) : v("--panel")}" stroke="${v(COL[k])}" stroke-width="${act ? 3 : 2}"/>`;
+    s += `<text x="${x + W / 2}" y="${y + 26}" text-anchor="middle" font-size="13" font-weight="700" fill="${act ? "#fff" : v("--texto")}">${CORTO[k]}</text>`;
+    if (act) s += `<text x="${x + W / 2}" y="${y + 46}" text-anchor="middle" font-size="12" fill="#fff">▣ el marco${e.sucia ? " (D = 1)" : ""}</text>`;
+  }
+  if (r.estado.ultima && r.estado.ultima.desde !== e.lista) {
+    const [x1, y1] = centro(r.estado.ultima.desde), [x2, y2] = centro(e.lista);
+    const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L;
+    const a = [x1 + ux * 55, y1 + uy * 34], b = [x2 - ux * 58, y2 - uy * 36];
+    s += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${v("--hl")}" stroke-width="4" marker-end="url(#pta)"/>`;
+    if (r.n) s += `<circle cx="${(a[0] + b[0]) / 2}" cy="${(a[1] + b[1]) / 2}" r="13" fill="${v("--hl")}"/><text x="${(a[0] + b[0]) / 2}" y="${(a[1] + b[1]) / 2 + 5}" text-anchor="middle" font-size="14" font-weight="800" fill="#000">${r.n}</text>`;
+  }
+  $("dia").innerHTML = s;
+
+  const celdas = [["Lista actual", LISTAS[e.lista], "lista"], ["Bit D (sucia)", e.sucia ? "1" : "0", "sucia"], ["Contenido del marco", e.contenido, "contenido"],
+    ["Fallos suaves", e.suaves, "suaves"], ["Fallos duros", e.duros, "duros"], ["Escrituras a disco", e.escrituras, "escrituras"]];
+  $("celdas").innerHTML = celdas.map(([k, val, key]) => `<div class="celda${prev && prev[key] !== e[key] ? " cambio" : ""}"><div class="k">${k}</div><div class="v">${val}</div></div>`).join("");
+
+  const ok = posibles(e);
+  $("eventos").querySelectorAll("button").forEach(b => b.disabled = !ok.includes(b.dataset.id));
+  $("cod").querySelectorAll("li").forEach(li => li.className = e.ultima && li.dataset.id === e.ultima.id ? "ahora" : "");
+  $("quien").innerHTML = r.actor ? `Lo hace: <span class="actor">${r.actor}</span>` : "";
+  $("porque").innerHTML = `<p class="tit">${r.tit}</p><div>${r.txt}</div>` + (r.ojo ? `<span class="marca ojo">⚠️ ${r.ojo}</span>` : "") + (r.cer ? `<span class="marca cer">🧠 ${r.cer}</span>` : "");
+  $("cont").textContent = guia >= 0 ? `Recorrido guiado: ${guia} de ${GUION.length}` : `Modo libre: ${historia.length - 1} eventos`;
+  $("sig").disabled = guia >= GUION.length;
+  $("ant").disabled = historia.length === 1;
+}
+pintar();
+</script>
+</body>
+</html>

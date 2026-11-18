@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Segmentación</title>
+<style>
+  :root{
+    --bg:#f4f5f8; --panel:#fff; --borde:#d6dae2; --texto:#1b1f24; --suave:#5b6572; --acento:#3d63c9;
+    --ok:#15803d; --ok-bg:#e9f8ee; --fal:#dc2626; --fal-bg:#fdecec; --lim:#b45309; --lim-bg:#fff6e0;
+    --cer:#7c3aed; --cer-bg:#f3edff; --hl:#facc15; --hueco:#e5e7eb;
+    --s0:#3b82f6; --s1:#f97316; --s2:#10b981; --s3:#a855f7; --s4:#ef4444; --s5:#14b8a6; --s6:#eab308; --s7:#ec4899;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+      --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+      --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308; --hueco:#2a2f38;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+    --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+    --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308; --hueco:#2a2f38;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--texto); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .envoltura{max-width:1150px; margin:0 auto; padding:18px 16px 48px}
+  h1{font-size:1.35rem; margin:0 0 4px}
+  h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave); margin:0 0 6px}
+  h3{font-size:1rem; margin:0 0 6px}
+  .sub{color:var(--suave); margin:0 0 14px; font-size:.92rem}
+  .tarjeta{background:var(--panel); border:1px solid var(--borde); border-radius:12px; padding:14px 16px; margin-bottom:12px}
+  .pestanas{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px}
+  .pestanas button{font-weight:650}
+  .pestanas button.act{background:var(--acento); color:#fff; border-color:var(--acento)}
+  button{font:inherit; font-size:.9rem; padding:7px 12px; border-radius:8px; border:1px solid var(--borde); background:var(--panel); color:var(--texto); cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--acento)}
+  button:disabled{opacity:.45; cursor:not-allowed}
+  button.prim{background:var(--acento); color:#fff; border-color:var(--acento); font-weight:650}
+  .ejemplos{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px}
+  .ejemplos button{font-size:.8rem; padding:4px 9px}
+  label{font-size:.83rem; font-weight:650; display:block; margin-bottom:3px}
+  .ayuda{font-size:.76rem; color:var(--suave); margin-top:2px}
+  input,select,textarea{width:100%; font:inherit; padding:6px 9px; border-radius:8px; border:1px solid var(--borde); background:var(--bg); color:var(--texto)}
+  textarea{font-family:ui-monospace,Consolas,monospace; font-size:.85rem; min-height:110px; resize:vertical}
+  .dos{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  .tres{display:grid; grid-template-columns:repeat(3,1fr); gap:12px}
+  @media (max-width:820px){ .dos,.tres{grid-template-columns:1fr} }
+  .barra{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:10px 0 2px}
+  .contador{margin-left:auto; color:var(--suave); font-size:.88rem}
+  @media (max-width:820px){ .contador{margin-left:0} }
+  .error{color:var(--fal); font-weight:650; margin-top:6px}
+  .mono{font-family:ui-monospace,Consolas,monospace}
+  table{border-collapse:collapse; font-size:.86rem; width:100%}
+  th,td{border:1px solid var(--borde); padding:4px 7px; text-align:center}
+  th{background:var(--bg); font-size:.76rem}
+  td.si{color:var(--ok); font-weight:700} td.no{color:var(--fal); font-weight:700}
+  tr.mira td{background:var(--cer-bg)}
+  .pm{margin:10px 0 0; padding-left:0; list-style:none; font-size:.88rem}
+  .pm li{margin-bottom:3px}
+  .mas{color:var(--ok); font-weight:800} .menos{color:var(--fal); font-weight:800}
+  .esp{display:flex; flex-direction:column; gap:3px; margin-top:6px}
+  .esp div{border-radius:6px; padding:4px 8px; color:#fff; font-size:.8rem; font-weight:700}
+  .mem{display:flex; flex-direction:column-reverse; border:2px solid var(--borde); border-radius:8px; overflow:hidden; height:380px}
+  .bloque{display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:.82rem; border-top:1px solid var(--panel); text-align:center; line-height:1.2}
+  .bloque.hueco{background:repeating-linear-gradient(45deg,var(--hueco),var(--hueco) 6px,transparent 6px,transparent 12px); color:var(--suave)}
+  .bloque.nuevo{box-shadow:inset 0 0 0 3px var(--hl)}
+  .fila-mem{display:grid; grid-template-columns:200px 1fr; gap:14px}
+  @media (max-width:700px){ .fila-mem{grid-template-columns:1fr} }
+  .porque{border:1px solid var(--borde); border-left:5px solid var(--acento); border-radius:10px; padding:12px 14px}
+  .porque .tit{font-weight:700; font-size:1.02rem; margin:0 0 4px}
+  .marca{display:block; margin-top:8px; border-radius:8px; padding:7px 10px; font-size:.88rem}
+  .marca.ojo{background:var(--fal-bg); border:1px solid var(--fal)}
+  .marca.cer{background:var(--cer-bg); border:1px solid var(--cer)}
+  .res{border-radius:10px; padding:10px 14px; margin-top:10px; border:1px solid var(--borde)}
+  .res.ok{background:var(--ok-bg); border-color:var(--ok)}
+  .res.sat{background:var(--fal-bg); border-color:var(--fal)}
+  .res.lim{background:var(--lim-bg); border-color:var(--lim)}
+  .grande{font-size:1.4rem; font-weight:800}
+  .stat{display:inline-block; border:1px solid var(--borde); border-radius:10px; padding:4px 10px; margin:4px 6px 0 0; font-size:.85rem}
+  .ideas li{margin-bottom:5px}
+  .oculto{display:none}
+  .complemento{background:var(--lim-bg); border:1px solid var(--lim); border-radius:8px; padding:7px 10px; font-size:.86rem; margin-bottom:10px}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <h1>Segmentación</h1>
+  <p class="sub">Tanenbaum 3.7 y 3.7.1 (págs. 234–238). <b>1.</b> Paginación y segmentación lado a lado, con la tabla de la fig. 3-33. <b>2.</b> El efecto tablero de ajedrez (fig. 3-34) paso a paso, con compactación. <b>3.</b> Traducción de una dirección (segmento, desplazamiento) con base, límite y protección.</p>
+
+  <div class="pestanas">
+    <button data-tab="cmp" class="act">1 · Paginación vs. segmentación</button>
+    <button data-tab="aje">2 · Tablero de ajedrez</button>
+    <button data-tab="tra">3 · Traducción (s, d)</button>
+  </div>
+
+  <!-- ===== COMPARACIÓN ===== -->
+  <section id="tab-cmp">
+    <div class="dos">
+      <div class="tarjeta"><h3>Paginación: un espacio lineal cortado en trozos iguales</h3>
+        <div class="esp">
+          <div style="background:var(--s0)">pág. 0 · código</div><div style="background:var(--s0)">pág. 1 · código + <u>principio de datos</u></div>
+          <div style="background:var(--s2)">pág. 2 · datos</div><div style="background:var(--s2)">pág. 3 · datos + tabla de símbolos</div>
+          <div style="background:var(--s4)">pág. 4 · pila</div>
+        </div>
+        <p class="ayuda">Los cortes caen donde caen: una página puede mezclar código y datos. Su contenido es «accidental».</p>
+        <ul class="pm"><li><span class="mas">+</span> Es invisible para el programador.</li><li><span class="mas">+</span> Todas las unidades son de tamaño fijo: no hay fragmentación externa, solo interna (½ página).</li><li><span class="mas">+</span> Da un espacio lineal grande sin comprar más RAM.</li><li><span class="menos">−</span> No se puede proteger «el código» aparte de «los datos»: el programador tendría que saber dónde caen los límites de página.</li><li><span class="menos">−</span> Las tablas que crecen pueden chocar entre sí (fig. 3-31).</li><li><span class="menos">−</span> Compartir solo una parte (una biblioteca) es más complicado: hay que simular segmentos.</li></ul>
+      </div>
+      <div class="tarjeta"><h3>Segmentación: muchos espacios independientes, cada uno desde 0</h3>
+        <div class="esp">
+          <div style="background:var(--s0)">segmento 0 · código · 0 a 12K · solo ejecución</div>
+          <div style="background:var(--s2)">segmento 1 · tabla de símbolos · 0 a 20K · L/E</div>
+          <div style="background:var(--s3)">segmento 2 · constantes · 0 a 4K · solo lectura</div>
+          <div style="background:var(--s5)">segmento 3 · árbol sintáctico · 0 a 16K · L/E</div>
+          <div style="background:var(--s4)">segmento 4 · pila · 0 a 8K · L/E, crece</div>
+        </div>
+        <p class="ayuda">Cada segmento es una entidad <b>lógica</b> que el programador conoce, y guarda un solo tipo de cosa.</p>
+        <ul class="pm"><li><span class="mas">+</span> Cada tabla crece o se achica sin chocar con las demás.</li><li><span class="mas">+</span> <b>Protección por tipo</b>: el código solo se ejecuta y en los datos no se puede saltar.</li><li><span class="mas">+</span> Si se recompila el procedimiento del segmento n, no cambian las direcciones de los demás (se llama con (n, 0)).</li><li><span class="mas">+</span> Se comparte un segmento entero (por ejemplo, la biblioteca gráfica).</li><li><span class="menos">−</span> El programador tiene que estar consciente: las direcciones son de dos partes.</li><li><span class="menos">−</span> Tamaño variable → <b>fragmentación externa</b> (tablero de ajedrez, pestaña 2).</li><li><span class="menos">−</span> Un segmento grande puede no entrar entero en memoria → MULTICS y Pentium lo paginan.</li></ul>
+      </div>
+    </div>
+    <div class="tarjeta">
+      <h2>Fig. 3-33: comparación de paginación y segmentación (se toma tal cual)</h2>
+      <div style="overflow-x:auto"><table>
+        <tr><th>Consideración</th><th>Paginación</th><th>Segmentación</th></tr>
+        <tr><td style="text-align:left">¿El programador tiene que saber que se usa esta técnica?</td><td class="no">No</td><td class="si">Sí</td></tr>
+        <tr><td style="text-align:left">¿Cuántos espacios de direcciones lineales hay?</td><td>1</td><td>Muchos</td></tr>
+        <tr><td style="text-align:left">¿El espacio total puede exceder la memoria física?</td><td class="si">Sí</td><td class="si">Sí</td></tr>
+        <tr><td style="text-align:left">¿Se pueden distinguir y proteger por separado procedimientos y datos?</td><td class="no">No</td><td class="si">Sí</td></tr>
+        <tr><td style="text-align:left">¿Se acomodan fácilmente las tablas que cambian de tamaño?</td><td class="no">No</td><td class="si">Sí</td></tr>
+        <tr><td style="text-align:left">¿Se facilita compartir procedimientos entre usuarios?</td><td class="no">No</td><td class="si">Sí</td></tr>
+        <tr><td style="text-align:left">¿Para qué se inventó?</td><td style="font-size:.82rem">Para tener un espacio lineal grande sin comprar más memoria física</td><td style="font-size:.82rem">Para dividir programas y datos en espacios lógicamente independientes, lo que ayuda a compartir y proteger</td></tr>
+      </table></div>
+      <span class="marca ojo">⚠️ Trampa típica: «¿el espacio total puede superar la memoria física?» → <b>Sí en las dos</b>. No es una diferencia entre ellas.</span>
+    </div>
+  </section>
+
+  <!-- ===== TABLERO DE AJEDREZ ===== -->
+  <section id="tab-aje" class="oculto">
+    <div class="tarjeta">
+      <div class="tres">
+        <div><label for="a-ini">Memoria inicial: <span class="mono">segmento tamañoK</span> (de abajo hacia arriba)</label><textarea id="a-ini">0 4
+1 8
+2 5
+3 8
+4 7</textarea></div>
+        <div><label for="a-ev">Eventos: <span class="mono">sale → entra tamañoK</span>, o <span class="mono">compactar</span></label><textarea id="a-ev">1 -> 7 5
+4 -> 5 4
+3 -> 6 4
+compactar</textarea><div class="ayuda">El segmento que entra se ubica en el hueco que dejó el que sale (como en el libro).</div></div>
+        <div><label>&nbsp;</label><button class="prim" id="a-cargar">Cargar</button><div class="ejemplos"><button id="a-libro">Libro, fig. 3-34 (a)–(e)</button><button id="a-nocabe">Uno que no entra en ningún hueco</button></div></div>
+      </div>
+      <div class="error" id="a-err"></div>
+      <div class="barra"><button id="a-ant">◀ Anterior</button><button class="prim" id="a-sig">Siguiente paso ▶</button><button id="a-rei">Reiniciar</button><span class="contador" id="a-cont"></span></div>
+    </div>
+    <div class="tarjeta fila-mem">
+      <div><h2>Memoria física</h2><div class="mem" id="a-mem"></div><p class="ayuda">La dirección 0 está abajo. Lo rayado son huecos.</p></div>
+      <div><div class="porque" id="a-porque"></div><div id="a-stats"></div></div>
+    </div>
+  </section>
+
+  <!-- ===== TRADUCCIÓN ===== -->
+  <section id="tab-tra" class="oculto">
+    <div class="tarjeta">
+      <div class="complemento">⚠️ <b>Complemento:</b> en la sección 3.7.1 el libro no da una traducción numérica para la segmentación pura. Es el mismo mecanismo de <b>base y límite</b> del tema 2 (3.2.1), pero con un par base/límite <b>por segmento</b>, guardado en una tabla de segmentos. El esquema real con descriptores es el de MULTICS y el Pentium (parte B).</div>
+      <div class="tres">
+        <div><label for="t-tabla">Tabla de segmentos: <span class="mono">seg base límite prot</span></label><textarea id="t-tabla">0 1400 1000 X
+1 6300 400 RW
+2 4300 400 R
+3 3200 1100 RW
+4 4700 1000 RW</textarea><div class="ayuda">Valores en decimal; prot = R, RW, X o RX.</div></div>
+        <div><label for="t-s">Segmento s</label><input id="t-s" type="number" min="0" value="2"><label for="t-d" style="margin-top:8px">Desplazamiento d</label><input id="t-d" type="number" min="0" value="53"><label for="t-acc" style="margin-top:8px">Acceso</label><select id="t-acc"><option value="R">leer</option><option value="W">escribir</option><option value="X">ejecutar</option></select></div>
+        <div><label>Ejemplos</label><div class="ejemplos"><button data-t="2 53 R">(2, 53) leer → ok</button><button data-t="3 852 W">(3, 852) escribir → ok</button><button data-t="0 1222 X">(0, 1222) → fuera de límite</button><button data-t="2 10 W">(2, 10) escribir → protección</button><button data-t="7 5 R">(7, 5) → segmento inexistente</button></div></div>
+      </div>
+      <div class="error" id="t-err"></div>
+      <div class="dos" style="margin-top:12px">
+        <div><h2>Tabla de segmentos</h2><div id="t-vista"></div></div>
+        <div><h2>Traducción paso a paso</h2><div id="t-res"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="tarjeta ideas">
+    <h2>Ideas clave para el examen</h2>
+    <ul>
+      <li>Un <b>segmento</b> es un espacio de direcciones <b>independiente</b>, de 0 a un máximo, con <b>longitud variable que puede cambiar</b> durante la ejecución. Es una <b>entidad lógica</b> que el programador conoce (un procedimiento, un arreglo, una pila). La dirección es <b>bidimensional</b>: (segmento, dirección dentro del segmento).</li>
+      <li>🧠 La protección «tiene sentido» en segmentación y no en paginación porque <b>cada segmento guarda un solo tipo de objeto</b>; el contenido de una página es accidental.</li>
+      <li>⚠️ <b>Páginas de tamaño fijo vs. segmentos de tamaño variable.</b> Por eso la segmentación pura sufre <b>fragmentación externa</b> (efecto tablero de ajedrez), que se arregla con <b>compactación</b>, y la paginación solo sufre <b>fragmentación interna</b>.</li>
+      <li>En la fig. 3-33 todo es «No / Sí», <b>salvo</b> «¿puede exceder la memoria física?», que es <b>Sí en las dos</b>. Los segmentos grandes se <b>paginan</b> (MULTICS, Pentium) para juntar las ventajas de las dos técnicas.</li>
+    </ul>
+  </div>
+</div>
+
+<script id="motor">
+// ======== MOTOR (sin DOM: se verifica con Node) ========
+function parsearMemoria(txt) {
+  const m = String(txt).trim().split(/\n+/).map(l => l.trim()).filter(Boolean).map((l, i) => {
+    const c = l.split(/[\s,]+/); if (c.length !== 2 || !/^\d+$/.test(c[1]) || Number(c[1]) === 0) throw new Error("Memoria, línea " + (i + 1) + ": «segmento tamañoK».");
+    return { seg: c[0], tam: Number(c[1]) };
+  });
+  if (!m.length) throw new Error("No hay segmentos.");
+  return m;
+}
+function parsearEventos(txt) {
+  return String(txt).trim().split(/\n+/).map(l => l.trim()).filter(Boolean).map((l, i) => {
+    if (/^compactar$/i.test(l)) return { tipo: "compactar" };
+    const r = /^(\S+)\s*->\s*(\S+)\s+(\d+)$/.exec(l);
+    if (!r) throw new Error("Evento " + (i + 1) + ": «sale -> entra tamaño» o «compactar».");
+    return { tipo: "reemplazo", sale: r[1], entra: r[2], tam: Number(r[3]) };
+  });
+}
+const huecos = mem => mem.filter(b => b.hueco);
+function fusionar(mem) { const r = []; for (const b of mem) { const u = r[r.length - 1]; if (b.hueco && u && u.hueco) u.tam += b.tam; else r.push({ ...b }); } return r; }
+function tablero(txtIni, txtEv) {
+  let mem = parsearMemoria(txtIni).map(b => ({ ...b, hueco: false }));
+  const total = mem.reduce((a, b) => a + b.tam, 0);
+  const eventos = parsearEventos(txtEv);
+  const pasos = [{ mem: mem.map(b => ({ ...b })), tit: "Estado inicial (fig. 3-34 a si es el ejemplo del libro)", texto: "La memoria está llena de segmentos contiguos de distinto tamaño, sin huecos.", nuevo: null }];
+  for (const ev of eventos) {
+    if (ev.tipo === "compactar") {
+      const segs = mem.filter(b => !b.hueco), libre = total - segs.reduce((a, b) => a + b.tam, 0);
+      const antes = huecos(mem).map(h => h.tam);
+      mem = segs.map(b => ({ ...b })); if (libre) mem.push({ seg: "", tam: libre, hueco: true });
+      pasos.push({ mem: mem.map(b => ({ ...b })), tit: "Compactación", texto: "Se mueven todos los segmentos hacia abajo, uno detrás del otro. Los huecos de " + antes.join("K, ") + "K se juntan en uno solo de " + libre + "K.", nuevo: null,
+        ojo: "Según la cátedra, compactar es costoso: hay que mover segmentos enteros dentro de la memoria." });
+      continue;
+    }
+    const i = mem.findIndex(b => !b.hueco && b.seg === ev.sale);
+    if (i < 0) throw new Error("El segmento " + ev.sale + " no está en memoria.");
+    // dirección donde empezaba el segmento que sale
+    let dir = 0; for (let x = 0; x < i; x++) dir += mem[x].tam;
+    const libre = mem[i].tam; mem[i] = { seg: "", tam: libre, hueco: true }; mem = fusionar(mem);
+    // preferimos el hueco que dejó el que salió; si no alcanza, el primero que alcance (primer ajuste)
+    let k = -1, acum = 0;
+    for (let x = 0; x < mem.length; x++) { if (mem[x].hueco && dir >= acum && dir < acum + mem[x].tam) { k = x; break; } acum += mem[x].tam; }
+    if (k < 0 || mem[k].tam < ev.tam) k = mem.findIndex(b => b.hueco && b.tam >= ev.tam);
+    if (k < 0) {
+      const libreTotal = huecos(mem).reduce((a, b) => a + b.tam, 0);
+      pasos.push({ mem: mem.map(b => ({ ...b })), tit: "Sale " + ev.sale + "; " + ev.entra + " (" + ev.tam + "K) NO entra en ningún hueco", texto: "Hay " + libreTotal + "K libres en total, pero repartidos en huecos de " + huecos(mem).map(h => h.tam).join("K, ") + "K. Ninguno alcanza para " + ev.tam + "K.", nuevo: null,
+        ojo: libreTotal >= ev.tam ? "Esto es la fragmentación externa: la memoria libre total alcanza, pero no es contigua. Solución: compactar." : "Ni compactando alcanza: falta memoria." });
+      continue;
+    }
+    const h = mem[k], sobra = h.tam - ev.tam;
+    mem.splice(k, 1, { seg: ev.entra, tam: ev.tam, hueco: false }, ...(sobra ? [{ seg: "", tam: sobra, hueco: true }] : []));
+    mem = fusionar(mem);
+    const hs = huecos(mem);
+    pasos.push({ mem: mem.map(b => ({ ...b })), nuevo: ev.entra, tit: "Sale el segmento " + ev.sale + " (" + libre + "K) y entra el " + ev.entra + " (" + ev.tam + "K)",
+      texto: (sobra ? "El segmento nuevo es más chico: sobra un hueco de " + sobra + "K." : "El segmento nuevo ocupa justo el hueco.") + " Huecos ahora: " + (hs.length ? hs.map(x => x.tam + "K").join(", ") : "ninguno") + ".",
+      cer: hs.length > 1 ? "Así se forma el «tablero de ajedrez»: segmentos y huecos alternados. Con páginas de tamaño fijo esto no pasa." : null });
+  }
+  return { total, pasos };
+}
+function parsearSegmentos(txt) {
+  const t = {};
+  String(txt).trim().split(/\n+/).map(l => l.trim()).filter(Boolean).forEach((l, i) => {
+    const c = l.split(/[\s,]+/);
+    if (c.length !== 4 || !/^\d+$/.test(c[0]) || !/^\d+$/.test(c[1]) || !/^\d+$/.test(c[2]) || !/^(R|RW|X|RX)$/i.test(c[3])) throw new Error("Tabla, línea " + (i + 1) + ": «seg base límite prot» (prot = R, RW, X o RX).");
+    t[Number(c[0])] = { base: Number(c[1]), limite: Number(c[2]), prot: c[3].toUpperCase() };
+  });
+  return t;
+}
+function traducir(txt, s, d, acc) {
+  const t = parsearSegmentos(txt); s = Number(s); d = Number(d);
+  const pasos = [];
+  if (!t[s]) return { ok: false, motivo: "segmento", pasos: ["El segmento " + s + " no está en la tabla de segmentos → fallo (trap): el proceso recibe una señal."] };
+  const e = t[s];
+  pasos.push("Se busca la entrada " + s + " de la tabla: base = " + e.base + ", límite = " + e.limite + ", protección = " + e.prot + ".");
+  if (d >= e.limite) { pasos.push("¿d < límite? " + d + " < " + e.limite + " → NO. Dirección fuera del segmento → trap (violación de segmento)."); return { ok: false, motivo: "limite", pasos }; }
+  pasos.push("¿d < límite? " + d + " < " + e.limite + " → sí.");
+  const permite = { R: /R/.test(e.prot), W: /W/.test(e.prot), X: /X/.test(e.prot) }[acc];
+  const nom = { R: "leer", W: "escribir", X: "ejecutar" }[acc];
+  if (!permite) { pasos.push("¿La protección " + e.prot + " permite " + nom + "? → NO → trap por violación de protección."); return { ok: false, motivo: "proteccion", pasos }; }
+  pasos.push("¿La protección " + e.prot + " permite " + nom + "? → sí.");
+  const fis = e.base + d;
+  pasos.push("Dirección física = base + d = " + e.base + " + " + d + " = " + fis + ".");
+  return { ok: true, fisica: fis, pasos };
+}
+if (typeof module !== "undefined") module.exports = { tablero, traducir };
+</script>
+
+<script>
+// ======== INTERFAZ ========
+const $ = id => document.getElementById(id);
+document.querySelectorAll(".pestanas button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".pestanas button").forEach(x => x.classList.toggle("act", x === b));
+  ["cmp", "aje", "tra"].forEach(t => $("tab-" + t).classList.toggle("oculto", t !== b.dataset.tab));
+});
+// tablero
+let T = null, ti = 0;
+function colorSeg(s) { const n = parseInt(s, 10); return isNaN(n) ? "var(--s1)" : `var(--s${n % 8})`; }
+function cargarA() { $("a-err").textContent = ""; try { T = tablero($("a-ini").value, $("a-ev").value); ti = 0; } catch (e) { T = null; $("a-err").textContent = e.message; } mostrarA(); }
+function mostrarA() {
+  if (!T) { $("a-mem").innerHTML = ""; $("a-porque").innerHTML = ""; $("a-cont").textContent = ""; return; }
+  const p = T.pasos[ti];
+  $("a-cont").textContent = `paso ${ti + 1} de ${T.pasos.length}`; $("a-ant").disabled = ti === 0; $("a-sig").disabled = ti >= T.pasos.length - 1;
+  $("a-mem").innerHTML = p.mem.map(b => `<div class="bloque ${b.hueco ? "hueco" : ""} ${b.seg === p.nuevo && !b.hueco ? "nuevo" : ""}" style="height:${100 * b.tam / T.total}%;${b.hueco ? "" : "background:" + colorSeg(b.seg)}">${b.hueco ? "hueco " + b.tam + "K" : "seg " + b.seg + " (" + b.tam + "K)"}</div>`).join("");
+  $("a-porque").innerHTML = `<p class="tit">${p.tit}</p><div>${p.texto}</div>` + (p.ojo ? `<span class="marca ojo">⚠️ ${p.ojo}</span>` : "") + (p.cer ? `<span class="marca cer">🧠 ${p.cer}</span>` : "");
+  const hs = p.mem.filter(b => b.hueco), libre = hs.reduce((a, b) => a + b.tam, 0), mayor = Math.max(0, ...hs.map(h => h.tam));
+  $("a-stats").innerHTML = `<div style="margin-top:10px"><span class="stat">memoria: <b>${T.total}K</b></span><span class="stat">libre total: <b>${libre}K</b></span><span class="stat">huecos: <b>${hs.length}</b></span><span class="stat">hueco más grande: <b>${mayor}K</b></span></div>` +
+    (hs.length > 1 ? `<div class="res lim">Hay ${libre}K libres, pero el segmento más grande que entra es de ${mayor}K: eso es la <b>fragmentación externa</b>.</div>` : "");
+}
+$("a-cargar").onclick = cargarA;
+$("a-sig").onclick = () => { ti++; mostrarA(); }; $("a-ant").onclick = () => { ti--; mostrarA(); }; $("a-rei").onclick = () => { ti = 0; mostrarA(); };
+$("a-libro").onclick = () => { $("a-ini").value = "0 4\n1 8\n2 5\n3 8\n4 7"; $("a-ev").value = "1 -> 7 5\n4 -> 5 4\n3 -> 6 4\ncompactar"; cargarA(); };
+$("a-nocabe").onclick = () => { $("a-ini").value = "0 4\n1 8\n2 5\n3 8\n4 7"; $("a-ev").value = "1 -> 7 5\n4 -> 5 4\n3 -> 6 4\n2 -> 8 9\ncompactar\n6 -> 9 9"; cargarA(); };
+// traducción
+function dibujarT() {
+  $("t-err").textContent = "";
+  let r, tabla; try { tabla = $("t-tabla").value; r = traducir(tabla, $("t-s").value, $("t-d").value, $("t-acc").value); } catch (e) { $("t-err").textContent = e.message; return; }
+  const filas = tabla.trim().split(/\n+/).map(l => l.trim().split(/[\s,]+/));
+  $("t-vista").innerHTML = `<table><tr><th>seg</th><th>base</th><th>límite</th><th>prot.</th></tr>` + filas.map(f => `<tr class="${f[0] === String(Number($("t-s").value)) ? "mira" : ""}"><td>${f[0]}</td><td class="mono">${f[1]}</td><td class="mono">${f[2]}</td><td>${f[3]}</td></tr>`).join("") + `</table>`;
+  const motivo = { segmento: "segmento inexistente", limite: "fuera de límite", proteccion: "violación de protección" };
+  $("t-res").innerHTML = `<ol style="margin:0;padding-left:20px">${r.pasos.map(x => `<li>${x}</li>`).join("")}</ol>` +
+    (r.ok ? `<div class="res ok">Dirección física: <span class="grande mono">${r.fisica}</span></div>` : `<div class="res sat"><b>TRAP: ${motivo[r.motivo]}</b>. El SO le manda una señal al proceso.</div>`) +
+    `<span class="marca cer">🧠 Comparalo con paginación: acá se <b>suma</b> la base (los segmentos pueden empezar en cualquier dirección), y en paginación se <b>pegan</b> los bits del marco y del desplazamiento.</span>`;
+}
+["t-tabla", "t-s", "t-d", "t-acc"].forEach(id => $(id).oninput = dibujarT);
+document.querySelectorAll("[data-t]").forEach(b => b.onclick = () => { const [s, d, a] = b.dataset.t.split(" "); $("t-s").value = s; $("t-d").value = d; $("t-acc").value = a; dibujarT(); });
+cargarA(); dibujarT();
+</script>
+</body>
+</html>

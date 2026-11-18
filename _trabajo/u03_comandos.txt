@@ -1,0 +1,164 @@
+
+===== [PDF pag 1] =====
+sudo apt install sysstat 
+Ejemplo con Firefox 
+pidstat -p $(pgrep -u usuario firefox) 1 
+●​ pgrep: busca el PID de Firefox. 
+●​ -u usuario: limita la búsqueda a ese usuario. 
+●​ -p: indica qué proceso monitorear. 
+●​ 1: actualiza la información cada 1 segundo. 
+Estadísticas principales 
+Por defecto, pidstat muestra principalmente uso de CPU. 
+●​ UID: usuario propietario del proceso. 
+●​ PID: identificador del proceso. 
+●​ %usr: CPU usada ejecutando código del programa. 
+●​ %system: CPU usada ejecutando código del kernel. 
+●​ %guest: CPU usada para máquinas virtuales. 
+●​ %wait: tiempo esperando para poder usar la CPU. 
+●​ %CPU: porcentaje total de CPU consumido. 
+●​ CPU: núcleo en el que se ejecutó por última vez. 
+●​ Command: nombre del proceso. 
+---- 
+ 
+free 
+Muestra el uso de la memoria RAM y de la memoria swap del sistema. 
+Lo más cómodo es usar: 
+free -h 
+-h muestra los valores en formato legible, por ejemplo MB o GB. 
+Columnas 
+●​ total: memoria total disponible. 
+●​ used: memoria utilizada. 
+●​ free: memoria completamente libre. 
+●​ shared: memoria compartida, por ejemplo entre procesos. 
+●​ buff/cache: memoria usada por el sistema como búfer y caché. 
+
+===== [PDF pag 2] =====
+●​ available: memoria que realmente puede usarse para abrir nuevos programas sin 
+recurrir a swap. 
+Filas 
+●​ Mem: información de la memoria RAM. 
+●​ Swap: información de la memoria de intercambio en disco. 
+Ejemplo: 
+              total    used    free   shared  buff/cache  available 
+Mem:            16Gi    6Gi     2Gi     500Mi      8Gi        9Gi 
+Swap:            2Gi    0Gi     2Gi 
+Comparación con top y htop 
+Los tres muestran información de memoria, pero: 
+●​ free muestra un resumen general de RAM y swap. 
+●​ top muestra memoria general y además el consumo de cada proceso. 
+●​ htop muestra lo mismo de forma más visual e interactiva. 
+Después de eliminar un proceso 
+Al finalizar un proceso y ejecutar nuevamente: 
+free -h 
+puede ocurrir que: 
+●​ disminuya used; 
+●​ aumente free o available; 
+●​ parte de la memoria pase a buff/cache. 
+No siempre el cambio aparece directamente en free, porque Linux aprovecha la memoria 
+liberada para caché. Por eso, para saber cuánta memoria queda realmente disponible, 
+conviene observar principalmente la columna available. 
+smem 
+Permite analizar el uso de memoria de cada proceso de forma más precisa que top o ps, 
+porque diferencia la memoria privada de la memoria compartida. 
+Instalación 
+sudo apt install smem 
+
+===== [PDF pag 3] =====
+Ejecución 
+smem -r -k 
+●​ -r: ordena los procesos de mayor a menor consumo de memoria. 
+●​ -k: muestra los valores en KB, MB o GB para facilitar la lectura. 
+Columnas principales 
+●​ PID: identificador del proceso. 
+●​ User: usuario propietario del proceso. 
+●​ Command: comando o programa ejecutado. 
+●​ Swap: memoria swap usada por el proceso. 
+●​ USS: memoria física exclusiva del proceso, no compartida con otros. 
+●​ PSS: memoria del proceso sumando su memoria privada y una parte proporcional 
+de la memoria compartida. 
+●​ RSS: memoria RAM total asociada al proceso, incluyendo toda la memoria 
+compartida. 
+Diferencia entre USS, PSS y RSS 
+●​ USS: lo que se liberaría aproximadamente si se cerrara únicamente ese proceso. 
+●​ PSS: estimación más realista del consumo de memoria, porque reparte la memoria 
+compartida entre los procesos que la usan. 
+●​ RSS: puede exagerar el consumo total, porque cuenta completa la memoria 
+compartida para cada proceso. 
+smem -r -k muestra los procesos ordenados por consumo de memoria y 
+permite distinguir memoria exclusiva, proporcional y total. Para comparar 
+procesos, normalmente la columna más útil es PSS. 
+vmstat 
+Muestra un resumen del estado del sistema: procesos, memoria, swap, entrada/salida, 
+actividad del sistema y CPU. 
+vmstat 
+También se puede actualizar cada segundo: 
+vmstat 1 
+Columnas de vmstat 
+procs 
+Procesos del sistema. 
+
+===== [PDF pag 4] =====
+●​ r: procesos listos para ejecutarse, esperando CPU. 
+●​ b: procesos bloqueados, normalmente esperando entrada/salida. 
+memory 
+Uso de memoria. 
+●​ swpd: memoria swap utilizada. 
+●​ free: memoria RAM libre. 
+●​ buff: memoria usada como búfer. 
+●​ cache: memoria usada como caché. 
+swap 
+Intercambio entre RAM y disco. 
+●​ si: memoria que entra desde swap hacia RAM por segundo. 
+●​ so: memoria que sale desde RAM hacia swap por segundo. 
+io 
+Actividad de entrada/salida de bloques. 
+●​ bi: bloques leídos desde dispositivos hacia memoria por segundo. 
+●​ bo: bloques escritos desde memoria hacia dispositivos por segundo. 
+system 
+Actividad del kernel. 
+●​ in: interrupciones por segundo. 
+●​ cs: cambios de contexto por segundo. 
+cpu 
+Porcentaje de tiempo de CPU. 
+●​ us: tiempo ejecutando programas de usuario. 
+●​ sy: tiempo ejecutando código del kernel. 
+●​ id: tiempo de CPU inactiva. 
+●​ wa: tiempo esperando operaciones de entrada/salida. 
+●​ st: tiempo quitado por el hipervisor en una máquina virtual. 
+Para recordar 
+r alto indica procesos esperando CPU.​
+ b o wa altos suelen indicar espera por entrada/salida.​
+
+===== [PDF pag 5] =====
+ si y so altos indican uso frecuente de swap.​
+ id alto significa que la CPU está mayormente libre. 
+/proc/meminfo 
+Es un archivo virtual que muestra información detallada y actualizada sobre la memoria del 
+sistema. 
+cat /proc/meminfo 
+Datos principales: 
+●​ MemTotal: memoria RAM total. 
+●​ MemFree: RAM completamente libre. 
+●​ MemAvailable: memoria disponible para nuevos procesos sin usar swap. 
+●​ Buffers: memoria usada como búfer. 
+●​ Cached: memoria usada como caché. 
+●​ SwapTotal: memoria swap total. 
+●​ SwapFree: memoria swap libre. 
+●​ Active: memoria usada recientemente. 
+●​ Inactive: memoria poco utilizada, que puede recuperarse. 
+●​ Dirty: memoria modificada que todavía debe escribirse al disco. 
+●​ PageTables: memoria utilizada por las tablas de páginas. 
+/proc/meminfo ofrece información más detallada que free, mientras que 
+free toma esos datos y los presenta resumidos y de manera más legible. 
+Sistemas de archivos montados 
+Hay tres formas comunes de verlos: 
+cat /proc/mounts 
+cat /proc/mounts 
+Muestra los sistemas de archivos que el kernel tiene montados actualmente. 
+Columnas principales: 
+●​ dispositivo: partición o recurso montado. 
+●​ punto de montaje: carpeta donde está montado. 
+●​ tipo de sistema de archivos: por ejemplo ext4, tmpfs, proc. 
+●​ opciones: permisos y forma de montaje, como rw o ro. 
+mount 
+mount 

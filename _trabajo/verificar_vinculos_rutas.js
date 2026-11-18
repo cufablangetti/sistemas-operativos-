@@ -1,0 +1,37 @@
+// Verifica motor + HTML de unidades/u04-archivos/visuales/vinculos_rutas.html
+const fs=require('fs'), vm=require('vm'), path=require('path');
+const F='unidades/u04-archivos/visuales/vinculos_rutas.html';
+const html=fs.readFileSync(F,'utf8'); const ctx={}; vm.createContext(ctx);
+vm.runInContext(html.match(/<script id="motor">([\s\S]*?)<\/script>/)[1]+';this.R={correrGuion,buscarRuta};',ctx);
+const {correrGuion,buscarRuta}=ctx.R;
+let ok=0,mal=0; const chk=(c,m)=>{c?(ok++,console.log('OK  ',m)):(mal++,console.log('FALLA',m));};
+let r=correrGuion('duro',2); chk(r.e.inodos[20].vinculos===2&&r.e.dirB.datos===20,'duro: ln -> contador 2, misma entrada 20');
+r=correrGuion('duro',4); chk(r.e.inodos[20].vinculos===1&&!r.e.inodos[20].liberado&&r.e.dirC.datos===undefined,'duro: rm C -> contador 1, sigue vivo, dueño C');
+chk(r.e.inodos[20].dueno==='C','duro: dueño sigue siendo C');
+r=correrGuion('duro',5); chk(r.ultimo.salida.includes('contenido'),'duro: B lee después del rm de C');
+r=correrGuion('duro',6); chk(r.e.inodos[20].liberado,'duro: rm B -> 0 -> liberado');
+r=correrGuion('simb',2); chk(r.e.inodos[20].vinculos===1&&r.e.inodos[21].tipo==='LINK','simb: contador del original sigue 1, nodo-i 21 LINK');
+r=correrGuion('simb',3); chk(r.ultimo.salida.includes('contenido'),'simb: lee por la ruta');
+r=correrGuion('simb',4); chk(r.e.inodos[20].liberado,'simb: rm C destruye el archivo');
+r=correrGuion('simb',5); chk(r.ultimo.salida.includes('No such file'),'simb: vínculo colgado');
+let b=buscarRuta('/usr/ast/mbox'); chk(b.ino===60&&b.lecturas===7,'/usr/ast/mbox -> nodo-i 60, 7 lecturas');
+b=buscarRuta('/usr/ast/tesis'); chk(b.ino===null&&b.lecturas===6,'tesis no existe, 6 lecturas');
+b=buscarRuta('../jim'); chk(b.ino===51&&b.lecturas===5,'../jim desde /usr/ast -> 51, 5 lecturas');
+b=buscarRuta('mbox'); chk(b.ino===60&&b.lecturas===3,'mbox relativa -> 60, 3 lecturas');
+const {chromium}=require(path.join(process.env.APPDATA,'npm/node_modules/@playwright/mcp/node_modules/playwright-core'));
+(async()=>{
+  const br=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'});
+  const pg=await br.newPage({viewport:{width:1200,height:900}}); const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
+  await pg.goto('file:///'+path.resolve(F).split(path.sep).join('/'));
+  for(let i=0;i<4;i++) await pg.click('#sigV');
+  chk((await pg.textContent('#cCnt .v')).trim()==='1','HTML duro: contador 1 tras rm C');
+  await pg.click('#sigV'); chk((await pg.textContent('#sal')).includes('contenido'),'HTML duro: B lee');
+  await pg.selectOption('#escV','simb'); for(let i=0;i<5;i++) await pg.click('#sigV');
+  chk((await pg.textContent('#sal')).includes('No such file'),'HTML simb: colgado');
+  await pg.click('#pR'); await pg.click('#todoR');
+  chk((await pg.textContent('#rLec .v')).trim()==='7','HTML ruta: 7 lecturas');
+  await pg.setViewportSize({width:390,height:800});
+  chk(await pg.evaluate(()=>document.documentElement.scrollWidth<=390),'sin scroll horizontal en móvil');
+  chk(errs.length===0,'sin errores '+errs.join('|'));
+  await br.close(); console.log(`\n${ok} OK, ${mal} fallos`); process.exit(mal?1:0);
+})();

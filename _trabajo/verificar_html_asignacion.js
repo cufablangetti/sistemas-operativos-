@@ -1,0 +1,23 @@
+const path = require("path");
+const { chromium } = require(path.join(process.env.APPDATA, "npm/node_modules/@playwright/mcp/node_modules/playwright-core"));
+const url = require("url").pathToFileURL(path.resolve("unidades/u03-memoria/visuales/asignacion_memoria.html")).href;
+let fallos = 0; const ok = (c, m) => { console.log((c ? "OK   " : "FALLA") + " " + m); if (!c) fallos++; };
+(async () => {
+  const b = await chromium.launch({ executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe" });
+  const p = await b.newPage({ viewport: { width: 1300, height: 900 } }); const err = [];
+  p.on("pageerror", e => err.push(e.message));
+  await p.goto(url);
+  await p.click("#sig");
+  ok(await p.$eval("#porque", e => e.textContent.includes("el de 20 KB")), "primer ajuste, paso 1: elige el de 20");
+  await p.click('.algos button[data-a="mejor"]'); await p.click("#sig"); await p.click("#sig");
+  ok(await p.$eval("#porque", e => e.textContent.includes("el de 10 KB")), "mejor ajuste, paso 2: elige el de 10");
+  ok(await p.$$eval("#comp tr", t => t.length) === 5, "tabla comparativa con los 4 algoritmos");
+  await p.fill("#pedidos", "A12 -A");
+  await p.click("#sig"); await p.click("#sig");
+  ok(await p.$eval("#porque", e => e.textContent.includes("se fusiona")), "liberar muestra la fusion");
+  await p.screenshot({ path: process.argv[2] || "C:/Users/Usuario/AppData/Local/Temp/asig.png", fullPage: true });
+  ok(err.length === 0, "sin errores de JS " + err.join("|"));
+  const m = await b.newPage({ viewport: { width: 375, height: 800 } }); await m.goto(url);
+  ok(await m.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "375 px sin scroll horizontal");
+  await b.close(); console.log(fallos ? `${fallos} FALLOS` : "0 fallos");
+})();

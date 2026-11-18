@@ -1,0 +1,504 @@
+===== [PDF pag 1] =====
+ 
+Históricamente se eligieron tamaños entre 1 KB y 4 KB, pero con discos modernos de 
+varios terabytes, bloques más grandes (por ejemplo 64 KB) pueden ser razonables, 
+aceptando el desperdicio de espacio. 
+Registro de bloques libres 
+Una vez elegido el tamaño de bloque, el sistema debe llevar registro de qué bloques están 
+libres. 
+Los dos métodos principales son: 
+●​ Lista enlazada de bloques libres​
+ Cada bloque contiene direcciones de otros bloques libres.​
+ Es simple, pero puede generar muchas operaciones de E/S cuando se crean y 
+eliminan archivos pequeños y temporales. 
+●​ Mapa de bits​
+ Un bit por bloque indica si está libre u ocupado.​
+ Usa mucho menos espacio y facilita asignar bloques cercanos, reduciendo el 
+movimiento del brazo del disco. 
+Ambos métodos tienen ventajas y desventajas, y la elección depende del uso real del 
+sistema. Este punto ilustra un problema clásico del diseño de sistemas operativos: las 
+decisiones deben tomarse sin conocer exactamente el comportamiento futuro de los 
+usuarios. 
+ 
+Unidad 5. ENTRADA/SALIDA 
+Además de procesos, memoria y archivos, el sistema operativo controla todos los 
+dispositivos de entrada/salida.​
+ Sus responsabilidades principales son: 
+ 
+
+===== [PDF pag 2] =====
+ 
+●​ emitir comandos a los dispositivos 
+●​ captar y manejar interrupciones 
+●​ detectar y tratar errores 
+●​ ofrecer una interfaz uniforme, independiente del dispositivo 
+El objetivo central es ocultar la complejidad del hardware y presentar mecanismos 
+simples y consistentes al resto del sistema. 
+5.1 Principios del hardware de E/S 
+El enfoque del capítulo es cómo se programa el hardware de E/S, no su construcción 
+física.​
+Sin embargo, la programación está fuertemente ligada a la forma en que el hardware opera. 
+5.1.1 Dispositivos de E/S 
+Los dispositivos de E/S se clasifican en dos grandes categorías. 
+Dispositivos de bloque 
+●​ Almacenan información en bloques de tamaño fijo 
+●​ Cada bloque tiene una dirección 
+●​ Permiten lectura y escritura independiente de cada bloque 
+●​ Transferencias en uno o más bloques completos 
+Ejemplos: discos duros, CD-ROM, memorias USB. 
+La propiedad clave es el acceso aleatorio. 
+Dispositivos de carácter 
+●​ Transfieren un flujo de caracteres 
+●​ No son direccionables 
+●​ No poseen operación de búsqueda 
+Ejemplos: teclados, impresoras, interfaces de red, ratones. 
+Este modelo no cubre perfectamente todos los dispositivos: 
+●​ los relojes sólo generan interrupciones 
+●​ las pantallas por memoria mapeada no encajan bien 
+Aun así, la distinción bloque / carácter permite construir software de E/S independiente 
+del dispositivo. 
+5.1.2 Controladores de dispositivos 
+Un dispositivo de E/S suele dividirse en: 
+ 
+
+===== [PDF pag 3] =====
+ 
+●​ componente mecánico (el dispositivo físico) 
+●​ controlador de dispositivo (componente electrónico). 
+El controlador: 
+●​ traduce señales físicas en datos utilizables 
+●​ realiza corrección de errores 
+●​ ofrece una interfaz uniforme al sistema operativo 
+El sistema operativo no controla directamente el hardware, sino que configura el 
+controlador y delega el trabajo fino. 
+5.1.3 E/S por asignación de memoria 
+La CPU se comunica con los dispositivos mediante registros de control y búferes de 
+datos.​
+Existen dos esquemas para acceder a ellos. 
+Puertos de E/S separados 
+●​ Espacio de direcciones distinto al de memoria 
+●​ Instrucciones especiales: IN, OUT 
+●​ Usado en sistemas clásicos y mainframes 
+Memoria y E/S son espacios independientes. 
+Solo el sistema operativo puede acceder, los procesos de usuario no pueden. 
+ 
+E/S por asignación de memoria (memory-mapped I/O) 
+●​ Los registros de control se asignan a direcciones de memoria 
+●​ Se acceden como variables comunes 
+●​ Introducido con la PDP-11 
+Ventajas: 
+●​ controladores escritos completamente en C 
+ 
+
+===== [PDF pag 4] =====
+ 
+●​ no requiere instrucciones especiales 
+●​ permite protección por páginas 
+●​ cualquier instrucción de memoria puede usarse sobre E/S 
+Desventajas de la E/S por asignación de memoria 
+●​ riesgo de caché incorrecta sobre registros de control 
+●​ requiere soporte de hardware para deshabilitar caché selectivamente 
+●​ mayor complejidad en arquitecturas con buses separados 
+Por eso existen arquitecturas: 
+●​ de un solo bus 
+●​ de buses múltiples 
+●​ híbridas (como Pentium) 
+No hay una solución perfecta: todo implica concesiones de diseño. 
+ 
+5.1.4 Acceso Directo a Memoria (DMA) 
+DMA permite transferir datos entre dispositivos y memoria sin intervención constante de 
+la CPU. 
+Componentes: 
+●​ controlador de DMA 
+●​ registros de dirección 
+●​ contador de bytes 
+●​ registros de control 
+Funcionamiento del DMA 
+1.​ La CPU programa el controlador DMA 
+2.​ El dispositivo coloca datos en su búfer interno 
+ 
+
+===== [PDF pag 5] =====
+ 
+3.​ El DMA transfiere datos directamente a memoria 
+4.​ Al finalizar, el DMA interrumpe a la CPU 
+La CPU no copia los datos, sólo coordina. 
+ 
+Modos de DMA 
+●​ robo de ciclo: el DMA toma el bus una palabra a la vez 
+●​ modo de ráfaga: transfiere bloques completos 
+El modo de ráfaga es más eficiente, pero puede bloquear la CPU por más tiempo. 
+Consideraciones adicionales 
+●​ DMA suele usar direcciones físicas 
+●​ el SO debe traducir direcciones virtuales 
+●​ el búfer interno del controlador permite: 
+○​ verificar errores antes de transferir 
+○​ desacoplar el ritmo del dispositivo del bus 
+DMA vs CPU 
+DMA no siempre es conveniente: 
+●​ la CPU puede ser más rápida 
+●​ en sistemas simples se evita DMA por costo y complejidad 
+●​ frecuente en sistemas embebidos 
+5.1.5 Repaso de las interrupciones 
+ 
+
+===== [PDF pag 6] =====
+ 
+Una interrupción ocurre cuando un dispositivo de E/S termina una operación y necesita 
+atención del sistema operativo. 
+Si las interrupciones están habilitadas, el dispositivo impone una señal en el bus, que es 
+detectada por el controlador de interrupciones de la tarjeta principal. 
+El controlador de interrupciones: 
+●​ decide si la interrupción puede atenderse de inmediato 
+●​ maneja prioridades entre dispositivos 
+●​ coloca un número identificador del dispositivo en las líneas de dirección 
+●​ envía la señal de interrupción a la CPU 
+Si hay otra interrupción en progreso o una de mayor prioridad, la petición se pospone, y el 
+dispositivo continúa solicitando atención. 
+Atención de una interrupción por la CPU 
+Cuando la CPU recibe la señal: 
+1.​ detiene la ejecución actual 
+2.​ usa el número recibido como índice en el vector de interrupciones 
+3.​ obtiene la dirección del procedimiento de servicio de interrupciones 
+4.​ comienza a ejecutarlo 
+Las interrupciones y las trampas suelen usar el mismo mecanismo y, en muchos sistemas, 
+el mismo vector. 
+Al iniciar el procedimiento de servicio, el sistema operativo reconoce la interrupción 
+escribiendo en el controlador de interrupciones. Esto le indica que puede aceptar nuevas 
+interrupciones y evita condiciones de competencia.
+ 
+Guardado del estado de la CPU 
+Antes de ejecutar el procedimiento de servicio, el hardware guarda el estado del proceso 
+interrumpido.​
+ 
+
+===== [PDF pag 7] =====
+ 
+ Como mínimo se guarda el contador del programa (PC), y en algunos sistemas también 
+registros visibles e internos. 
+Este estado debe almacenarse en algún lugar: 
+●​ registros internos: impiden reconocer nuevas interrupciones hasta leer todo el 
+estado 
+●​ pila: es el método más común 
+Usar la pila del proceso de usuario es peligroso, ya que: 
+●​ el apuntador puede ser inválido 
+●​ puede generar fallos de página durante la interrupción 
+Por eso, normalmente se utiliza la pila del kernel, aunque esto puede requerir cambios de 
+contexto de la MMU y afectar la caché y el TLB, aumentando el tiempo de atención de la 
+interrupción. 
+Interrupciones precisas e imprecisas 
+En sistemas antiguos, las interrupciones ocurrían entre instrucciones, lo que garantizaba 
+un estado bien definido.​
+ En CPUs modernas con líneas de tuberías y ejecución superescalar, esto deja de ser 
+cierto. 
+Al ocurrir una interrupción: 
+●​ varias instrucciones pueden estar en ejecución parcial 
+●​ el contador del programa puede no reflejar el límite real entre lo ejecutado y lo no 
+ejecutado 
+●​ las instrucciones pueden haberse ejecutado fuera de orden 
+Interrupciones precisas 
+Una interrupción precisa deja a la máquina en un estado completamente definido y 
+cumple cuatro propiedades: 
+1.​ El contador del programa se guarda en un lugar conocido. 
+2.​ Todas las instrucciones anteriores al PC se han ejecutado por completo. 
+3.​ Ninguna instrucción posterior al PC ha tenido efecto. 
+4.​ El estado de ejecución de la instrucción apuntada por el PC es conocido. 
+Esto permite: 
+●​ reiniciar correctamente el proceso 
+●​ manejar fallos de página y trampas con seguridad 
+Interrupciones imprecisas 
+ 
+
+===== [PDF pag 8] =====
+ 
+Una interrupción imprecisa no garantiza un estado claro: 
+●​ instrucciones cercanas al PC pueden estar en distintos grados de avance 
+●​ instrucciones más nuevas pueden estar más completas que las antiguas 
+●​ el sistema operativo debe reconstruir el estado real 
+Para hacerlo posible, la CPU suele guardar gran cantidad de estado interno, lo que: 
+●​ complica enormemente el sistema operativo 
+●​ ralentiza la atención de interrupciones 
+●​ reduce el rendimiento global 
+Esto genera una paradoja: CPUs muy rápidas que se ven limitadas por interrupciones 
+lentas. 
+ 
+Decisiones de diseño 
+Algunas arquitecturas: 
+●​ hacen precisas las interrupciones de E/S 
+●​ permiten interrupciones imprecisas para errores fatales 
+Otras ofrecen un bit para forzar todas las interrupciones precisas, lo cual: 
+●​ simplifica el sistema operativo 
+●​ incrementa mucho la complejidad del hardware 
+●​ impacta negativamente el rendimiento 
+La familia Pentium implementa interrupciones precisas para mantener compatibilidad con 
+software antiguo, pagando el costo en complejidad del chip. 
+5.2 Fundamentos del software de E/S 
+Luego de analizar el hardware de E/S, el foco pasa al software de E/S, es decir, a cómo el 
+sistema operativo organiza, abstrae y controla el uso de los dispositivos.​
+ Primero se definen los objetivos del software de E/S y luego las formas en que se realiza 
+la E/S desde el punto de vista del sistema operativo. 
+ 
+
+===== [PDF pag 9] =====
+ 
+5.2.1 Objetivos del software de E/S 
+El objetivo central del software de E/S es lograr la independencia de dispositivos.​
+ Esto significa que los programas no deben depender del tipo concreto de dispositivo que se 
+utiliza. Un mismo programa debe poder leer datos desde un disco duro, un CD-ROM, una 
+memoria USB o el teclado sin ser modificado. El sistema operativo es el encargado de 
+ocultar las diferencias reales entre los dispositivos, aunque internamente requieran 
+comandos y secuencias distintas. 
+Un objetivo estrechamente relacionado es la denominación uniforme.​
+ Los archivos y dispositivos deben identificarse únicamente por un nombre (una cadena o 
+un entero), sin que ese nombre revele el tipo de dispositivo. En UNIX, los dispositivos se 
+integran a la jerarquía del sistema de archivos, por lo que acceder a un archivo en un disco 
+o a una memoria USB se hace de la misma forma: mediante un nombre de ruta. El usuario 
+no necesita saber qué dispositivo físico está detrás. 
+Otro objetivo fundamental es el manejo de errores.​
+ Los errores deben resolverse lo más cerca posible del hardware. Si el controlador detecta 
+un error de lectura, debe intentar corregirlo. Si no puede, el software del dispositivo puede 
+reintentar la operación. Muchos errores son transitorios y desaparecen al repetir la 
+operación. Sólo cuando los niveles inferiores no pueden resolver el problema, se informa a 
+los niveles superiores. En muchos casos, la recuperación ocurre de manera transparente, 
+sin que el resto del sistema se entere. 
+También es clave la distinción entre E/S síncrona (de bloqueo) y E/S asíncrona 
+(controlada por interrupciones).​
+ Aunque la E/S real suele ser asíncrona, los programas de usuario son más simples de 
+escribir si las operaciones parecen de bloqueo. Por ejemplo, una llamada a read suspende 
+al proceso hasta que los datos están disponibles. El sistema operativo debe hacer que una 
+operación basada en interrupciones se comporte como una operación de bloqueo desde el 
+punto de vista del usuario. 
+El uso de búferes es otro aspecto central.​
+ Muchas veces los datos no pueden colocarse directamente en su destino final. Por 
+ejemplo, al recibir un paquete de red, el sistema operativo necesita almacenarlo primero 
+para analizarlo. Además, algunos dispositivos tienen restricciones temporales estrictas, por 
+lo que los datos deben almacenarse en búferes para desacoplar la velocidad de producción 
+y consumo. El uso de búferes implica copias adicionales y tiene un impacto importante en el 
+rendimiento de la E/S. 
+Un buffer es un dispositivo de almacenamiento temporal. 
+Por último, el software de E/S debe manejar dispositivos compartidos y dispositivos 
+dedicados.​
+ Los dispositivos compartidos, como los discos, pueden ser usados por múltiples procesos 
+al mismo tiempo sin conflictos. Los dispositivos dedicados, como las unidades de cinta, 
+deben ser asignados a un solo usuario hasta que termine su uso. Esto introduce problemas 
+adicionales, como interbloqueos, que el sistema operativo debe evitar. 
+ 
+
+===== [PDF pag 10] =====
+ 
+5.2.2 E/S programada 
+La E/S programada es la forma más simple de realizar E/S. En este método, la CPU hace 
+todo el trabajo. 
+Un proceso de usuario prepara los datos en un búfer y solicita al sistema operativo que 
+realice la operación. El sistema operativo copia los datos al espacio de kernel y luego entra 
+en un ciclo en el que: 
+●​ escribe un dato en el dispositivo, 
+●​ verifica si el dispositivo está listo, 
+●​ espera activamente hasta que pueda continuar. 
+Este mecanismo se conoce como sondeo u ocupado en espera. La CPU verifica 
+continuamente el estado del dispositivo hasta que esté listo para aceptar el siguiente dato. 
+La E/S programada es simple, pero ineficiente, ya que la CPU queda ocupada durante toda 
+la operación de E/S. Sólo es razonable cuando el tiempo de espera es muy corto o en 
+sistemas incrustados donde la CPU no tiene otro trabajo que realizar.
+ 
+5.2.3 E/S controlada por interrupciones 
+Para evitar que la CPU pierda tiempo esperando, se utiliza la E/S controlada por 
+interrupciones. 
+En este esquema, el sistema operativo copia los datos al espacio de kernel y envía el primer 
+dato al dispositivo. Luego, el proceso que solicitó la E/S se bloquea y la CPU puede ejecutar 
+otros procesos.​
+ Cuando el dispositivo termina de procesar el dato y está listo para continuar, genera una 
+interrupción. 
+El procedimiento de servicio de interrupciones se encarga de: 
+●​ enviar el siguiente dato al dispositivo, si quedan datos por transferir, 
+●​ o desbloquear al proceso de usuario si la operación terminó. 
+De esta forma, la CPU sólo interviene cuando ocurre una interrupción y no pierde tiempo 
+esperando activamente. El costo es que se produce una interrupción por cada unidad 
+transferida. 
+ 
+
+===== [PDF pag 11] =====
+ 
+5.2.4 E/S mediante el uso de DMA 
+La desventaja de la E/S por interrupciones es que genera muchas interrupciones.​
+ Para reducir este costo, se utiliza DMA (Acceso Directo a Memoria). 
+Con DMA, la CPU programa al controlador de DMA indicando: 
+●​ qué datos transferir, 
+●​ desde dónde, 
+●​ hacia dónde, 
+●​ y cuántos bytes. 
+Luego, el controlador de DMA realiza la transferencia sin intervención de la CPU. La CPU 
+queda libre para ejecutar otros procesos y sólo se genera una interrupción cuando toda la 
+transferencia termina, no por cada dato. 
+La ventaja principal es reducir drásticamente el número de interrupciones.​
+ La desventaja es que el controlador de DMA puede ser más lento que la CPU. Si la CPU no 
+tiene otro trabajo que realizar o el controlador de DMA no puede manejar la velocidad del 
+dispositivo, puede ser preferible usar E/S por interrupciones o incluso E/S programada. 
+En la práctica, la mayor parte del tiempo vale la pena usar DMA. 
+5.3 Capas del software de E/S 
+El software de E/S se organiza en capas, cada una con una función bien definida y con 
+interfaces claras hacia las capas vecinas.​
+ Esta organización permite ocultar la complejidad del hardware, separar 
+responsabilidades y facilitar la extensión del sistema con nuevos dispositivos. 
+De abajo hacia arriba, las capas son:​
+ hardware, manejadores de interrupciones, controladores de dispositivos, software de E/S 
+independiente del dispositivo y software de E/S en espacio de usuario. 
+ 
+5.3.1 Manejadores de interrupciones 
+Las interrupciones son inevitables en la mayoría de las operaciones de E/S y deben 
+ocultarse lo más posible del resto del sistema operativo.​
+ 
+
+===== [PDF pag 12] =====
+ 
+ La idea central es que el controlador que inicia una operación de E/S se bloquee hasta que 
+la operación termine y ocurra la interrupción. 
+Cuando el hardware genera una interrupción, el procedimiento de servicio de interrupciones: 
+●​ identifica qué dispositivo generó la interrupción, 
+●​ obtiene información del controlador del dispositivo, 
+●​ y desbloquea al controlador que estaba esperando. 
+Este modelo funciona mejor cuando los controladores están estructurados como procesos 
+del kernel, con su propio estado, pila y contador del programa. 
+El procesamiento de una interrupción implica mucho más que “atenderla y volver”.​
+ El sistema operativo debe guardar registros, establecer un contexto de ejecución, manejar 
+la MMU y el TLB si existen, ejecutar el procedimiento de servicio, decidir qué proceso 
+ejecutar a continuación y restaurar el estado del proceso elegido. 
+Por este motivo, las interrupciones son costosas en términos de tiempo de CPU, 
+especialmente en sistemas con memoria virtual y hardware moderno. 
+5.3.2 Drivers de dispositivos 
+Cada dispositivo de E/S necesita código específico para ser controlado.​
+ Este código es el driver, generalmente escrito por el fabricante del dispositivo y 
+dependiente del sistema operativo. 
+Los drivers difieren enormemente entre sí porque los dispositivos son muy distintos.​
+ Un driver de disco debe conocer sectores, pistas y cilindros; un driver de ratón maneja 
+desplazamientos y botones. Por eso, no existe un driver universal. 
+En la mayoría de los sistemas operativos, los drivers se ejecutan dentro del kernel, porque 
+necesitan acceso directo a los registros del hardware.​
+ Aunque es posible ejecutar drivers en espacio de usuario (como en MINIX 3), el modelo 
+habitual es que formen parte del kernel. 
+Para permitir que drivers de terceros se integren al sistema, el sistema operativo define una 
+arquitectura estándar de drivers.​
+ Cada clase de dispositivo (bloque o carácter) debe implementar un conjunto bien definido 
+de funciones, como leer, escribir, inicializar o apagar el dispositivo. Estas funciones se 
+acceden mediante una tabla de apuntadores, que actúa como interfaz entre el driver y el 
+resto del sistema. 
+El funcionamiento típico de un driver es: 
+●​ validar los parámetros, 
+●​ traducir solicitudes abstractas a términos concretos del dispositivo, 
+●​ verificar si el dispositivo está ocupado, 
+●​ enviar una secuencia de comandos al hardware, 
+●​ bloquearse si es necesario, 
+ 
+
+===== [PDF pag 13] =====
+ 
+●​ manejar la interrupción, 
+●​ verificar errores y devolver el resultado. 
+Los drivers deben ser reentrantes, ya que pueden ser interrumpidos mientras se están 
+ejecutando.​
+ Además, en sistemas con conexión en caliente, deben manejar la aparición o desaparición 
+inesperada de dispositivos sin dañar las estructuras del kernel. 
+ 
+5.3.3 Software de E/S independiente del dispositivo 
+Esta capa implementa funciones comunes a todos los dispositivos, ocultando 
+diferencias específicas del hardware. 
+Su función principal es proporcionar una interfaz uniforme hacia los niveles superiores.​
+ Gracias a esto, el sistema operativo no necesita cambiar cada vez que se agrega un nuevo 
+dispositivo compatible con una clase existente. 
+También se encarga del nombramiento y protección de dispositivos.​
+ Los dispositivos aparecen como archivos especiales, por lo que se aplican las reglas 
+normales de permisos. El número mayor identifica al controlador y el número menor 
+identifica al dispositivo concreto. 
+Otra responsabilidad clave es el uso de búferes.​
+ El uso de búfer mejora el rendimiento y desacopla la velocidad del dispositivo de la del 
+proceso.​
+ Se utilizan técnicas como: 
+ 
+
+===== [PDF pag 14] =====
+ 
+●​ búfer en kernel, 
+●​ doble búfer, 
+●​ búfer circular. 
+Estas técnicas evitan pérdidas de datos y reducen el número de activaciones de procesos, 
+pero a costa de múltiples copias de datos, lo que puede degradar el rendimiento. 
+El reporte de errores también se coordina aquí.​
+ Los errores simples se reportan directamente al proceso. Los errores de E/S reales pueden 
+implicar reintentos, interacción con el usuario o, en casos graves, la detención del sistema. 
+Esta capa también gestiona la asignación de dispositivos dedicados, evitando que más 
+de un proceso los use al mismo tiempo, ya sea bloqueando o rechazando solicitudes. 
+Por último, oculta las diferencias de tamaño de bloque entre dispositivos, ofreciendo un 
+tamaño de bloque lógico uniforme a los niveles superiores. 
+ 
+ 
+5.3.4 Software de E/S en espacio de usuario 
+Una parte del software de E/S se ejecuta fuera del kernel, principalmente en forma de 
+bibliotecas y procesos especiales. 
+ 
+
+===== [PDF pag 15] =====
+ 
+Las llamadas al sistema de E/S suelen invocarse a través de procedimientos de 
+biblioteca, como write, read, printf o scanf.​
+ Estas bibliotecas se encargan del formato de datos, mientras que el kernel sólo maneja la 
+transferencia. 
+Otra forma importante de E/S en espacio de usuario es el uso de colas (spooling).​
+ Se utiliza para dispositivos dedicados, como impresoras.​
+ En lugar de permitir acceso directo al dispositivo, los procesos depositan su salida en un 
+directorio de cola. Un proceso especial, llamado demonio, es el único que accede al 
+dispositivo y procesa la cola. 
+Este esquema evita bloqueos innecesarios, mejora la equidad y permite manejar 
+dispositivos lentos en sistemas multiprogramados. 
+ 
+5.4 Discos 
+Los discos son dispositivos de E/S fundamentales. Conceptualmente son simples, pero 
+críticos, porque se utilizan como memoria secundaria, tanto para sistemas de archivos 
+como para paginación. Existen discos magnéticos y discos ópticos, cada uno con 
+características físicas y de rendimiento distintas. 
+5.4.1 Hardware de disco 
+Discos magnéticos 
+Los discos magnéticos se organizan en cilindros, pistas y sectores.​
+ Un cilindro es el conjunto de pistas alineadas verticalmente; cada pista se divide en 
+sectores, que son la unidad mínima de lectura y escritura. 
+En discos modernos (IDE, SATA), gran parte del trabajo lo realiza un microcontrolador 
+interno, que maneja caché, reasignación de bloques defectuosos y comandos de alto nivel. 
+5.5 Relojes 
+Los relojes (temporizadores) son esenciales en sistemas de multiprogramación. Permiten 
+mantener la hora del día, evitar que un proceso monopolice la CPU y medir el uso del 
+sistema, entre otras funciones.​
+ 
+
+===== [PDF pag 16] =====
+ 
+ Aunque no son dispositivos de bloque ni de carácter, el software de reloj se implementa 
+como un controlador de dispositivo. 
+Unidad 6 – Interbloqueos 
+Un interbloqueo ocurre cuando dos o más procesos quedan bloqueados de manera 
+permanente porque cada uno posee recursos que los otros necesitan y ninguno puede 
+continuar. 
+Los sistemas operativos administran recursos que no pueden ser usados 
+simultáneamente por más de un proceso, por lo que deben otorgar acceso exclusivo de 
+forma temporal. 
+Los interbloqueos pueden darse tanto con: 
+●​ recursos de hardware (impresoras, unidades de cinta, grabadores de CD), 
+●​ recursos de software (registros de bases de datos, entradas en tablas del sistema). 
+También pueden ocurrir en sistemas distribuidos, cuando los recursos se reservan a 
+través de una red. 
+6.1 Recursos 
+Un recurso es cualquier objeto que un proceso debe: 
+1.​ solicitar, 
+2.​ utilizar, 
+3.​ liberar. 
+Puede ser un dispositivo físico o una estructura de información.​
+ Puede haber una o varias instancias de un mismo tipo de recurso. 
+Si el recurso solicitado no está disponible, el proceso debe esperar (bloquearse o 
+reintentar). 
+6.1.1 Recursos apropiativos y no apropiativos 
+Recursos apropiativos 
+Son aquellos que pueden quitarse a un proceso sin causar fallos. 
+Ejemplo: memoria.​
+ El sistema operativo puede retirarla temporalmente (swap) y luego devolverla. 
+Los interbloqueos que involucran solo recursos apropiativos pueden resolverse 
+reasignando recursos. 
+Recursos no apropiativos 
+ 

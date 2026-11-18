@@ -1,0 +1,45 @@
+// Verifica el motor de fsck.html contra la fig. 4-27 y el ejemplo resuelto 8
+const fs = require('fs'), vm = require('vm'), path = require('path');
+const html = fs.readFileSync(path.join(__dirname, '../unidades/u04-archivos/visuales/fsck.html'), 'utf8');
+const src = html.match(/<script id="motor">([\s\S]*?)<\/script>/)[1];
+const ctx = {module:{exports:{}}}; vm.createContext(ctx); vm.runInContext(src, ctx);
+const M = ctx.module.exports;
+let ok = 0, mal = 0;
+const t = (nom, c) => { if(c){ ok++; console.log('OK  ', nom); } else { mal++; console.log('FALLA', nom); } };
+const E = M.ESC_BLOQUES;
+const diag = k => M.parseFila(E[k].uso).map((u, i) => M.diagBloque(u, M.parseFila(E[k].lib)[i]).tipo);
+t('4-27a todo consistente', diag('a').every(x => x === 'okUso' || x === 'okLibre'));
+t('4-27b bloque 2 faltante y solo ese', diag('b').filter(x => !x.startsWith('ok')).length === 1 && diag('b')[2] === 'faltante');
+t('4-27c bloque 4 duplicado en libres', diag('c')[4] === 'dupLibre' && diag('c').filter(x => !x.startsWith('ok')).length === 1);
+t('4-27d bloque 5 duplicado de datos', diag('d')[5] === 'dupDatos' && diag('d').filter(x => !x.startsWith('ok')).length === 1);
+const e8 = diag('e8');
+t('ej. 8: bloque 2 faltante', e8[2] === 'faltante');
+t('ej. 8: bloque 3 duplicado de datos', e8[3] === 'dupDatos');
+t('ej. 8: resto bien', [0,1,4,5,6,7].every(i => e8[i].startsWith('ok')));
+// reparaciones
+const rep = k => M.repararBloques(M.parseFila(E[k].uso), M.parseFila(E[k].lib));
+t('reparar a: sin acciones', rep('a').acciones.length === 0 && rep('a').consistente);
+t('reparar b: libres[2]=1', rep('b').lib[2] === 1 && rep('b').consistente);
+t('reparar c: libres[4]=1', rep('c').lib[4] === 1 && rep('c').consistente);
+const rd = rep('d');
+t('reparar d: copia 5 → 2 (primer libre)', rd.copias.length === 1 && rd.copias[0].de === 5 && rd.copias[0].a === 2 && rd.consistente);
+const r8 = rep('e8');
+t('reparar ej.8: 2 a libres, 3 copiado a un libre', r8.consistente && r8.copias.length === 1 && r8.copias[0].de === 3);
+const rm = rep('mix');
+t('mix: diag', JSON.stringify(diag('mix')) === JSON.stringify(['okUso','faltante','usoYLibre','dupDatos','okUso','dupLibre','okLibre','okUso']));
+t('mix: reparado consistente', rm.consistente);
+t('sin libres para copiar → faltanLibres', M.repararBloques([2,1],[0,0]).faltanLibres === 1);
+t('parseFila rechaza basura', M.parseFila('1 x 2').some(isNaN));
+// directorios
+const D = M.ESC_DIRS;
+const ver = k => M.verificarDirs(M.parseDirs(D[k].dirs), M.parseCuentas(D[k].cuen));
+const tipos = k => Object.fromEntries(ver(k).map(r => [r.nodo, r.tipo]));
+t('dirs ok: 5 y 7 ok', JSON.stringify(tipos('ok')) === '{"5":"ok","7":"ok"}');
+t('dirs alta: 5 alta, 8 ok', JSON.stringify(tipos('alta')) === '{"5":"alta","8":"ok"}');
+t('dirs baja: 5 baja, real 2', tipos('baja')[5] === 'baja' && ver('baja')[0].real === 2 && ver('baja')[0].arreglo === 2);
+t('dirs huérfano: 9 alta real 0', tipos('huer')[9] === 'alta' && ver('huer').find(r => r.nodo === 9).real === 0);
+t('directorios no se cuentan como archivos', !ver('ok').some(r => r.nodo === 2 || r.nodo === 3));
+t('pasosDirs: raíz + 5 entradas + comp + reparar', M.pasosDirs(M.parseDirs(D.ok.dirs)).length === 8);
+t('parseDirs rechaza formato malo', M.parseDirs('/ a=5') === null);
+console.log(`\n${ok} OK, ${mal} fallos`);
+process.exit(mal ? 1 : 0);

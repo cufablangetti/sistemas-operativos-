@@ -39,7 +39,7 @@
   <h2>Repaso de todas las unidades</h2>
   <a class="item" href="mapa_conceptual.html">
     <strong>Mapa conceptual acumulativo ★</strong>
-    <span>Unidades 1 y 2 conectadas, con buscador y ramas colapsables. Tiene las secuencias para recitar, las trampas de examen, tus errores y las dudas que tuviste. Cada rama tiene dos referencias, al Tanenbaum y a la página del PDF de repaso, y los cruces entre unidades se pueden clickear. La versión para imprimir está en <code>plan/mapa_conceptual.pdf</code>.</span>
+    <span>Unidades 1, 2 y 3 conectadas, con buscador y ramas colapsables. Tiene las secuencias para recitar, las trampas de examen, tus errores y las dudas que tuviste. Cada rama tiene dos referencias, al Tanenbaum y a la página del PDF de repaso, y los cruces entre unidades se pueden clickear. La versión para imprimir está en <code>plan/mapa_conceptual.pdf</code>.</span>
   </a>
 
   <a class="item" href="mapa_grafico.html">
@@ -111,6 +111,98 @@
   <a class="item" href="../unidades/u02-procesos/visuales/filosofos_comelones.html">
     <strong>Los filósofos comelones: los cuatro intentos</strong>
     <span>Vos sos el planificador: hacés clic en cada filósofo y decidís el orden. Los cuatro esquemas del libro &mdash; todos el izquierdo (<strong>interbloqueo</strong>), el filósofo zurdo, el mutex para toda la mesa (correcto pero come uno a la vez) y la solución de Dijkstra con <code>estado[]</code> y un semáforo por filósofo. Botón para forzar el interbloqueo del libro y ver que nadie consume CPU.</span>
+  </a>
+
+  <h2>Unidad 3 &mdash; Administración de memoria</h2>
+  <a class="item" href="../unidades/u03-memoria/visuales/asignacion_memoria.html">
+    <strong>Asignación de memoria: primer, siguiente, mejor y peor ajuste</strong>
+    <span>Cargás los huecos y los pedidos, y ves paso a paso qué hueco mira y cuál elige cada algoritmo. También libera procesos y muestra cómo se fusionan los huecos vecinos. Una tabla compara los cuatro algoritmos con los mismos datos.</span>
+  </a>
+  <a class="item" href="../unidades/u03-memoria/visuales/traduccion_direcciones.html">
+    <strong>Traducción de dirección virtual a física ★</strong>
+    <span>Escribís la dirección (hexa, binario o decimal) y el tamaño de página, y el simulador la corta en página y desplazamiento, busca la página en una tabla editable y arma la dirección física con el marco. Si el bit de presente está en 0, muestra el fallo de página. Trae los ejemplos del libro, de la práctica y de un examen de la cátedra.</span>
+  </a>
+  <a class="item" href="../unidades/u03-memoria/visuales/tlb.html">
+    <strong>TLB: aciertos, fallos suaves y fallos duros</strong>
+    <span>Cargás una secuencia de páginas (con w si es escritura) y ves línea por línea qué hace la MMU y qué hace el SO, cómo cambian el TLB, la tabla de páginas y los marcos, y cuándo el bit M viaja a la tabla o al disco. Incluye el fallo de protección.</span>
+  </a>
+  <a class="item" href="../unidades/u03-memoria/visuales/tablas_paginas.html">
+    <strong>Tablas de páginas grandes: multinivel e invertida</strong>
+    <span>Una calculadora con deslizadores del tamaño de la tabla (un nivel, dos niveles e invertida, con estado ok / al límite / saturado), un divisor de direcciones en TP1 | TP2 | desplazamiento con el ejemplo del libro y su errata, y los tres esquemas lado a lado con sus ventajas y desventajas.</span>
+  </a>
+  <a class="item" href="../unidades/u03-memoria/visuales/reemplazo_paginas.html">
+    <strong>Algoritmos de reemplazo de páginas ★</strong>
+    <span>Óptimo, FIFO, segunda oportunidad, reloj y LRU sobre una cadena de referencias, paso a paso, con la página inspeccionada, la víctima, el conteo de fallos y la comparación entre algoritmos. Trae el ejercicio de examen de la cátedra (segunda oportunidad sobre una tabla de páginas que se modifica, con la cola en la notación de la cátedra) y las clases de NRU.</span>
+  </a>
+  <a class="item" href="../unidades/u03-memoria/visuales/lru_aproximaciones.html">
+    <strong>LRU y sus aproximaciones: matriz, envejecimiento, conjunto de trabajo y WSClock</strong>
+    <span>La matriz n × n de LRU por hardware (fig. 3-17), el envejecimiento con NFU al lado para ver por qué NFU «no olvida» (fig. 3-18, con la errata marcada), y el conjunto de trabajo y WSClock con τ ajustable, edad de cada página y escritura planificada de las sucias (figs. 3-20 y 3-21).</span>
+  </a>
+  <a class="item" href="../unidades/u03-memoria/visuales/diseno_paginacion.html">
+    <strong>Cuestiones de diseño: tamaño de página, local vs. global, asignación y PFF</strong>
+    <span>Calculadora del tamaño de página óptimo p = √(2se) con la curva de sobrecarga (tabla + fragmentación interna), los paneles de reemplazo local y global sobre la fig. 3-23 con sus ventajas y desventajas, la asignación de marcos en partes iguales o proporcional con mínimo, y PFF con las líneas A y B, la media móvil y la señal de control de carga.</span>
+  </a>
+  <a class="item" href="../unidades/u03-memoria/visuales/copia_en_escritura.html">
+    <strong>fork y copia en escritura; bibliotecas compartidas</strong>
+    <span>Simulador paso a paso de las tablas de padre e hijo después de un fork: todo en solo lectura, trap en la primera escritura y copia de una sola página, comparado con un fork que copia todo; incluye la escritura en texto (violación real) y el execve. Además, paneles de enlazado estático, DLL y código independiente de la posición con la calculadora del salto de la fig. 3-27.</span>
+  </a>
+  <a class="item" href="../unidades/u03-memoria/visuales/fallo_de_pagina.html">
+    <strong>Manejo del fallo de página: los 10 pasos ★</strong>
+    <span>Simulador paso a paso de la secuencia 3.6.2 con quién ejecuta cada paso (hardware, rutina en ensamblador, SO, disco), el modo de la CPU, el PC, los registros, el estado del proceso y la tabla de páginas. Escenarios: víctima sucia, limpia, marco libre, dirección inválida y violación de protección; incluye el respaldo de instrucción.</span>
+  </a>
+  <a class="item" href="../unidades/u03-memoria/visuales/segmentacion.html">
+    <strong>Segmentación: comparación con paginación, tablero de ajedrez y traducción (s, d)</strong>
+    <span>Paginación y segmentación en paneles lado a lado con sus ventajas y desventajas y la tabla de la fig. 3-33; el efecto tablero de ajedrez de la fig. 3-34 paso a paso con huecos, fragmentación externa y compactación (con eventos editables); y una calculadora de traducción (segmento, desplazamiento) con base, límite y protección.</span>
+  </a>
+  <a class="item" href="../unidades/u03-memoria/visuales/segmentacion_paginada.html">
+    <strong>Segmentación con paginación: MULTICS y Pentium</strong>
+    <span>Simulador paso a paso de la traducción de direcciones: MULTICS (segmento | página | desplazamiento, descriptor, fallo de segmento vs. fallo de página, TLB de 16 entradas) y Pentium (selector, LDT/GDT, límite con G, dirección lineal, paginación de dos niveles, TLB). Con escenarios de error, datos editables y un verificador de anillos de protección con compuertas de llamada.</span>
+  </a>
+  <a class="item" href="../unidades/u03-memoria/visuales/listas_paginas_windows.html">
+    <strong>Windows: listas de páginas físicas y fallos suaves/duros</strong>
+    <span>Simulador de la vida de un marco por la fig. 11-36: conjunto de trabajo, listas de modificadas, en espera, libres, en ceros y defectuosas, con las 8 transiciones, quién las hace y el conteo de fallos suaves, duros y escrituras a disco. Recorrido guiado o eventos libres.</span>
+  </a>
+  <h2>Unidad 4 &mdash; Sistemas de archivos</h2>
+  <a class="item" href="../unidades/u04-archivos/visuales/fat.html">
+    <strong>Seguir la cadena de una FAT ★</strong>
+    <span>Simulador paso a paso: desde el cluster inicial de la entrada de directorio seguís la tabla en RAM hasta FIN, con la línea de código que se ejecuta, el bloque lógico de cada cluster y el espacio ocupado (clusters × tamaño). Trae la fig. 4-12 (archivos A y B), el ejercicio de final de la cátedra (FAT32, 256 B, cluster 4), cadenas rotas y ciclos, la fragmentación interna, en qué cluster cae un byte y la comparación con lista enlazada y asignación contigua.</span>
+  </a>
+  <a class="item" href="../unidades/u04-archivos/visuales/inodos.html">
+    <strong>Nodos-i: tamaño máximo, bloques índice y dónde está un byte ★</strong>
+    <span>Calculadora con deslizadores (directos, tamaño de bloque y de puntero, niveles) del máximo (D + P + P² + P³) × B, con el techo que pone el ancho del puntero (ok / al límite / saturado); conteo de bloques de datos y de bloques índice para un archivo dado (el de 5,5 MB de la práctica da 7); y un simulador paso a paso que ubica un byte en el árbol del nodo-i, con las entradas y las lecturas de disco.</span>
+  </a>
+  <a class="item" href="../unidades/u04-archivos/visuales/vinculos_rutas.html">
+    <strong>Vínculos duros y simbólicos · Búsqueda de /usr/ast/mbox ★</strong>
+    <span>Simulador paso a paso de la fig. 4-17: C crea un archivo, B lo vincula (duro o simbólico), C lo borra y B intenta leerlo, con los directorios, la tabla de nodos-i, el contador de vínculos, el dueño y la salida de la terminal (incluye el vínculo colgado). Segunda pestaña: la búsqueda de una ruta absoluta o relativa sobre los datos de la fig. 4-35, alternando nodo-i y bloque de directorio, con el conteo de lecturas.</span>
+  </a>
+  <a class="item" href="../unidades/u04-archivos/visuales/bitacora.html">
+    <strong>Bitácora (journaling), idempotencia y VFS</strong>
+    <span>Simulador del borrado de un archivo en tres pasos (directorio, nodo-i, bloques) con orden elegible, con o sin bitácora, liberación por mapa de bits o por lista libre, y una caída en el punto que elijas. Al re-arrancar se rehace lo pendiente y se crean archivos nuevos para ver si el disco quedó sano: limbo, entrada que abre otro archivo, bloques compartidos o perdidos, y la falla de una operación no idempotente. Abajo, el VFS en capas (fig. 4-18) con la secuencia de un open.</span>
+  </a>
+  <a class="item" href="../unidades/u04-archivos/visuales/espacio_disco.html">
+    <strong>Espacio en disco: fragmentación interna, tamaño de bloque y bloques libres ★</strong>
+    <span>Tres calculadoras con deslizadores y estado ok / al límite / saturado: la fragmentación interna de un archivo con el paso a paso del ejercicio de FAT32 de la práctica (sectores por bloque, bytes por sector en el BPB, 906 bloques + 1542 B → 2554 B, con la errata marcada); velocidad contra eficiencia de espacio según el tamaño de bloque (fig. 4-21); y lista enlazada contra mapa de bits para registrar bloques libres (500 GB → 1,9 M bloques contra 60.000).</span>
+  </a>
+  <a class="item" href="../unidades/u04-archivos/visuales/fsck.html">
+    <strong>Verificador de consistencia (fsck) ★</strong>
+    <span>Simulador paso a paso: consistencia de bloques con las dos tablas de contadores (fig. 4-27: faltante, duplicado en libres, duplicado de datos, más el ejemplo resuelto y un caso mixto editable) y consistencia de directorios (cuenta de vínculos alta o baja), con la reparación. Además, paneles de vaciado físico vs. lógico y caché UNIX (sync) vs. write-through.</span>
+  </a>
+  <a class="item" href="../unidades/u04-archivos/visuales/ejemplos_fs.html">
+    <strong>Ejemplos de sistemas de archivos: ISO 9660, MS-DOS, V7, NTFS y NFS</strong>
+    <span>Paneles lado a lado con la entrada de directorio de cada sistema dibujada a escala, dónde guarda los bloques y los libres, y sus + y −. Calculadora de FAT-12/16/32 (partición máxima de la fig. 4-32, FAT en RAM y desperdicio, con el ejemplo de 2 GB), codificador de fecha y hora de MS-DOS (±2 s, año 2107) y NFS: montaje remoto, nodo-v → nodo-r, con y sin estado.</span>
+  </a>
+  <a class="item" href="../unidades/u04-archivos/visuales/proteccion.html">
+    <strong>Protección: matriz, ACL, capacidades, Bell-La Padula y Biba ★</strong>
+    <span>Matriz de protección editable que se convierte en vivo en ACL (por columnas) y listas de capacidades (por filas), con la revocación comparada; evaluador paso a paso de una ACL ordenada (primera entrada que coincide, grupos, comodín, bloqueo selectivo de Virgil); niveles de Bell-La Padula contra Biba; y un canal encubierto que filtra bits bloqueando un archivo, usando la CPU o provocando fallos de página.</span>
+  </a>
+  <a class="item" href="../unidades/u04-archivos/visuales/tres_tablas.html">
+    <strong>Linux: las tres tablas de un read y /etc/fstab ★</strong>
+    <span>Simulador paso a paso de la fig. 10-34: tabla de descriptores (por proceso) → descripción de archivo abierto (posición) → nodos-i, con un selector de dónde se guarda la posición (Linux real, en el descriptor o en el nodo-i) y cuatro escenarios: (p1; p2) &gt; x, dos procesos no relacionados, padre e hijo tras fork, y dos open en el mismo proceso. Además, un explicador de las 6 columnas de una línea de /etc/fstab y la tabla de comandos de la cátedra.</span>
+  </a>
+  <h2>Unidad 5 &mdash; Entrada/salida</h2>
+  <a class="item" href="../unidades/u05-entrada-salida/visuales/hardware_es.html">
+    <strong>Hardware de E/S: puertos, asignación de memoria y caché</strong>
+    <span>Paneles lado a lado de los tres esquemas de la fig. 5-2 (puertos separados, E/S por asignación de memoria e híbrido del Pentium) con sus + y −; elegís una instrucción (MOV o IN) y qué querés leer y te dice a qué espacio va. Simulador del ciclo de sondeo TEST PUERTO_4 con y sin caché (el ciclo infinito). Tabla de dispositivos de bloque contra de carácter y ls -l /dev.</span>
   </a>
 </div>
 </body>

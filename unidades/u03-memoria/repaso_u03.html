@@ -1,0 +1,1228 @@
+<html><body>
+<h1>Unidad 3 — Administración de memoria</h1>
+<p class="sub">Sistemas Operativos — UTN FRM — Repaso de la clase completa en el chat: 11 temas, correcciones y cierre</p>
+<div class="clave"><b>Cómo leer este repaso.</b> Es la clase tal como se dio, tema por tema, con los mismos
+diagramas y ejemplos. Al final de cada tema están las <b>preguntas de control</b> y, a continuación, su
+<b>corrección</b>: ahí quedaron marcados los errores que conviene no repetir (⚠️). La referencia al Tanenbaum
+está en cada bloque. Los simuladores interactivos de cada tema están en <b>visuales/index.html</b>.
+El resumen de todo y <b>lo que más se toma</b> está en el <b>Cierre de la Unidad 3</b>, en las últimas páginas.</div>
+
+<h2>Mapa de la unidad</h2>
+<p>La pregunta que recorre toda la unidad: <b>¿cómo hacen varios programas, que juntos no entran en la RAM, para convivir sin pisarse?</b></p>
+<pre> 1. Jerarquía de memoria ── "no hay memoria ideal, hay capas"
+        │
+        ▼
+ 2. Sin abstracción ──► problema: se pisan y no se pueden reubicar
+        │                 solución: ESPACIO DE DIRECCIONES (base y límite)
+        ▼
+ 3. Intercambio ──► procesos ENTEROS van y vienen del disco
+        │            hay que anotar los huecos (mapa de bits, listas,
+        │            primer/mejor/peor ajuste, colegas)
+        ▼
+ 4. MEMORIA VIRTUAL ★ ──► páginas: solo está en RAM lo que se usa
+        │
+        ├─ 5. Tabla de páginas y TLB ──► traducir RÁPIDO
+        ├─ 6. Multinivel e invertidas ──► tablas que no ocupen todo
+        ├─ 7. Reemplazo de páginas ★ ──► ¿qué página saco?
+        ├─ 8. Diseño ──► local/global, sobrepaginación, tamaño de página
+        └─ 9. El fallo de página, paso a paso
+        │
+        ▼
+10. Segmentación ──► varios espacios lógicos (MULTICS, Pentium)
+        │
+        ▼
+11. Casos de estudio y comandos (Linux, Windows, free, smem, vmstat)</pre>
+<p>Los ★ son lo que más se toma: <b>traducir direcciones</b> (tema 4) y <b>segunda oportunidad con la tabla de páginas</b> (tema 7). En los dos casos te voy a armar un simulador.</p>
+<p>La lógica de la unidad es una escalera: cada tema resuelve el problema que dejó el anterior y abre uno nuevo. Si te perdés, preguntate qué problema venía a resolver ese tema.</p>
+<hr/>
+<h2>Tema 1 — La jerarquía de memoria y el administrador de memoria</h2>
+<h4>La intuición</h4>
+<p>Imaginá una cocina. Lo que estás usando ahora está en la mano (los <b>registros</b>). Lo que vas a usar enseguida está sobre la mesada (la <b>caché</b>). Los ingredientes del día están en la heladera (la <b>RAM</b>). El resto está en la despensa del fondo (el <b>disco</b>). Nadie guarda todo en la mano, porque no entra, ni va a la despensa por cada cucharada, porque tardaría una eternidad.</p>
+<p>Esto ya lo viste en la U1. Acá vuelve porque <b>el sistema operativo administra la heladera</b>: qué entra, de quién es cada estante y qué se tira cuando no hay lugar.</p>
+<h4>Lo formal</h4>
+<p>La memoria ideal sería infinita, rapidísima, no volátil y barata. <b>No existe.</b> Por eso se construye una <b>jerarquía</b>:</p>
+<pre>            ┌────────────┐  1 ns     &lt; 1 KB     ▲ más rápida
+            │ Registros  │                      │ más cara por bit
+            ├────────────┤                      │ más chica
+            │   Caché    │  2 ns      4 MB      │
+            ├────────────┤                      │
+            │    RAM     │  10 ns     ~GB       │
+            ├────────────┤                      │
+            │   Disco    │  10 ms     ~TB       │ más lenta
+            ├────────────┤                      │ más barata
+            │   Cinta    │  100 s               ▼ más grande
+            └────────────┘
+   (números del libro, fig. 1-9: valen las proporciones)</pre>
+<ul><li><b>Volátil</b> (se pierde al apagar): registros, caché y RAM.</li><li><b>No volátil</b>: ROM, flash y disco. La CMOS es volátil, pero tiene una pila que la mantiene.</li></ul>
+<p><b>El administrador de memoria</b> es la parte del SO que:</p>
+<ol><li>lleva el registro de qué partes de la memoria están en uso,</li><li>asigna memoria a los procesos cuando la piden,</li><li>la libera cuando terminan.</li></ol>
+<p>La caché la maneja el <b>hardware</b>, así que la unidad se concentra en la <b>RAM</b>.</p>
+<h4>La caché, en una línea (repaso de la U1)</h4>
+<p>La RAM se divide en <b>líneas de 64 bytes</b>. Si la línea que pedís está en la caché, hay un <b>acierto</b>. Si no está, hay un <b>fallo</b>: se va a la RAM y se trae la línea entera. Funciona por la <b>localidad</b>: lo que usaste hace poco y lo que está al lado lo vas a volver a usar.</p>
+<h4>Ejemplo: por qué importa la localidad</h4>
+<p>Caché de 1 ns, RAM de 10 ns.</p>
+<table><tr><th>Aciertos</th><th>Cuenta</th><th>Tiempo medio</th></tr><tr><td>95 %</td><td>0,95 × 1 + 0,05 × (1 + 10)</td><td><b>1,50 ns</b> (6,67 veces más rápido)</td></tr><tr><td>50 %</td><td>0,50 × 1 + 0,50 × (1 + 10)</td><td><b>6,00 ns</b> (apenas 1,67 veces más rápido)</td></tr></table>
+<p>La caché vale lo que vale la localidad del programa. Lo podés mover con deslizadores en la calculadora, en la pestaña «Tiempo con caché».</p>
+<h4>La idea que se repite en toda la unidad</h4>
+<div class="clave">La caché es un caso de algo más general: <b>un nivel rápido y chico que guarda lo más usado de un nivel lento y grande.</b></div>
+<p>Vas a ver la misma idea en el resto de la unidad:</p>
+<ul><li>la <b>RAM</b> funciona como caché del <b>disco</b> (eso es la memoria virtual);</li><li>el <b>TLB</b> es una caché de la <b>tabla de páginas</b>;</li><li>elegir qué página sacar de la RAM es el mismo problema que elegir qué línea sacar de la caché.</li></ul>
+<p>📖 Tanenbaum, cap. 1.3.2, págs. 23–26, y la introducción del cap. 3, págs. 175–176.</p>
+<hr/>
+<h4>Preguntas de control</h4>
+<p><b>1.</b> Te dicen: «agregar más caché siempre hace al programa mucho más rápido». ¿Es verdad? ¿De qué depende?</p>
+<p><b>2.</b> ¿Por qué la unidad se concentra en administrar la RAM y no la caché, si las dos son memoria?</p>
+<p>Respondé con tus palabras y después seguimos con el tema 2: qué pasa cuando no hay ninguna abstracción y dos programas se pisan.</p>
+<h4>Corrección</h4>
+<p><b>1. Correcta en la idea, pero falta la palabra clave.</b> Lo que dijiste, que la caché sirve si guarda lo que se busca repetidamente, tiene nombre: <b>localidad</b>. Y la respuesta a «¿siempre?» es <b>no</b>. Si el programa tiene mala localidad (salta por toda la memoria sin repetir), la caché casi no acierta y agrandarla ayuda poco: con 50 % de aciertos pasás de 10 ns a 6 ns, no a 1,5 ns.</p>
+<div class="clave">Frase de examen: «La caché vale lo que vale la localidad del programa».</div>
+<p><b>2. No.</b> La caché no es «más temporal» que la RAM: las dos son volátiles y las dos guardan datos de los procesos. La diferencia es <b>quién la administra</b>:</p>
+<table><tr><th></th><th>¿Quién decide qué guarda?</th></tr><tr><td>Caché</td><td>el <b>hardware</b>, solo, en nanosegundos</td></tr><tr><td>RAM</td><td>el <b>sistema operativo</b> (el administrador de memoria)</td></tr></table>
+<p>La unidad estudia la RAM porque es la que maneja el SO. La caché ocurre «debajo» del SO, sin que este intervenga.</p>
+<hr/>
+<hr/>
+<h2>Tema 2 — Sin abstracción de memoria y el espacio de direcciones</h2>
+<h4>La intuición</h4>
+<p>Imaginá un edificio donde las oficinas no tienen número propio: cada inquilino usa la dirección de la calle. Si el inquilino A dice «dejá el paquete en el 28» y el inquilino B también dice «el 28», los dos paquetes van a la misma puerta. Se pisan.</p>
+<p>La solución es que cada inquilino tenga su <b>numeración interna</b> («mi oficina 28»), y que un conserje la traduzca a la dirección real según dónde está ubicado cada uno. Ese conserje es el hardware de <b>base y límite</b>.</p>
+<h4>Paso 1: sin abstracción</h4>
+<p>En las primeras computadoras (mainframes antes de 1960, PC antes de 1980), <b>el programa veía la memoria física directamente</b>. <code>MOV REGISTRO1, 1000</code> leía la celda física 1000, sin traducción.</p>
+<p>Consecuencia: <b>no podía haber dos programas en memoria</b>. Si el primero escribía en la 2000, borraba lo que el segundo tenía ahí.</p>
+<h4>Paso 2: el truco de la IBM 360 y el problema que quedó</h4>
+<p>La IBM 360 dividió la memoria en bloques de 2 KB con una <b>llave de protección</b> de 4 bits. El PSW del proceso también tenía una llave: si no coincidían, había un trap. Así los programas ya no se pisaban los datos.</p>
+<p>Pero quedaba el <b>problema de la reubicación</b> (fig. 3-2):</p>
+<pre>  Programa 1 (16 KB)          Programa 2 (16 KB)
+  0:  JMP 24                  0:  JMP 28
+  24: MOV                     28: CMP
+
+  Cargados uno tras otro en la memoria física:
+
+  0      JMP 24    ┐
+  24     MOV       │ programa 1
+  28     ADD   ◄───┼──── ¡el JMP 28 del programa 2 cae ACÁ!
+  ...              ┘
+  16384  JMP 28    ┐
+  16412  CMP       │ programa 2 (su CMP está en 16384 + 28)
+  ...              ┘</pre>
+<p>El programa 2 se escribió pensando que empezaba en 0. Su <code>JMP 28</code> salta a la dirección <b>física</b> 28, que está dentro del programa 1. Falla en menos de un segundo.</p>
+<p><b>Parche: la reubicación estática.</b> Al cargar el programa en 16384, se le suma 16384 a todas sus direcciones. Funciona, pero tiene tres problemas: es lento, no es general, y el cargador tiene que saber qué números son direcciones (<code>JMP 28</code>: reubicar) y cuáles son constantes (<code>MOV REG, 28</code>, que carga el número 28: no reubicar).</p>
+<h4>Paso 3: la solución, el espacio de direcciones</h4>
+<div class="clave"><b>Espacio de direcciones:</b> el conjunto de direcciones que puede usar un proceso para direccionar la memoria. Cada proceso tiene el suyo.</div>
+<p>Es la misma jugada que en la U2: <b>el proceso es una CPU abstracta y el espacio de direcciones es una memoria abstracta</b>. La dirección 28 de un proceso no tiene nada que ver con la dirección 28 de otro.</p>
+<p>Hay que resolver dos problemas a la vez: la <b>protección</b> (no tocar lo ajeno) y la <b>reubicación</b> (funcionar en cualquier lugar).</p>
+<h4>Registros base y límite</h4>
+<p>Son dos registros de hardware de la CPU (se usaron desde la CDC 6600 hasta el 8088):</p>
+<ul><li><b>base</b> = dónde empieza el proceso en la memoria física;</li><li><b>límite</b> = cuánto mide.</li></ul>
+<p>En <b>cada</b> acceso a memoria, el hardware hace esto:</p>
+<pre>  dirección del proceso (d)
+          │
+          ▼
+   ¿d ≥ límite? ──sí──► FALLO (trap): se sale de su espacio
+          │ no
+          ▼
+     d + base ──────────► dirección física ──► bus de memoria</pre>
+<h4>Ejemplo resuelto</h4>
+<p>El programa 2 se ejecuta con <b>base = 16384</b> y <b>límite = 16384</b>.</p>
+<table><tr><th>El proceso pide</th><th>¿Menor que el límite?</th><th>Física = d + base</th><th>Resultado</th></tr><tr><td><code>JMP 28</code></td><td>28 &lt; 16384 ✅</td><td>16412</td><td>llega a su CMP ✔</td></tr><tr><td><code>MOV REG, 100</code></td><td>100 &lt; 16384 ✅</td><td>16484</td><td>correcto</td></tr><tr><td>dirección 20000</td><td>20000 ≥ 16384 ❌</td><td>—</td><td><b>trap</b>: protección</td></tr></table>
+<p>El programa no se modificó al cargarlo: se escribió suponiendo que empieza en 0, y el hardware lo reubica en cada acceso. Por eso se llama <b>reubicación dinámica</b>.</p>
+<ul><li><b>Ventaja:</b> simple, y cada proceso tiene su espacio privado.</li><li><b>Desventaja:</b> una <b>suma y una comparación en cada acceso</b> a memoria. La suma es lenta por la propagación del acarreo.</li><li>📌 Solo el SO puede cambiar los registros base y límite. Si el proceso pudiera tocarlos, se saldría de su espacio. Es la misma lógica que el bit de modo del PSW en la U1.</li></ul>
+<p>🔗 <b>Conexión con la U1:</b> la IBM 360 guardaba la llave en el <b>PSW</b>, el mismo registro donde vive el bit de modo kernel/usuario. La protección de memoria la impone el <b>hardware</b> y la configura el <b>SO</b>: la misma regla de la U1.</p>
+<div class="clave">Sobre las <b>particiones fijas</b> del programa: esta edición del libro no las desarrolla como tema propio. Lo más cercano son las llaves de la IBM 360 y los registros base y límite.</div>
+<p>📖 Tanenbaum, cap. 3.1 y 3.2.1, págs. 176–181 (figs. 3-1, 3-2 y 3-3).</p>
+<hr/>
+<h4>Preguntas de control</h4>
+<p><b>1.</b> Un proceso tiene <b>base = 40000</b> y <b>límite = 8000</b>. Ejecuta tres accesos: a la dirección <b>500</b>, a la <b>7999</b> y a la <b>8000</b>. ¿Qué dirección física sale en cada caso, o qué pasa?</p>
+<p><b>2.</b> Con la reubicación estática, el cargador tiene que distinguir entre <code>JMP 28</code> y <code>MOV REG, 28</code>. ¿Por qué con base y límite ese problema <b>desaparece</b>?</p>
+<h4>Corrección</h4>
+<p><b>1. Dos bien y una mal.</b> 500 → <b>40500</b> ✅ y 7999 → <b>47999</b> ✅.</p>
+<p>La de <b>8000 es un trap</b>, no 48000. La condición es «¿d ≥ límite?», y 8000 ≥ 8000. El límite es el <b>tamaño</b>: con 8000 direcciones válidas, van <b>de 0 a 7999</b>. La 8000 ya es la primera dirección <b>afuera</b>.</p>
+<pre>  direcciones válidas: 0 … 7999   (8000 en total)
+  8000 ──► ya no es del proceso ──► TRAP</pre>
+<p>⚠️ Es la trampa típica del «uno de más». Fijate que la condición es <b>≥</b>, no <b>&gt;</b>.</p>
+<p><b>2. Parcial.</b> Es cierto que hay un control de protección, pero esa no es la razón. La razón es que <b>el programa no se toca</b>: queda escrito tal cual, como si empezara en 0. La suma la hace el hardware <b>en el momento de cada acceso a memoria</b>.</p>
+<ul><li><code>JMP 28</code>: el 28 se usa como <b>dirección</b>, así que pasa por el hardware y se le suma la base → 16412.</li><li><code>MOV REG, 28</code>: el 28 es un <b>número</b> que va a un registro, no un acceso a memoria. Nunca pasa por la suma, así que queda 28.</li></ul>
+<p>Nadie tiene que distinguir de antemano qué es dirección y qué es constante: <b>solo se reubica lo que efectivamente se usa para acceder a memoria.</b></p>
+<hr/>
+<hr/>
+<h2>Tema 3 — Intercambio y administración de la memoria libre</h2>
+<h4>La intuición</h4>
+<p>Pensá en un estacionamiento sin lugares marcados, donde cada auto ocupa lo que mide. Entran y salen autos todo el día, y van quedando <b>huecos</b> de distintos tamaños. Cuando llega un auto nuevo, el cuidacoches tiene que (1) saber dónde hay huecos y (2) decidir en cuál lo pone. Y si un auto no entra en ningún lado, alguno tiene que irse un rato a la calle: eso es el <b>intercambio</b>.</p>
+<h4>Intercambio (swapping)</h4>
+<p>La RAM no alcanza para todos (un Windows arranca con 40 a 60 procesos). La solución más simple:</p>
+<div class="clave"><b>Intercambio:</b> traer cada proceso <b>completo</b> a memoria, ejecutarlo un rato y devolverlo al disco.</div>
+<pre> (a)    (b)    (c)    (d)    (e)    (f)    (g)        fig. 3-4
+ ┌──┐   ┌──┐   ┌──┐   ┌──┐   ┌──┐   ┌──┐   ┌──┐
+ │  │   │  │   │C │   │C │   │C │   │C │   │C │
+ │  │   │B │   │B │   │B │   │B │   │  │   │A │◄ A vuelve en OTRO lugar
+ │A │   │A │   │A │   │  │◄  │D │   │D │   │D │   (hay que reubicarlo:
+ │SO│   │SO│   │SO│   │SO│   │SO│   │SO│   │SO│    base y límite)
+ └──┘   └──┘   └──┘   └──┘   └──┘   └──┘   └──┘
+                      sale A  entra D sale B</pre>
+<p>Problemas que aparecen:</p>
+<ul><li><b>Quedan huecos.</b> Juntarlos moviendo todo hacia abajo se llama <b>compactación</b>, y casi no se hace porque es carísima. Con 1 GB, copiando 4 bytes cada 20 ns, tarda unos <b>5 segundos</b>.</li><li><b>Los procesos crecen.</b> El heap crece hacia arriba y la pila hacia abajo. Por eso se les deja un <b>espacio para crecer</b> entre los dos. Si se llena, el proceso se mueve, se intercambia o se elimina.</li></ul>
+<h4>Cómo anotar qué está libre</h4>
+<p><b>1. Mapa de bits:</b> un bit por unidad de asignación (0 = libre, 1 = ocupado).</p>
+<pre> memoria:  [A A A A A][· · ·][B B B B B B][C C C C][· ·][D D D D D D][E E E][· · ·]
+ bits:      1 1 1 1 1  0 0 0  1 1 1 1 1 1  1 1 1 1  0 0  1 1 1 1 1 1  1 1 1  0 0 0</pre>
+<ul><li>+ Simple. El tamaño del mapa depende solo del tamaño de la memoria y de la unidad.</li><li>− Para meter un proceso de k unidades hay que <b>buscar k ceros seguidos</b>, y esa búsqueda es lenta.</li><li>🔢 Ejemplo: 32 MB en unidades de 4 KB son 8192 unidades, o sea 8192 bits = <b>1 KB de mapa</b>.</li></ul>
+<p><b>2. Lista ligada</b> (ordenada por dirección): cada nodo dice P (proceso) o H (hueco), dónde empieza y cuánto mide.</p>
+<pre> P 0,5 → H 5,3 → P 8,6 → P 14,4 → H 18,2 → P 20,6 → P 26,3 → H 29,3</pre>
+<p>Cuando un proceso X termina, se <b>fusiona</b> con los huecos vecinos (fig. 3-7):</p>
+<pre> A X B  →  A · B        (X se vuelve hueco)
+ A X ·  →  A ···        (se une con el de la derecha)
+ · X B  →  ··· B        (se une con el de la izquierda)
+ · X ·  →  ·····        (los tres en uno; la lista pierde 2 nodos)</pre>
+<h4>¿En qué hueco lo pongo? Los algoritmos de asignación</h4>
+<table><tr><th>Algoritmo</th><th>Regla</th><th>Lo que hay que saber</th></tr><tr><td><b>Primer ajuste</b></td><td>el <b>primer</b> hueco que alcance</td><td><b>rápido</b>: busca lo menos posible</td></tr><tr><td><b>Siguiente ajuste</b></td><td>igual, pero sigue <b>desde donde quedó</b></td><td>un poco <b>peor</b> que el primer ajuste</td></tr><tr><td><b>Mejor ajuste</b></td><td>el hueco <b>más chico</b> que alcance</td><td>⚠️ <b>desperdicia MÁS</b>: deja huecos diminutos inútiles, y es lento (recorre toda la lista)</td></tr><tr><td><b>Peor ajuste</b></td><td>el hueco <b>más grande</b></td><td>tampoco funciona bien</td></tr><tr><td><b>Ajuste rápido</b></td><td>listas separadas por tamaño (4 KB, 8 KB…)</td><td>rapidísimo, pero fusionar vecinos es caro y se fragmenta</td></tr></table>
+<p>📌 <b>Trampa de examen:</b> «el mejor ajuste es el que menos memoria desperdicia» es <b>falso</b>. Por elegir siempre el hueco justo, va dejando sobras chiquitas en las que no entra nadie.</p>
+<h4>Ejemplo resuelto</h4>
+<p>Huecos en orden de dirección: <b>10, 4, 20, 18, 7, 9, 12 y 15 KB</b>. Llegan pedidos de <b>12, 10 y 9 KB</b>.</p>
+<table><tr><th></th><th>Pedido de 12</th><th>Pedido de 10</th><th>Pedido de 9</th></tr><tr><td>Primer ajuste</td><td>20 (sobran 8)</td><td>10 (exacto)</td><td>18 (sobran 9)</td></tr><tr><td>Mejor ajuste</td><td>12 (exacto)</td><td>10 (exacto)</td><td>9 (exacto)</td></tr><tr><td>Peor ajuste</td><td>20 (sobran 8)</td><td>18 (sobran 8)</td><td>15 (sobran 6)</td></tr><tr><td>Siguiente ajuste</td><td>20 (sobran 8)</td><td>18 (sigue desde el 20)</td><td>9 (sigue desde el 18)</td></tr></table>
+<p>El caso del siguiente ajuste: después del 12, el hueco de 20 quedó en 8 y no alcanza para 10, así que sigue al 18. Para el 9 arranca desde el 18 (que quedó en 8, no alcanza) y el siguiente que sirve es el 9.</p>
+<h4>El sistema de colegas (buddy system)</h4>
+<p>El programa lo llama «sistema compañero». En el libro está en el caso de estudio de Linux, no en esta sección. La regla es <b>todo en potencias de 2</b>:</p>
+<pre> pedido de 8 páginas sobre un bloque de 64:
+ [              64              ]
+ [      32      ][      32      ]
+ [  16  ][  16  ][      32      ]
+ [ 8][ 8][  16  ][      32      ]   ← se asigna uno de 8</pre>
+<p>Cuando se liberan dos <b>colegas</b> (dos mitades que salieron del mismo bloque), se vuelven a unir.</p>
+<ul><li>+ Encontrar y fusionar bloques es rapidísimo.</li><li>− <b>Fragmentación interna</b> enorme: si pedís 65 páginas, te dan 128 y se desperdician 63.</li></ul>
+<p>📖 Tanenbaum, cap. 3.2.2 y 3.2.3, págs. 181–187 (figs. 3-4 a 3-7). Algoritmo de colegas: cap. 10.4.3, págs. 765–767.</p>
+<p>Ahora te armo un simulador de asignación para que pruebes los cuatro algoritmos con tus propios datos, como pide el formato.</p>
+<h4>Preguntas de control</h4>
+<p><b>1.</b> Huecos en orden de dirección: <b>6, 14, 3, 9 y 20 KB</b>. Llegan pedidos de <b>8 KB</b> y después de <b>5 KB</b>. ¿Qué hueco elige cada uno de los cuatro algoritmos para cada pedido? Resolvelo a mano y después comprobalo en el simulador.</p>
+<p><b>2.</b> Un compañero dice: «El mejor ajuste es el mejor algoritmo porque elige el hueco justo y no desperdicia memoria». ¿Qué le contestás?</p>
+<h4>Corrección</h4>
+<p><b>1. Siete de ocho bien.</b> Primer, mejor y peor ajuste están perfectos ✅.</p>
+<p>En el <b>siguiente ajuste</b>, el pedido de 5 KB <b>no</b> va al de 9. Hay que mirar bien desde dónde arranca la búsqueda:</p>
+<pre> antes:       [6] [14] [3] [9] [20]
+ pide 8 ──►   [6] [8 ocupado|6 libre] [3] [9] [20]
+                          ▲
+                quedó acá ─┘
+ pide 5 ──►   arranca desde ACÁ: lo que sobró del 14 (6 KB) ¿alcanza? SÍ</pre>
+<p>El siguiente ajuste <b>retoma donde quedó</b>. Lo primero que encuentra es el sobrante de 6 KB del hueco de 14, que alcanza para 5. Vos saltaste al 9, como si la búsqueda empezara <i>después</i> del hueco usado. Lo chequeé con el motor del simulador: da «hueco de 6», el que sobró del 14.</p>
+<p><b>2. Correcta</b> ✅. Es exactamente así: al elegir siempre el hueco justo, deja sobras diminutas (en tu ejercicio, el 9 queda en 1 KB) donde no entra nadie. Para redondearla, agregale que además es <b>lento</b>, porque recorre toda la lista cada vez.</p>
+<hr/>
+<hr/>
+<h2>Tema 4 — Memoria virtual y paginación</h2>
+<h4>La intuición</h4>
+<p>Estás estudiando un libro de 1000 páginas, pero en el escritorio te entran 20. No necesitás las 1000 a la vez: tenés sobre la mesa las que estás leyendo y el resto en la biblioteca. Si necesitás una que no está, vas a buscarla y devolvés una que ya no usás.</p>
+<ul><li>el libro entero = el <b>programa</b> (está completo en el disco),</li><li>el escritorio = la <b>RAM</b>,</li><li>ir a la biblioteca = el <b>fallo de página</b>.</li></ul>
+<h4>Por qué hace falta</h4>
+<p>El intercambio mueve procesos <b>enteros</b>. Con un disco de 100 MB/s, sacar un programa de 1 GB tarda <b>10 segundos</b> y traer otro, otros 10. Inviable.</p>
+<p>Antes, en los años sesenta, se usaban los <b>sobrepuestos (overlays)</b>: el programador partía el programa a mano en pedazos que se cargaban de a uno. Era tedioso y propenso a errores.</p>
+<div class="clave"><b>Memoria virtual</b> (Fotheringham, 1961): cada programa tiene su propio espacio de direcciones dividido en <b>páginas</b>. <b>No todas tienen que estar en RAM</b> para que el programa corra. Si se usa una que no está, el SO la trae y reintenta la instrucción.</div>
+<p>Según la cátedra: «la memoria virtual nace por la necesidad de que los programas sean más grandes que la memoria».</p>
+<h4>Lo formal: páginas, marcos y la MMU</h4>
+<pre>       CPU ──(dirección VIRTUAL)──► MMU ──(dirección FÍSICA)──► RAM
+       └──────── chip de la CPU ────────┘</pre>
+<ul><li><b>Dirección virtual:</b> la que genera el programa (<code>MOV REG, 1000</code>).</li><li><b>Página:</b> un pedazo de tamaño fijo del espacio <b>virtual</b>.</li><li><b>Marco de página:</b> un pedazo del mismo tamaño de la memoria <b>física</b>.</li><li><b>MMU</b> (unidad de administración de memoria): hardware que traduce de virtual a física en cada acceso.</li><li>Las transferencias entre RAM y disco son siempre de <b>páginas completas</b>.</li></ul>
+<h4>El ejemplo central del libro (fig. 3-9)</h4>
+<p>Direcciones de 16 bits (64 KB virtuales), solo <b>32 KB de RAM</b> y páginas de <b>4 KB</b>. Eso da <b>16 páginas y 8 marcos</b>.</p>
+<pre> Página virtual        Marco          Página virtual       Marco
+  0 (0–4095)      ──►   2              8  (32768–…)    ──►  X  (no está)
+  1 (4096–8191)   ──►   1              9               ──►  5
+  2 (8192–…)      ──►   6             10               ──►  X
+  3               ──►   0             11               ──►  7
+  4               ──►   4             12 a 15          ──►  X
+  5 (20480–…)     ──►   3
+  6, 7            ──►   X</pre>
+<p>Solo 8 de las 16 páginas están en RAM: las de la X están en el disco.</p>
+<h4>Cómo traduce la MMU: cortar los bits</h4>
+<p>Como el tamaño de página es <b>potencia de 2</b>, no hay que hacer divisiones: alcanza con <b>cortar la dirección en dos</b>.</p>
+<pre> dirección virtual de 16 bits, página de 4 KB = 2¹² → 12 bits de desplazamiento
+
+   ┌────────┬──────────────────────┐
+   │ 4 bits │       12 bits        │
+   │ PÁGINA │    DESPLAZAMIENTO    │
+   └───┬────┴──────────┬───────────┘
+       │ índice        │ se copia TAL CUAL
+       ▼               │
+   tabla de páginas    │
+   ¿presente? ─ no ─► FALLO DE PÁGINA (trap al SO)
+       │ sí            │
+       ▼               ▼
+   ┌────────┬──────────────────────┐
+   │ MARCO  │    DESPLAZAMIENTO    │  = dirección FÍSICA
+   └────────┴──────────────────────┘</pre>
+<div class="clave"><b>La regla de oro:</b> se <b>reemplaza el número de página por el número de marco</b> y el desplazamiento <b>no se toca</b>.</div>
+<p>Bits de desplazamiento = log₂(tamaño de página): <b>1 KB → 10 bits · 2 KB → 11 · 4 KB → 12.</b></p>
+<h4>Ejemplo resuelto 1 (del libro, fig. 3-10): la dirección 8196</h4>
+<ol><li>En binario: <code>0010 0000 0000 0100</code>.</li><li>Corto 4 | 12: página <code>0010</code> = <b>2</b>; desplazamiento <code>0000 0000 0100</code> = <b>4</b>.</li><li>Tabla: la página 2 está en el <b>marco 6</b> (<code>110</code>), presente.</li><li>Física: <code>110</code> + <code>0000 0000 0100</code> = <b>24580</b> (= 6 × 4096 + 4). ✔</li></ol>
+<h4>Ejemplo resuelto 2 (estilo examen de la cátedra)</h4>
+<p><b>0x2C3A</b> con páginas de <b>1 KB</b>; la tabla dice que la página 11 está en el marco 5.</p>
+<ol><li>Hexa a binario (cada dígito son 4 bits): <code>0010 1100 0011 1010</code>.</li><li>1 KB son 10 bits de desplazamiento, así que corto 6 | 10: <code>001011 | 00 0011 1010</code>.</li><li>Página = <code>001011</code> = <b>11</b>; desplazamiento = <code>00 0011 1010</code> = <b>58</b>.</li><li>La página 11 está en el marco 5, que en 6 bits es <code>000101</code>.</li><li>Física: <code>000101 | 00 0011 1010</code> = <code>0001 0100 0011 1010</code> = <b>0x143A</b>.</li><li>Comprobación: 5 × 1024 + 58 = <b>5178</b> = 0x143A ✔.</li></ol>
+<h4>Y si la página no está: el fallo de página (versión corta)</h4>
+<p><code>MOV REG, 32780</code> cae en la <b>página 8</b> (32768 + 12), que tiene una X.</p>
+<ol><li>La MMU ve que la página no está presente y la CPU hace un <b>trap</b> al SO.</li><li>El SO elige un marco poco usado. Supongamos el <b>marco 1</b>.</li><li>Si ese marco fue modificado, lo escribe al disco.</li><li>Trae la página 8 al marco 1.</li><li>Actualiza la tabla: la página 1 queda «no presente» y la página 8 pasa a estar en el marco 1.</li><li><b>Reintenta</b> la instrucción: ahora 32780 se traduce a 4096 + 12 = <b>4108</b>.</li></ol>
+<p>Los diez pasos completos los vemos en el tema 9.</p>
+<p>🔗 <b>Conexión con la U2:</b> mientras se trae la página del disco, el proceso queda <b>BLOQUEADO</b> y el planificador le da la CPU a otro. La memoria virtual encaja perfecto con la multiprogramación.</p>
+<p>📖 Tanenbaum, cap. 3.3 y 3.3.1, págs. 188–193 (figs. 3-8, 3-9 y 3-10).</p>
+<p>Ahora te armo el simulador de traducción, porque es el ejercicio que más se toma.</p>
+<h4>Preguntas de control</h4>
+<p><b>1.</b> Traducí a mano la dirección <b>0x1D7B</b> con páginas de <b>2 KB</b> (direcciones de 16 bits). La tabla dice que la página 3 está en el <b>marco 9</b>. Dame el número de página, el desplazamiento y la dirección física en hexa. Después comprobalo en el simulador.</p>
+<p><b>2.</b> ¿Por qué el tamaño de página es siempre una potencia de 2? ¿Qué se ahorra la MMU gracias a eso?</p>
+<h3>Corrección del tema 4</h3>
+<p><b>1. ✅ Correcta.</b> Página 3, desplazamiento 0x57B y dirección física <b>0x4D7B</b>. Tuviste un solo detalle de forma:</p>
+<pre>0x1D7B = 0001 1 | 101 0111 1011
+         página  | desplazamiento (11 bits, porque 2 KB = 2^11)
+         00011=3 | 101 0111 1011 = 0x57B</pre>
+<p>El desplazamiento tiene <b>11 bits</b>, no 12. Escribiste <code>0101 0111 1011</code>, y ese 0 de adelante no le corresponde al desplazamiento. El valor te dio igual por casualidad. En el examen, separá con una barra exactamente donde cortás: si cortás mal, la página te sale mal (por ejemplo, con 12 bits te daría página 1 en vez de 3).</p>
+<p>Con marco 9 queda <code>01001 | 101 0111 1011</code> = 0100 1101 0111 1011 = <b>0x4D7B</b> ✔</p>
+<p><b>2. 🟡 Parcial.</b> La idea va bien encaminada, pero "adivinar qué página es" no lo podés poner en el examen. Lo que tenés que decir es esto:</p>
+<div class="clave">Como el tamaño es 2ⁿ, la página son los bits altos y el desplazamiento son los n bits bajos. La MMU <b>no divide ni multiplica</b>: corta los bits, usa los de arriba como índice de la tabla y <b>reemplaza</b> el número de página por el número de marco. El desplazamiento pasa sin tocarse.</div>
+<p>Si la página fuera de 3000 bytes, cada traducción necesitaría una división (dirección ÷ 3000) y una multiplicación más una suma. Eso habría que hacerlo en <b>cada</b> acceso a memoria, y es demasiado lento.</p>
+<hr/>
+<hr/>
+<h2>Tema 5 — La tabla de páginas por dentro y el TLB</h2>
+<h4>La intuición</h4>
+<p>La tabla de páginas es la <b>agenda</b> donde la MMU busca "la página 3 está en el marco 9". El problema es que esa agenda vive en la RAM, así que cada acceso a memoria se convierte en <b>dos</b>: uno para leer la agenda y otro para buscar el dato. El rendimiento cae a la mitad.</p>
+<p>El <b>TLB</b> es como tener anotados en un post-it los 5 o 6 números que más usás: no abrís la agenda para eso.</p>
+<h4>5.1 Qué tiene una entrada de la tabla (fig. 3-11)</h4>
+<pre>┌──────────┬───────┬───────┬──────────┬─────────┬──────────┐
+│ caché    │ refe- │ modi- │ protec-  │presente/│ Nº de    │
+│ deshabil.│ renc. │ ficada│ ción     │ ausente │ MARCO    │
+└──────────┴───────┴───────┴──────────┴─────────┴──────────┘
+                                                 ↑ el campo más importante</pre>
+<table><tr><th>Bit</th><th>Quién lo pone</th><th>Para qué sirve</th></tr><tr><td><b>Presente/ausente</b></td><td>el SO</td><td>Si vale 0 → <b>fallo de página</b></td></tr><tr><td><b>Protección</b></td><td>el SO</td><td>Permisos R / W / X. Violarlos → fallo de protección</td></tr><tr><td><b>Modificada (bit sucio)</b></td><td>el <b>hardware</b>, al escribir</td><td>Al desalojar: si está sucia <b>se escribe al disco</b>; si está limpia se descarta</td></tr><tr><td><b>Referenciada</b></td><td>el <b>hardware</b>, al leer o escribir</td><td>Para elegir la víctima en los algoritmos de reemplazo (tema 7)</td></tr><tr><td><b>Caché deshabilitada</b></td><td>el SO</td><td>Para páginas mapeadas a registros de dispositivos, así no se lee una copia vieja de la caché</td></tr></table>
+<p>⚠️ <b>Trampa de examen:</b> la <b>dirección en disco</b> de la página <b>NO</b> está en la tabla de páginas. La tabla solo guarda lo que el hardware necesita para traducir. Dónde está la página en el disco lo guarda el SO en sus propias tablas de software.</p>
+<p>🧠 Conexión con U1: el bit de caché deshabilitada existe por la <b>E/S mapeada a memoria</b>.</p>
+<h4>5.2 Los dos problemas de la paginación</h4>
+<ol><li><b>La traducción debe ser rápida</b>, porque se hace en <i>cada</i> referencia a memoria.</li><li><b>La tabla puede ser enorme</b>: 32 bits con páginas de 4 KB dan 2²⁰ = <b>1 millón de entradas</b>, y <b>cada proceso tiene la suya</b>.</li></ol>
+<p>El TLB resuelve el problema 1. El problema 2 se resuelve con las tablas multinivel e invertidas, que son el tema 6.</p>
+<h4>5.3 El TLB (búfer de traducción adelantada o memoria asociativa)</h4>
+<ul><li>Es <b>hardware</b>, está <b>dentro de la MMU</b> y es chico: el ejemplo del libro tiene 8 entradas, y "raras veces más de 64".</li><li>Funciona porque los programas usan <b>muchas veces pocas páginas</b> (localidad).</li><li>Cada entrada tiene: <b>válida · página virtual · modificada · protección · marco</b>. A diferencia de la tabla de páginas, el TLB <b>sí guarda el número de página virtual</b>, porque no está indexado por página.</li><li>Busca en <b>todas las entradas a la vez</b>, en paralelo.</li></ul>
+<pre>          dirección virtual
+                │
+                ▼
+      ┌──────────────────────┐
+      │ ¿página en el TLB?   │── SÍ (acierto) ──► ¿protección OK? ──► marco → física
+      │ (compara en paralelo)│                         └─ NO → fallo de protección
+      └──────────────────────┘
+                │ NO (fallo de TLB)
+                ▼
+      buscar en la tabla de páginas (en RAM)
+                │
+        ┌───────┴────────┐
+     presente=1       presente=0
+        │                 │
+ cargar la entrada en  FALLO DE PÁGINA → disco
+ el TLB (desalojando   (fallo duro)
+ una; su bit M vuelve
+ a la tabla) y traducir
+ (fallo suave)</pre>
+<p><b>TLB por software</b> (en RISC como SPARC, MIPS y HP PA): ante un fallo de TLB, la MMU no recorre la tabla sino que genera un trap y <b>el SO</b> carga la entrada. Con unas 64 entradas la eficiencia es aceptable, y a cambio la MMU es más simple, lo que libera espacio en el chip para caché.</p>
+<h4>5.4 Fallo suave vs. fallo duro ★</h4>
+<table><tr><th></th><th>Fallo <b>suave</b></th><th>Fallo <b>duro</b></th></tr><tr><td>¿Dónde está la página?</td><td>En <b>RAM</b>, pero no en el TLB</td><td><b>No está en RAM</b> (tampoco en el TLB)</td></tr><tr><td>¿Qué hay que hacer?</td><td>Actualizar el TLB</td><td>Traerla del <b>disco</b></td></tr><tr><td>Costo</td><td>10–20 instrucciones, <b>nanosegundos</b></td><td><b>milisegundos</b></td></tr><tr><td>Relación</td><td>—</td><td>≈ <b>un millón de veces más lento</b></td></tr></table>
+<h4>Ejemplo</h4>
+<p>Un proceso recorre un arreglo en un ciclo. El código está en las páginas 19–21, el arreglo en 129–130, los índices en 140 y la pila en 860–861. Esas <b>8 páginas</b> entran en un TLB de 8 entradas. Así casi todas las referencias son <b>aciertos</b> y la tabla en RAM ni se toca. Es el ejemplo del libro (fig. 3-12): fijate que el código tiene protección R-X y los datos RW.</p>
+<p>📖 <i>Tanenbaum, 3.3.2–3.3.3, págs. 193–198.</i></p>
+<hr/>
+<h4>Preguntas rápidas</h4>
+<p><b>1.</b> Un proceso hace un acceso y la página <b>está en RAM</b> (presente = 1) pero <b>no está en el TLB</b>. ¿Qué tipo de fallo es? ¿Interviene el disco? ¿Qué pasa con el bit M de la entrada del TLB que se desaloja para hacerle lugar?</p>
+<p><b>2.</b> Verdadero o falso, y justificá: <i>"Cuando una página sucia se desaloja, el SO saca de la tabla de páginas la dirección de disco donde tiene que escribirla."</i></p>
+<p>Cuando me contestes, te armo el <b>simulador del TLB</b> paso a paso: vas a ver aciertos, fallos suaves y fallos duros con su costo.</p>
+<h3>Corrección del tema 5</h3>
+<p><b>1. 🟡 Parcial.</b> La primera parte está perfecta: es un <b>fallo suave</b>, se actualiza el TLB y no interviene el disco porque la página ya está en RAM ✔.</p>
+<p>Lo del bit M está mal, y es la trampa más común de este tema:</p>
+<div class="clave">Cuando una entrada <b>sale del TLB</b>, su M se copia <b>a la tabla de páginas en RAM</b>, no al disco. La página <b>sigue en memoria</b>: solo perdió su "post-it".<br/>Al disco se escribe recién cuando la <b>página sale de la RAM</b> (en un fallo duro sin marcos libres) y tiene M = 1.</div>
+<pre>sale del TLB   →  M viaja a la TABLA DE PÁGINAS   (no hay disco)
+sale de la RAM →  si M = 1, se ESCRIBE AL DISCO    (cuesta milisegundos)</pre>
+<p>¿Por qué tiene que viajar? Porque al escribir, el hardware pone M = 1 <b>solo en el TLB</b>. Si al desalojar la entrada no se copiara, la tabla quedaría con M = 0, y más adelante el SO descartaría una página sucia y perdería los cambios.</p>
+<p><b>2. ❌ Incorrecta: es FALSO.</b> La dirección de disco <b>no está en la tabla de páginas</b>. La tabla solo guarda lo que el <b>hardware</b> necesita para traducir (marco, P, M, R, protección, caché). La ubicación en disco la necesita el <b>SO</b>, y la guarda en sus propias tablas de software. Esto es textual del libro, pág. 194, y es una pregunta típica de V/F.</p>
+<hr/>
+<hr/>
+<h2>Tema 6 — Tablas de páginas para memorias grandes</h2>
+<h4>La intuición</h4>
+<p>El TLB resolvió la <b>velocidad</b>, pero queda el otro problema: <b>el tamaño</b>. Con 32 bits y páginas de 4 KB, la tabla tiene 2²⁰ entradas, o sea <b>4 MB por proceso</b>, aunque el proceso use apenas 12 MB.</p>
+<p>Es como imprimir una guía telefónica con todos los números posibles del país, incluidos los que no existen. Hay dos salidas:</p>
+<ul><li><b>Multinivel:</b> se arma un índice por zona, y las zonas vacías ni se imprimen.</li><li><b>Invertida:</b> en vez de listar todos los números posibles, se lista una vez cada casa que existe (cada <b>marco</b>) con quién vive ahí.</li></ul>
+<h4>6.1 Tablas multinivel (fig. 3-13)</h4>
+<p>La dirección de 32 bits se corta en <b>tres</b> partes:</p>
+<pre> 31          22 21          12 11            0
+┌──────────────┬──────────────┬──────────────┐
+│  TP1 (10)    │  TP2 (10)    │  desp (12)   │
+└──────────────┴──────────────┴──────────────┘
+      │               │
+      ▼               ▼
+ tabla SUPERIOR   tabla de 2º NIVEL  ──►  marco ∥ desp
+ (1024 entradas,  (1024 entradas,
+  cada una cubre   cada una es
+  un trozo de 4 MB) una página de 4 KB)</pre>
+<p>El ejemplo del libro es un proceso de 12 MB: el <b>texto</b> en los 4 MB de abajo, los <b>datos</b> en los 4 MB siguientes y la <b>pila</b> en los 4 MB de arriba. En el medio queda un hueco enorme.</p>
+<pre>Tabla superior          Tablas de 2º nivel
+ [0]    ──────────────► tabla del texto
+ [1]    ──────────────► tabla de los datos
+ [2]    P=0  ┐
+  ...   P=0  ├ el hueco: NO tiene tabla de 2º nivel
+ [1022] P=0  ┘
+ [1023] ──────────────► tabla de la pila</pre>
+<p>Solo hacen falta <b>4 tablas</b>: 1 superior más 3 de 2º nivel. Son 4 × 4 KB = <b>16 KB</b>, contra <b>4 MB</b> de la tabla de un nivel. Si el proceso toca una dirección del hueco, la entrada superior tiene P = 0 y se produce un fallo. El SO ve que es memoria que el proceso no debe usar, y le manda una señal o lo termina.</p>
+<p><b>Ejemplo resuelto: 0x00403004</b> (págs. 199–200)</p>
+<pre>0x00403004 = 0000 0000 01 | 00 0000 0011 | 0000 0000 0100
+              TP1 = 1     |   TP2 = 3    |   desp = 4</pre>
+<ul><li>TP1 = 1 cae en la entrada 1 de la tabla superior, que cubre el trozo de 4 MB a 8 MB (los datos).</li><li>TP2 = 3 cae en la entrada 3 de esa tabla, que cubre los bytes 12288 a 16383 del trozo, y de ahí sale el marco.</li><li>La dirección física es ese marco seguido del desplazamiento 4.</li></ul>
+<p>⚠️ <b>Errata:</b> el libro en español dice "TP2 = 2", pero los bits dan <b>TP2 = 3</b>, y el mismo párrafo después dice "extrae la entrada 3". Comprobación: 4M + 3 × 4096 + 4 = 4.206.596 ✔.</p>
+<p>🧠 <b>Truco:</b> con un corte 10|10|12, los <b>3 últimos dígitos hexa</b> son el desplazamiento. Para TP1 y TP2 sí tenés que pasar a binario, porque 10 bits no coinciden con dígitos hexa.</p>
+<p>Se puede hacer con 3 o más niveles, pero <b>más de 3 rara vez conviene</b>. Costo: sin TLB, cada nivel agrega un acceso a memoria.</p>
+<h4>6.2 Tabla invertida (fig. 3-14)</h4>
+<p>Con <b>64 bits</b> ni el multinivel alcanza: 2⁵² entradas × 8 B = <b>32 PB</b> (el libro dice "30 millones de GB").</p>
+<table><tr><th></th><th>Tabla común</th><th><b>Invertida</b></th></tr><tr><td>Entradas</td><td>una por <b>página virtual</b></td><td>una por <b>marco físico</b></td></tr><tr><td>¿Cuántas?</td><td>2⁵² (64 bits, 4 KB)</td><td>RAM / página: 1 GB / 4 KB = <b>262.144</b></td></tr><tr><td>Contenido</td><td>el marco</td><td><b>(proceso, página virtual)</b> que ocupa ese marco</td></tr><tr><td>¿Cuántas tablas?</td><td>una por proceso</td><td><b>una para todo el sistema</b></td></tr><tr><td>Traducir</td><td>indexar: inmediato</td><td><b>buscar</b> (n, p) en toda la tabla: lento</td></tr></table>
+<p><b>El problema:</b> la búsqueda habría que hacerla en <b>cada</b> acceso a memoria. <b>La solución</b> es usar el <b>TLB</b> para las páginas frecuentes y, cuando el TLB falla, una <b>tabla hash</b> sobre la página virtual, recorrida <b>por software</b>. Si el hash tiene tantas ranuras como marcos, la cadena promedio tiene una sola entrada.</p>
+<p><b>Según la cátedra</b>, para fijar: <b>32 bits → multinivel; 64 bits → invertida + TLB.</b></p>
+<p>📖 <i>Tanenbaum, 3.3.4, págs. 198–201 · Resumen de la cátedra, págs. 12–15.</i></p>
+<hr/>
+<hr/>
+<h4>Preguntas rápidas</h4>
+<p><b>1.</b> Con una tabla de 2 niveles 10|10|12, dividí la dirección <b>0x01C0A2F0</b>: dame TP1, TP2 y el desplazamiento. ¿Qué trozo de 4 MB toca?</p>
+<p><b>2.</b> Verdadero o falso, y justificá: <i>"La tabla de páginas invertida tiene una entrada por cada página virtual de cada proceso, y por eso cada proceso tiene la suya."</i></p>
+<h3>Duda: ¿qué función de hash usa la tabla de páginas invertida?</h3>
+<p>Buena pregunta. <b>El libro no dice qué función de hash se usa.</b> Solo dice que es "un hash de la dirección virtual" y que las páginas virtuales con el mismo valor de hash quedan <b>encadenadas</b> (pág. 201). El resumen de la cátedra tampoco lo especifica. O sea: <b>en el examen no te van a pedir una fórmula</b>, sino la idea.</p>
+<p>Tu propuesta es razonable como ejemplo: el módulo por la cantidad de ranuras es una de las funciones de hash más comunes. Pero es un ejemplo mío, no del material.</p>
+<h4>Cómo funciona (ejemplo inventado, con 8 ranuras)</h4>
+<p>Supongamos que la función es <code>h = (proceso + página) mod 8</code>:</p>
+<pre>Proceso 2 busca la página 13 → h = (2 + 13) mod 8 = 7
+
+Tabla hash                Entradas (una por marco)
+ranura 7 ──► [proc 1, pág 14, marco 3] ──► [proc 2, pág 13, marco 9] ──► fin
+              (1+14) mod 8 = 7 también:      ¡coincide! → marco 9
+              no es la que busco, sigo</pre>
+<ol><li>Se calcula el hash de (proceso, página) y se va a esa <b>ranura</b>.</li><li>Se recorre la <b>cadena</b> comparando el par <b>completo</b> (proceso, página). Por eso cada entrada guarda el par: dos pares distintos pueden caer en la misma ranura (una <b>colisión</b>).</li><li>Si se encuentra el par, se obtiene el marco y se carga en el <b>TLB</b>. Si se llega al final de la cadena sin encontrarlo, es un <b>fallo de página</b>.</li></ol>
+<p>🧠 Lo que sí dice el libro: si la tabla hash tiene <b>tantas ranuras como marcos</b>, la cadena promedio tiene <b>una sola entrada</b>, y la búsqueda es casi tan rápida como indexar. Esto pasa solo cuando el TLB falla y lo hace <b>el software</b>.</p>
+<hr/>
+<p>Te quedan pendientes las dos preguntas del tema 6:</p>
+<p><b>1.</b> Dividí <b>0x01C0A2F0</b> con 10|10|12: dame TP1, TP2 y el desplazamiento, y decime qué trozo de 4 MB toca.</p>
+<p><b>2.</b> Verdadero o falso: <i>"La tabla invertida tiene una entrada por cada página virtual de cada proceso, y por eso cada proceso tiene la suya."</i></p>
+<h3>Corrección del tema 6</h3>
+<p><b>1. ✅ Correcta.</b> TP1 = 7, TP2 = 10 y desplazamiento = 752 (0x2F0). Toca el trozo de <b>28 MB a 32 MB</b> ✔.</p>
+<p>Y tu pregunta extra está muy bien pensada: <b>sí</b>. Si el proceso es el del ejemplo del libro (texto en 0–4 MB, datos en 4–8 MB, pila arriba de todo), la entrada 7 de la tabla superior cae <b>en el hueco</b>. Tiene P = 0 y no hay tabla de 2º nivel, así que se produce un <b>fallo</b>. El SO ve que el proceso tocó memoria que no le corresponde y le manda una <b>señal</b> o lo termina. En otro proceso que sí use ese trozo, la traducción seguiría normal.</p>
+<p><b>2. ✅ Correcta.</b> Es FALSO: hay <b>una sola tabla para todo el sistema</b>, con <b>una entrada por marco</b>, y cada entrada guarda el par (proceso, página virtual). Un detalle de vocabulario: la tabla <b>sí está indexada, pero por número de marco</b>. Lo que no se puede hacer es indexarla <b>por página virtual</b>, y por eso hay que <b>buscar</b> el par, con TLB y hash.</p>
+<hr/>
+<hr/>
+<h2>Tema 7A — Algoritmos de reemplazo de páginas</h2>
+<p>Este tema es largo y lo parto en dos:</p>
+<ul><li><b>Parte A (ahora):</b> óptimo, NRU, FIFO, segunda oportunidad y reloj.</li><li><b>Parte B (después):</b> LRU, envejecimiento, conjunto de trabajo y WSClock.</li></ul>
+<h4>La intuición</h4>
+<p>Hay un <b>fallo de página</b>, la RAM está llena y tiene que salir alguien. Si sacás una página que se usa mucho, vuelve a fallar enseguida. El objetivo es <b>sacar la que menos falta va a hacer</b>.</p>
+<p>Si la víctima tiene <b>M = 1</b>, primero se escribe al disco. Si está limpia, se descarta.</p>
+<h4>7.1 Óptimo (págs. 202–203)</h4>
+<p>Saca la página que se va a usar <b>más tarde</b> en el futuro.</p>
+<ul><li><b>No se puede implementar</b>: el SO no conoce el futuro. Es lo mismo que pasaba con SJF en la U2.</li><li>Sirve como <b>referencia</b>: se corre el programa una vez, se registran las referencias, y en una segunda corrida se compara cada algoritmo contra el óptimo.</li></ul>
+<h4>7.2 NRU, no usada recientemente (págs. 203–204)</h4>
+<p>Usa los bits <b>R</b> y <b>M</b> que pone el hardware. <b>En cada interrupción de reloj el SO borra R</b>, pero nunca borra M.</p>
+<table><tr><th>Clase</th><th>R</th><th>M</th><th>Significado</th></tr><tr><td>0</td><td>0</td><td>0</td><td>no referenciada, no modificada → <b>la mejor víctima</b></td></tr><tr><td>1</td><td>0</td><td>1</td><td>no referenciada, modificada</td></tr><tr><td>2</td><td>1</td><td>0</td><td>referenciada, no modificada</td></tr><tr><td>3</td><td>1</td><td>1</td><td>referenciada, modificada</td></tr></table>
+<p>NRU saca <b>una al azar de la clase más baja que no esté vacía</b>.</p>
+<ul><li>🧠 La clase 1 parece imposible, pero aparece cuando el reloj borra R de una página de clase 3.</li><li>⚠️ NRU prefiere sacar una <b>modificada que no se usó</b> (clase 1) antes que una <b>limpia que se usa mucho</b> (clase 2).</li></ul>
+<h4>7.3 FIFO (pág. 204)</h4>
+<p>Mantiene una cola en orden de llegada y saca <b>la que llegó primero</b>. El ejemplo del libro es el supermercado que saca el producto más antiguo: puede ser la gomina para bigote, pero también la harina. Por eso <b>casi no se usa puro</b>.</p>
+<h4>7.4 Segunda oportunidad ★ (págs. 204–205)</h4>
+<p>Es FIFO, pero <b>mirando el bit R</b> de la más vieja:</p>
+<pre>cola (vieja → nueva):   A(R=1) → B(R=0) → C(R=1)
+                         │
+mirar A: R=1 → R=0, llegada = AHORA, va al final
+cola:                   B(R=0) → C(R=1) → A(R=0)
+mirar B: R=0 → VÍCTIMA ✔</pre>
+<ul><li>Si <b>todas</b> tienen R = 1, da la vuelta completa y vuelve a la primera, que ahora tiene R = 0. <b>Degenera en FIFO, pero siempre termina.</b></li><li>⚠️ La salvada <b>cambia su llegada al instante actual</b>. En el examen hay que actualizarlo en la tabla.</li></ul>
+<h4>7.5 Reloj (págs. 205–206, fig. 3-16)</h4>
+<p>Es la segunda oportunidad <b>sin mover páginas</b>: una lista <b>circular</b> y una <b>manecilla</b> que apunta a la más vieja.</p>
+<pre>        ┌──► A(1) ──► B(0) ──┐        fallo: mira donde apunta ◀
+        │                    ▼        R=1 → R=0 y avanza
+       F(1)                C(1)       R=0 → víctima, la nueva toma
+        ▲                    │              su lugar y avanza
+        └─── E(0) ◀── D(1) ◀─┘</pre>
+<p>Saca <b>exactamente las mismas víctimas</b> que la segunda oportunidad. Es más eficiente porque no mueve nodos de la lista.</p>
+<h4>Ejemplo con la cadena de clase</h4>
+<p>Cadena 7 0 1 2 0 3 0 4 2 3 0 3 2 con 3 marcos:</p>
+<table><tr><th>Óptimo</th><th>FIFO</th><th>Segunda oportunidad</th><th>Reloj</th><th>LRU</th></tr><tr><td><b>7</b></td><td>10</td><td>9</td><td>9</td><td>9</td></tr></table>
+<p>El óptimo es el <b>piso</b>: ningún algoritmo puede tener menos fallos.</p>
+<p>📖 <i>Tanenbaum, 3.4–3.4.5, págs. 201–206, figs. 3-15 y 3-16.</i></p>
+<hr/>
+<hr/>
+<h4>Preguntas (resolvelas a mano primero; después comprobalas en la pestaña 📝)</h4>
+<p><b>1. Ejercicio de examen.</b> Páginas de <b>2 KB</b>, direcciones de 16 bits. En el instante <b>200</b> se lee la dirección <b>0x4B3A</b>. La tabla es:</p>
+<table><tr><th>Página</th><th>Llegada</th><th>R</th><th>M</th><th>P</th><th>Marco</th></tr><tr><td>2</td><td>90</td><td>0</td><td>1</td><td>1</td><td>6</td></tr><tr><td>5</td><td>60</td><td>1</td><td>0</td><td>1</td><td>3</td></tr><tr><td>9</td><td>—</td><td>0</td><td>0</td><td>0</td><td>—</td></tr><tr><td>11</td><td>40</td><td>1</td><td>1</td><td>1</td><td>1</td></tr><tr><td>14</td><td>120</td><td>1</td><td>0</td><td>1</td><td>4</td></tr></table>
+<p>a) ¿Qué página es y hay fallo? b) Aplicá segunda oportunidad: ¿qué página sale? ¿Hay que escribir al disco? c) La dirección física en hexa. d) La cola final en la notación de la cátedra.</p>
+<p><b>2. V o F:</b> <i>"Si todas las páginas tienen R = 1, la segunda oportunidad entra en un ciclo infinito."</i></p>
+<h3>Corrección</h3>
+<p><b>1a) ✅</b> Es la página <b>9</b> y hay <b>fallo</b> porque P = 0.</p>
+<p>Para el examen conviene mostrar cómo sale el 9. Con páginas de 2 KB = 2¹¹ el desplazamiento tiene <b>11 bits</b>, y con direcciones de 16 bits quedan <b>5 bits</b> para la página:</p>
+<pre>0x4B3A = 0100 1011 0011 1010
+         └─┬─┘└──────┬──────┘
+         01001   011 0011 1010
+         pág 9   desp = 0x33A = 826</pre>
+<p><b>1b) ✅ (falta mostrar los pasos)</b> La víctima es la <b>2</b>, y como tiene M = 1 hay que escribirla al disco ✔. En el examen piden también <b>cómo se llega</b>: hay que pasar por las páginas salvadas. Se ordenan por llegada, de la más vieja a la más nueva:</p>
+<table><tr><th>Paso</th><th>Página (llegada)</th><th>R</th><th>Qué pasa</th></tr><tr><td>1</td><td>11 (40)</td><td>1</td><td>se salva: R → 0, llegada → <b>200</b>, va al final</td></tr><tr><td>2</td><td>5 (60)</td><td>1</td><td>se salva: R → 0, llegada → <b>200</b>, va al final</td></tr><tr><td>3</td><td>2 (90)</td><td><b>0</b></td><td><b>víctima</b> ✔, sucia → se escribe al disco</td></tr></table>
+<p>La página 9 entra en el <b>marco que liberó la 2, que es el 6</b>, con P = 1, R = 1, M = 0 (es una lectura) y llegada 200.</p>
+<p><b>1c) ❌</b> La respuesta correcta es <b>0x333A</b>, no 0x3CEE. Se arma así: el marco <b>reemplaza</b> a los 5 bits de página y el desplazamiento se copia sin cambios.</p>
+<pre>marco 6 = 00110        desp = 011 0011 1010
+física  = 00110 011 0011 1010 = 0011 0011 0011 1010 = 0x333A
+control en decimal: 6 × 2048 + 826 = 13114 = 0x333A ✔</pre>
+<p>¿Cómo llegaste a 0x3CEE? Contame qué marco usaste y cómo armaste la dirección, así vemos dónde se desvió. Sospecho que se cortó mal el desplazamiento, o que se usó otro marco.</p>
+<p><b>1d) La cola final</b> es cómo queda la <b>cola FIFO</b> de segunda oportunidad después del reemplazo, con el bit R de cada página. La cátedra la pide así, de la más <b>nueva</b> a la más <b>vieja</b>:</p>
+<pre>9(1) → 5(0) → 11(0) → 14(1)</pre>
+<p>La 9 acaba de entrar con R = 1. La 5 y la 11 fueron salvadas, así que quedan con R = 0 y llegada 200; la 11 se salvó primero y por eso queda detrás de la 5. La 14 no se tocó y ahora es la más vieja: va a ser la primera candidata en el próximo fallo.</p>
+<p><b>2. ✅ Correcta.</b> Es falso: da la vuelta completa poniendo todas las R en 0, vuelve a la primera (que ahora tiene R = 0) y la saca. <b>Degenera en FIFO pero siempre termina.</b></p>
+<hr/>
+<p>📝 Si cargás este ejercicio en la pestaña <b>Examen</b> de reemplazo_paginas.html, te muestra cada uno de estos pasos con las casillas que cambian en violeta.</p>
+<p>Antes de seguir, respondeme cómo armaste el 0x3CEE. Después escribí <b>"seguí"</b> y pasamos al <b>tema 7 parte B</b>: LRU, envejecimiento, conjunto de trabajo y WSClock.</p>
+<hr/>
+<h2>Tema 7B — LRU y sus aproximaciones; conjunto de trabajo y WSClock</h2>
+<p>Lo que importa de esta parte, en una línea: <b>LRU es el mejor algoritmo realizable, pero es caro; todo lo demás son formas baratas de imitarlo.</b></p>
+<pre>            Óptimo (imposible, solo sirve de referencia)
+               │  "el pasado reciente predice el futuro"
+               ▼
+             LRU ── exacto, necesita HARDWARE (contador C, matriz n×n)
+               │  imitarlo por SOFTWARE con el bit R
+       ┌───────┴────────┐
+      NFU ──mejora──► ENVEJECIMIENTO ★        ← aproxima LRU
+
+   CONJUNTO DE TRABAJO ──mejora──► WSClock ★   ← otra idea: τ y edad</pre>
+<hr/>
+<h3>7.6 LRU, menos usada recientemente (págs. 205–207)</h3>
+<p><b>Intuición:</b> lo que usaste recién lo vas a volver a usar; lo que hace mucho que no tocás, probablemente tampoco lo uses ahora. Es lo que hacés con la ropa del placard: al fondo va lo que no te pusiste hace meses.</p>
+<p><b>Regla:</b> en un fallo sale la página que <b>hace más tiempo que no se usa</b>.</p>
+<p><b>El problema</b> es que hay que registrar algo <b>en cada referencia a memoria</b>, no en cada fallo. Una lista ordenada que se actualice en cada instrucción es demasiado lenta, incluso hecha en hardware. El libro da dos variantes con <b>hardware especial</b>:</p>
+<ol><li><b>Contador C de 64 bits.</b> Se incrementa en cada instrucción, y en cada referencia se copia en la entrada de la página. En un fallo sale la que tiene el <b>menor</b> valor.</li><li><b>Matriz n × n de bits</b>, con n = cantidad de marcos. Al referenciar la página k:</li></ol>
+<pre>   fila k    ← todo 1
+   columna k ← todo 0        →  la fila con MENOR valor binario es la LRU
+
+   Ej. fig. 3-17, refs 0 1 2 3 2 1 0 3 2 3 → al final:
+        0 1 2 3   valor
+   0 │ 0 1 0 0 │  4
+   1 │ 0 0 0 0 │  0   ← LRU (la 1 es la que hace más que no se usa)
+   2 │ 1 1 0 0 │ 12
+   3 │ 1 1 1 0 │ 14   ← la más reciente</pre>
+<p>🧠 <b>Para recitar:</b> «fila en 1, columna en 0; la fila más chica sale».</p>
+<hr/>
+<h3>7.7 Simular LRU por software: NFU y envejecimiento (págs. 207–209)</h3>
+<p>Casi ninguna máquina tiene ese hardware, así que <b>el SO lo imita con el bit R</b> en cada interrupción de reloj.</p>
+<p><b>NFU (no usada frecuentemente).</b> Cada página tiene un contador, y en cada pulso se hace <code>contador += R</code>. En un fallo sale la de menor contador.</p>
+<ul><li>⚠️ <b>NFU nunca olvida.</b> En un compilador de varias pasadas, las páginas de la pasada 1 acumulan una cuenta altísima. Después le ganan a las páginas de la pasada actual, que son las que se están usando.</li></ul>
+<p><b>Envejecimiento (aging) ★.</b> Cambia dos cosas respecto de NFU:</p>
+<ol><li>el contador <b>se desplaza 1 bit a la derecha</b>;</li><li>R entra <b>por el bit de la izquierda</b>, no se suma por la derecha.</li></ol>
+<pre>   pág. 0, R = 1 0 1 1:   10000000 → 01000000 → 10100000 → 11010000
+                             ▲ R entra acá       lo viejo se corre y pierde peso</pre>
+<p>Un 1 reciente, a la izquierda, <b>vale más que todos los viejos juntos</b>. En un fallo sale la de <b>menor</b> contador.</p>
+<p>Ejemplo del libro (fig. 3-18): después del pulso 4 sale la <b>página 3</b>.</p>
+<ul><li>⚠️ <b>Errata del libro en español:</b> en la fig. 3-18, para la página 2, imprime 00100000 y 10010000. Lo correcto es <b>00010000</b> y <b>10001000</b>. El simulador lo marca.</li></ul>
+<p>🧠 <b>Dos diferencias con LRU verdadero (se toman):</b></p>
+<ol><li><b>Pierde el orden dentro del pulso.</b> Si dos páginas se usaron en el mismo intervalo, no sabe cuál fue la última.</li><li><b>Horizonte finito.</b> Con 8 bits, dos contadores en 00000000 empatan aunque una página se haya usado hace 9 pulsos y la otra hace 1000. En la práctica alcanza: 8 pulsos de unos 20 ms son 160 ms.</li></ol>
+<hr/>
+<h3>7.8 Conjunto de trabajo (págs. 209–213)</h3>
+<p><b>Paginación bajo demanda:</b> el proceso arranca sin páginas en memoria y las va trayendo fallo a fallo.</p>
+<p><b>Localidad de referencia:</b> en cada fase de ejecución, el proceso usa solo una fracción chica de sus páginas.</p>
+<p><b>Conjunto de trabajo:</b> son las páginas que el proceso usa <b>en este momento</b>.</p>
+<ul><li>Si entra completo en memoria, el proceso casi no da fallos.</li><li>Si no entra, falla cada pocas instrucciones. Eso es <b>sobrepaginación (thrashing)</b>, el tema 8.</li></ul>
+<p><b>Definición formal:</b> <b>w(k, t)</b> es el conjunto de páginas usadas en las k referencias más recientes. La curva sube rápido y después se aplana; por eso el valor exacto de k casi no importa.</p>
+<p><b>Prepaginación:</b> cargar el conjunto de trabajo <b>antes</b> de volver a correr el proceso. Lo que se usa en la práctica se llama <b>modelo del conjunto de trabajo</b>.</p>
+<p><b>Aproximación práctica.</b> En vez de contar k referencias, se toma lo usado en los últimos <b>τ de tiempo virtual</b>.</p>
+<ul><li>⚠️ El <b>tiempo virtual</b> es el tiempo de <b>CPU del propio proceso</b>, no el tiempo real. Si un proceso tuvo 40 ms de CPU en 100 ms reales, su tiempo virtual es 40 ms.</li></ul>
+<p><b>Algoritmo (fig. 3-20).</b> En el fallo se recorre <b>toda</b> la tabla, y para cada página se calcula <code>edad = tiempo virtual actual − último uso</code>:</p>
+<pre>   R = 1            → último uso ← actual (está en el CT, no sale)
+   R = 0, edad &gt; τ  → VÍCTIMA (fuera del CT); el recorrido sigue para actualizar
+   R = 0, edad ≤ τ  → se reserva; se anota la más vieja
+   ninguna fuera    → sale la más vieja con R = 0
+   todas con R = 1  → una al azar, mejor limpia</pre>
+<p>Ejemplo: tiempo actual 2204 y τ = 600 (el libro no da τ; lo elegí yo).</p>
+<ul><li>La página de <b>1213</b> tiene R = 0 y edad 991 &gt; 600 → <b>sale</b>.</li><li>La de <b>1620</b> tiene R = 0 pero edad 584 ≤ 600 → <b>se queda</b>.</li></ul>
+<hr/>
+<h3>7.9 WSClock (págs. 213–214) ★</h3>
+<p>Es el conjunto de trabajo <b>montado sobre el reloj</b>: un anillo con manecilla, así no hay que recorrer toda la tabla.</p>
+<pre>   mira la de la manecilla:
+   R = 1                    → R ← 0, avanza (como el reloj)
+   R = 0, edad &gt; τ, LIMPIA  → VÍCTIMA, la nueva entra ahí
+   R = 0, edad &gt; τ, SUCIA   → ✎ planifica escritura y AVANZA (no la saca todavía)
+   R = 0, edad ≤ τ          → avanza
+   si da la vuelta entera:
+     hubo escrituras   → sigue girando hasta encontrar una que ya quedó limpia
+     no hubo ninguna   → cualquier limpia; si no hay, la actual (y se escribe)</pre>
+<p>⚠️ <b>Lo más preguntado:</b> la sucia <b>no sale</b>; se planifica su escritura y la manecilla sigue. Así el SO no se queda esperando el disco, porque más adelante puede haber una vieja y limpia.</p>
+<p>Otro detalle: la primera que se limpia no tiene por qué ser la primera que se planificó, porque el controlador de disco puede reordenar las escrituras.</p>
+<hr/>
+<h3>7.10 Resumen del libro (fig. 3-22, pág. 215)</h3>
+<table><tr><th>Algoritmo</th><th>Comentario del libro</th></tr><tr><td>Óptimo</td><td>No se puede implementar; sirve de comparación</td></tr><tr><td>NRU</td><td>Aproximación muy burda de LRU</td></tr><tr><td>FIFO</td><td>Puede descartar páginas importantes</td></tr><tr><td>Segunda oportunidad</td><td>Gran mejora sobre FIFO</td></tr><tr><td>Reloj</td><td>Realista</td></tr><tr><td>LRU</td><td>Excelente, pero difícil de implementar con exactitud</td></tr><tr><td>NFU</td><td>Aproximación a LRU bastante burda</td></tr><tr><td><b>Envejecimiento</b></td><td><b>Eficiente, se aproxima bien a LRU</b></td></tr><tr><td>Conjunto de trabajo</td><td>Muy costoso de implementar</td></tr><tr><td><b>WSClock</b></td><td><b>Eficientemente bueno</b></td></tr></table>
+<p>🧠 <b>Los dos mejores en la práctica:</b> <b>envejecimiento</b>, basado en LRU, y <b>WSClock</b>, basado en el conjunto de trabajo.</p>
+<p>📖 <i>Tanenbaum 3.4.6–3.4.10, págs. 205–215, figs. 3-17 a 3-22.</i></p>
+<hr/>
+<hr/>
+<h4>Preguntas (a mano primero; después podés comprobarlas en el simulador)</h4>
+<p><b>1. Envejecimiento con contadores de 8 bits.</b> Hay 4 páginas (0 a 3), todas arrancan en 00000000. Los bits R en cada pulso son:</p>
+<pre>pulso 0:  1 1 0 1
+pulso 1:  0 1 1 0
+pulso 2:  1 0 0 0
+pulso 3:  0 0 1 1</pre>
+<p>a) Escribí los contadores después del pulso 3. b) Si ahora hay un fallo, ¿qué página saca el envejecimiento? c) ¿Y NFU? ¿Qué te muestra la diferencia?</p>
+<p><b>2. WSClock.</b> El tiempo virtual actual es 2200 y τ = 400. El anillo es A → B → C → D → (vuelve a A), y la manecilla está en A:</p>
+<table><tr><th>Página</th><th>Último uso</th><th>R</th><th>M</th></tr><tr><td>A</td><td>1700</td><td>0</td><td>1</td></tr><tr><td>B</td><td>2150</td><td>1</td><td>0</td></tr><tr><td>C</td><td>1500</td><td>0</td><td>0</td></tr><tr><td>D</td><td>1900</td><td>0</td><td>0</td></tr></table>
+<p>¿Qué pasa con A? ¿Qué página sale finalmente y por qué?</p>
+<h3>Duda: ¿las columnas de la fig. 3-18 son las páginas?</h3>
+<p><b>Sí.</b> Cada <b>fila es un pulso de reloj</b> y cada <b>columna es una página</b>. Es el mismo formato que la fig. 3-18 del libro.</p>
+<pre>            pág 0  pág 1  pág 2  pág 3
+pulso 0:      1      1      0      1
+pulso 1:      0      1      1      0
+pulso 2:      1      0      0      0
+pulso 3:      0      0      1      1</pre>
+<p>Por ejemplo, en el pulso 0 se usaron las páginas 0, 1 y 3, y la 2 no. Si leés una columna <b>de arriba hacia abajo</b>, ves la historia de esa página. La página 0, por ejemplo, tuvo R = 1, 0, 1, 0.</p>
+<p>Para que veas el mecanismo, hago <b>solo el primer pulso de la página 0</b>:</p>
+<pre>contador inicial:     00000000
+desplazo a la derecha: 00000000
+meto R = 1 a la izq.:  10000000   ← después del pulso 0</pre>
+<p>Seguí vos desde ahí con los pulsos 1, 2 y 3, y después con las otras páginas. En cada pulso repetís lo mismo: <b>desplazar a la derecha y poner el R de ese pulso como bit de más a la izquierda</b>.</p>
+<p>Si querés comprobarlo después, en la pestaña <b>2 · Envejecimiento vs. NFU</b> del simulador podés pegar esas cuatro líneas tal cual en el cuadro de bits R, y te muestra pulso por pulso.</p>
+<h3>Duda: ¿el contador cuenta el número o las veces que hubo un 1?</h3>
+<p>Depende del algoritmo, y justamente esa diferencia es la que busca la pregunta.</p>
+<p><b>En envejecimiento</b> el «contador» es el <b>registro de 8 bits completo</b>. Hay que escribir el número binario que queda después de los desplazamientos, por ejemplo <code>10100000</code>. Para elegir la víctima comparás esos números como binarios: el más chico sale. Si te resulta más fácil, pasalos a decimal para compararlos (<code>10100000</code> = 160), pero lo que importa es el patrón de bits.</p>
+<pre>10000000 = 128   ← 1 reciente (bit de la izquierda)
+00000011 =   3   ← dos 1, pero viejos</pre>
+<p>Por eso en envejecimiento <b>no importa cuántos 1 hay, sino dónde están</b>: un 1 a la izquierda (reciente) pesa más que todos los de la derecha (viejos).</p>
+<p><b>En NFU</b> el contador <b>sí</b> es la cantidad de veces que R estuvo en 1, porque cada pulso hace <code>contador = contador + R</code>. Ahí no hay bits que se corran: es una suma.</p>
+<table><tr><th></th><th>Qué se anota</th><th>Qué sale en un fallo</th></tr><tr><td><b>Envejecimiento</b></td><td>el registro de 8 bits (posición de los 1)</td><td>el menor valor binario</td></tr><tr><td><b>NFU</b></td><td>cuántas veces R = 1 (suma)</td><td>la de menor cuenta</td></tr></table>
+<p>Entonces, en la pregunta:</p>
+<ul><li><b>a)</b> los 4 registros de 8 bits del envejecimiento;</li><li><b>b)</b> cuál es el menor de esos números;</li><li><b>c)</b> la cuenta de NFU de cada página (cuántos 1 tiene su columna) y qué página sacaría.</li></ul>
+<h3>Corrección</h3>
+<p><b>1a) ✅</b> Los contadores son 0 = <b>01010000</b> (80), 1 = <b>00110000</b> (48), 2 = <b>10100000</b> (160) y 3 = <b>10010000</b> (144). Están todos bien.</p>
+<p><b>1b) ✅</b> Sale la <b>página 1</b>, que tiene el menor valor, 48.</p>
+<p><b>1c) ✅ (le falta la conclusión)</b> Es cierto que en NFU los cuatro contadores valen <b>2</b> y hay un empate total. La idea que pide la pregunta es esta:</p>
+<div class="clave">Las cuatro páginas se usaron <b>la misma cantidad de veces</b>, pero <b>no en el mismo momento</b>. NFU solo cuenta, así que no puede distinguirlas. El envejecimiento mira <b>cuándo</b> se usaron: la página 1 se usó en los pulsos 0 y 1, y hace dos pulsos que no se toca. Por eso es la que se parece más a la LRU.</div>
+<p>🧠 En el examen: NFU mide <b>frecuencia</b> y el envejecimiento mide <b>recencia</b>, que es lo que aproxima a LRU.</p>
+<p><b>2. ✅ La víctima es correcta (C), pero hay un matiz importante con A.</b></p>
+<p>Lo que escribiste sobre A da a entender que se hace la copia a disco y A queda con M = 0. <b>No es así, al menos no en ese momento:</b></p>
+<pre>A: R=0, edad 2200−1700 = 500 &gt; 400, SUCIA
+   → se PLANIFICA la escritura ✎ y la manecilla AVANZA
+     (A sigue sucia y en memoria; el SO no espera al disco)
+B: R=1 → R=0, avanza
+C: R=0, edad 2200−1500 = 700 &gt; 400, LIMPIA → VÍCTIMA ✔</pre>
+<ul><li>⚠️ La escritura de A queda <b>en cola</b>. Cuando el disco termine, A va a quedar limpia, y en una vuelta futura podrá salir sin escribir nada. El objetivo es <b>no frenar el fallo esperando el disco</b>.</li><li>Te faltó calcular la <b>edad de A</b>, que es 500 &gt; τ. Ese dato es el que justifica la escritura: si A estuviera dentro del conjunto de trabajo (edad ≤ τ), la manecilla avanzaría sin planificar nada.</li><li>Tampoco mencionaste a <b>B</b>: tenía R = 1, así que se le borra R y la manecilla sigue.</li></ul>
+<p>En la pestaña 3 del simulador se ve así: elegí <b>WSClock</b>, pegá la tabla <code>A 1700 0 1 / B 2150 1 0 / C 1500 0 0 / D 1900 0 0</code>, poné tiempo 2200, τ 400 y manecilla 1. A queda marcada con ✎.</p>
+<hr/>
+<p>Con esto cerramos los <b>algoritmos de reemplazo</b>, el corazón de la unidad. Escribí <b>"seguí"</b> y pasamos al <b>tema 8, cuestiones de diseño</b>: sobrepaginación, asignación local vs. global, PFF y tamaño de página óptimo. Para el tamaño de página voy a armar una calculadora.</p>
+<hr/>
+<h2>Tema 8A — Cuestiones de diseño: sobrepaginación, local/global, tamaño de página</h2>
+<p>Hasta ahora vimos <b>qué página sacar</b>. Ahora vienen las preguntas de diseño: <b>de quién</b> sacarla, <b>cuántos marcos</b> darle a cada proceso, <b>qué hacer cuando no alcanza</b> y <b>de qué tamaño</b> hacer las páginas. El libro lo compara con saber mover las piezas de ajedrez y saber jugar.</p>
+<pre>   reemplazo (tema 7): ¿QUÉ página sale?
+        │
+        ├─ ¿de QUIÉN?        → local vs. global
+        ├─ ¿CUÁNTOS marcos?  → partes iguales / proporcional / PFF
+        ├─ ¿y si no alcanza? → sobrepaginación → CONTROL DE CARGA
+        └─ ¿de qué TAMAÑO?   → p = √(2se)</pre>
+<hr/>
+<h3>8.1 Sobrepaginación (thrashing / hiperpaginación) (pág. 209)</h3>
+<p><b>Intuición:</b> es un escritorio tan chico que, para abrir un libro, tenés que guardar el que estabas usando, y un minuto después lo necesitás de nuevo. Te pasás el día guardando y sacando libros y no leés nada.</p>
+<p><b>Definición:</b> un proceso <b>sobrepagina</b> cuando produce <b>fallos de página cada pocas instrucciones</b>. Le pasa porque su <b>conjunto de trabajo no entra</b> en los marcos que tiene.</p>
+<pre> instrucción ≈ nanosegundos      leer página ≈ 10 milisegundos
+ → 1 o 2 instrucciones cada 10 ms = "una eternidad"
+ CPU ociosa, disco al 100%</pre>
+<p>🧠 La sobrepaginación <b>no es culpa del algoritmo de reemplazo</b>: si la suma de los conjuntos de trabajo supera la RAM, aparece igual.</p>
+<hr/>
+<h3>8.2 Reemplazo local vs. global (págs. 216–217, fig. 3-23)</h3>
+<p>El proceso <b>A</b> tiene un fallo. Hay dos opciones:</p>
+<pre> edades (fig. 3-23):  A0 10  A1 7  A2 5  A3 4  A4 6  A5 3
+                      B0 9   B1 4  B2 6  B3 2  B4 5  B5 6  B6 12
+                      C1 3   C2 5  C3 6
+
+ LOCAL  → busca solo entre las de A → sale A5 (3)    A sigue con 6 marcos
+ GLOBAL → busca en toda la memoria  → sale B3 (2)    A pasa a 7, B a 6</pre>
+<table><tr><th></th><th>Local</th><th>Global</th></tr><tr><td>Qué es</td><td>cada proceso tiene una <b>fracción fija</b> de memoria</td><td>los marcos se <b>reparten dinámicamente</b></td></tr><tr><td>+</td><td>un proceso no le saca marcos a otro</td><td><b>en general funciona mejor</b></td></tr><tr><td>−</td><td>si el conjunto de trabajo <b>crece</b> → sobrepaginación <b>aunque haya marcos libres</b>; si <b>se achica</b> → desperdicia memoria</td><td>el SO tiene que decidir todo el tiempo cuántos marcos tiene cada proceso</td></tr></table>
+<ul><li>⚠️ <b>FIFO y LRU</b> sirven con las dos políticas.</li><li>⚠️ El <b>conjunto de trabajo y WSClock solo tienen sentido como locales</b>: no existe un conjunto de trabajo de la máquina entera.</li></ul>
+<hr/>
+<h3>8.3 ¿Cuántos marcos le doy a cada proceso? (págs. 217–218)</h3>
+<ul><li><b>Partes iguales.</b> Con 12 416 marcos y 10 procesos, son <b>1241</b> para cada uno y <b>6</b> a una reserva para los fallos. El problema es que no tiene sentido darle lo mismo a un proceso de 10 KB que a uno de 300 KB.</li><li><b>Proporcional al tamaño.</b> El de 300 KB recibe <b>30 veces</b> lo del de 10 KB.</li><li><b>Con un mínimo.</b> En algunas máquinas, una instrucción de dos operandos puede tocar <b>hasta 6 páginas</b>: la instrucción y los dos operandos, cada uno cruzando un límite de página. Con 5 marcos, ese programa <b>no se puede ejecutar nunca</b>.</li></ul>
+<p>Eso fija <b>el arranque</b>. Con una política global, la asignación se ajusta en marcha con PFF.</p>
+<hr/>
+<h3>8.4 PFF, frecuencia de fallos de página (págs. 217–218, fig. 3-24)</h3>
+<p><b>La idea:</b> si das más marcos, la tasa de fallos baja; en LRU y muchos otros algoritmos se cumple. Se fijan <b>dos líneas</b>:</p>
+<pre> fallos/seg
+   │╲
+ A ┤-╲------------------  por encima: le faltan marcos → DARLE
+   │  ╲___
+ B ┤------╲______________  por debajo: le sobran → QUITARLE
+   └──────────────────────► marcos asignados</pre>
+<p><b>Cómo se mide:</b> se cuentan los fallos por segundo con una media móvil, <code>media nueva = (media actual + fallos del último segundo) / 2</code>.</p>
+<ul><li>Ejemplo: 20, 40, 10 → media 20 → (20+40)/2 = <b>30</b> → (30+10)/2 = <b>20</b>.</li></ul>
+<p>⚠️ <b>PFF decide CUÁNTOS marcos tiene cada proceso, NO CUÁL página sale.</b> La víctima la sigue eligiendo el algoritmo de reemplazo.</p>
+<hr/>
+<h3>8.5 Control de carga (págs. 218–219) ★</h3>
+<p><b>El síntoma:</b> PFF dice que <b>algunos procesos necesitan más memoria y ninguno necesita menos</b>. No hay de dónde sacar marcos sin perjudicar a otro proceso.</p>
+<p><b>La única solución real</b> es <b>sacar procesos de memoria temporalmente</b>:</p>
+<ol><li><b>intercambiar (swap) un proceso entero al disco</b> y repartir sus marcos entre los que sobrepaginan;</li><li>si la sobrepaginación sigue, intercambiar otro, y así hasta que pare.</li></ol>
+<p>🧠 Por eso <b>el intercambio de la U3 sigue existiendo aunque haya paginación</b>. Ya no se usa para conseguir páginas, sino para <b>bajar la demanda de memoria</b>. Es parecido a la <b>planificación de dos niveles</b> de la U2.</p>
+<p>⚠️ Tampoco hay que bajar demasiado el <b>grado de multiprogramación</b>, porque la CPU queda ociosa. Para elegir qué proceso sacar se mira:</p>
+<ul><li>el tamaño del proceso;</li><li>su tasa de fallos;</li><li>si está <b>ligado a la CPU o a la E/S</b>, junto con cómo son los demás procesos.</li></ul>
+<hr/>
+<h3>8.6 Tamaño de página (págs. 219–220) ★</h3>
+<p>No hay un tamaño óptimo en general: hay que equilibrar.</p>
+<table><tr><th>Páginas <b>chicas</b></th><th>Páginas <b>grandes</b></th></tr><tr><td>+ menos <b>fragmentación interna</b>: en promedio se desperdicia ½ página por segmento, <b>n·p/2</b></td><td>+ <b>tabla de páginas</b> más chica</td></tr><tr><td>+ menos parte del programa en memoria sin usar (8 fases de 4 KB con páginas de 32 KB ocupan 32 KB todo el tiempo)</td><td>+ menos transferencias: casi todo el tiempo de disco es búsqueda y rotación. <b>64 × 10 ms</b> para cargar 64 páginas de 512 B vs. <b>4 × 12 ms</b> para 4 páginas de 8 KB</td></tr><tr><td>− tabla grande y más registros que cargar en cada cambio de proceso</td><td>− más fragmentación interna</td></tr></table>
+<p><b>La fórmula (se toma):</b> con un proceso promedio de <b>s</b> bytes, páginas de <b>p</b> bytes y <b>e</b> bytes por entrada:</p>
+<pre> sobrecarga = s·e/p   +   p/2
+              └tabla┘    └frag. interna de la última página┘
+
+ derivo e igualo a 0:  −s·e/p² + 1/2 = 0   →   p = √(2·s·e)
+
+ Ej. libro: s = 1 MB = 2²⁰, e = 8 = 2³
+            p = √(2 · 2²⁰ · 2³) = √2²⁴ = 2¹² = 4 KB ✔</pre>
+<p>🧠 En el óptimo <b>los dos términos son iguales</b> (2 KB y 2 KB en el ejemplo).</p>
+<p>Datos reales del libro: se usaron páginas de 512 B a 64 KB, y hoy es común <b>4 KB u 8 KB</b>. Cuando la RAM crece, el tamaño de página también crece, pero no en forma lineal: cuadruplicar la RAM rara vez duplica la página.</p>
+<p>📖 <i>Tanenbaum 3.4.8 (pág. 209) y 3.5.1–3.5.3 (págs. 216–220), figs. 3-23 y 3-24.</i></p>
+<hr/>
+<hr/>
+<h4>Preguntas</h4>
+<p><b>1.</b> Un sistema tiene procesos de <b>4 MB</b> en promedio y entradas de tabla de <b>8 bytes</b>. a) ¿Cuál es el tamaño de página óptimo? b) ¿Cuánto vale cada término de la sobrecarga en ese punto? <i>(Pista: trabajá con potencias de 2.)</i></p>
+<p><b>2. Escenario.</b> El administrador ve la <b>CPU casi ociosa</b> y el <b>disco al 100 %</b>. PFF muestra que P1, P2 y P3 están por encima de la línea A y ninguno por debajo de B. Un compañero propone cambiar FIFO por WSClock para arreglarlo. ¿Qué está pasando? ¿Alcanza con la propuesta del compañero? ¿Qué hace el SO?</p>
+<h3>Corrección</h3>
+<p><b>1a) ✅</b> El óptimo es <b>8 KB</b>. La cuenta, por si te la piden escrita:</p>
+<pre>s = 4 MB = 2²²     e = 8 = 2³
+p = √(2 · 2²² · 2³) = √(2¹ · 2²² · 2³) = √2²⁶ = 2¹³ = 8 KB</pre>
+<p><b>1b) Te lo explico.</b> La fórmula de sobrecarga tiene <b>dos términos</b>, y la pregunta pide <b>reemplazar p = 8 KB en cada uno</b>:</p>
+<pre>sobrecarga =   s·e/p        +      p/2
+              (lo que ocupa        (lo que se pierde por
+               la tabla)            fragmentación interna)</pre>
+<ul><li><b>Tabla de páginas:</b> s/p = 2²² / 2¹³ = 2⁹ = <b>512 páginas</b>. Cada una necesita una entrada de 8 B, así que la tabla ocupa 512 × 8 = <b>4096 B = 4 KB</b>.</li><li><b>Fragmentación interna:</b> en promedio la última página queda medio vacía, p/2 = 8 KB / 2 = <b>4 KB</b>.</li><li><b>Total:</b> 4 KB + 4 KB = <b>8 KB</b> de sobrecarga por proceso.</li></ul>
+<p>🧠 <b>Los dos términos dan lo mismo (4 KB y 4 KB), y esto no es casualidad: es la marca del óptimo.</b></p>
+<ul><li>Con una página más chica, la tabla crecería: con 4 KB, s·e/p = 8 KB y p/2 = 2 KB, en total 10 KB.</li><li>Con una más grande, crecería la fragmentación: con 16 KB, 2 KB + 8 KB = 10 KB.</li><li>En los dos casos queda peor que 8 KB.</li></ul>
+<p>En la pestaña 1 de la calculadora podés poner s = 4 MB, e = 8 y mover p a 4, 8 y 16 KB. La barra muestra cómo se equilibran los dos colores.</p>
+<hr/>
+<p><b>2. 🟡 Parcial.</b> Tenés bien que les faltan marcos, y que lo del compañero no alcanza. Te faltan <b>el nombre del problema, el porqué y la solución concreta</b>.</p>
+<p><b>Qué está pasando:</b> es <b>sobrepaginación (thrashing)</b>. El síntoma de manual es CPU ociosa con el disco saturado: los procesos se pasan el tiempo esperando páginas.</p>
+<p><b>Por qué no alcanza cambiar a WSClock:</b> el problema no es <b>qué</b> página se saca, sino que <b>la suma de los conjuntos de trabajo no entra en la RAM</b>. Con cualquier algoritmo, aunque fuera el óptimo, alguien se queda sin sus páginas. Tu observación de que WSClock es local es correcta, pero no es el motivo.</p>
+<p><b>Por qué «hacerlo de forma dinámica» no basta:</b> eso es justamente lo que ya hace PFF, que reparte marcos en marcha. Para darle a uno hay que <b>quitarle a otro</b>, y acá <b>nadie está por debajo de B</b>: no hay de dónde sacar.</p>
+<p><b>Qué hace el SO: control de carga.</b></p>
+<ol><li><b>Intercambia un proceso entero al disco (swap)</b> y reparte sus marcos entre los demás.</li><li>Si la sobrepaginación sigue, intercambia otro, hasta que pare.</li><li>Elige cuál según el tamaño, la tasa de fallos y si está ligado a CPU o a E/S, <b>sin bajar tanto la multiprogramación que la CPU quede ociosa</b>.</li></ol>
+<p>📌 Frase de examen: <i>«PFF indica que algunos procesos necesitan más memoria y ninguno necesita menos → la única solución real es reducir la cantidad de procesos en memoria intercambiando alguno al disco.»</i></p>
+<hr/>
+<p>Para ver si quedó el 1b, una rápida: con <b>s = 1 MB</b> y <b>e = 4 B</b>, ¿cuál es el p óptimo y cuánto vale cada término?</p>
+<p>Cuando la contestes, seguimos con el <b>tema 8B</b>: espacios I y D, páginas compartidas, bibliotecas compartidas y política de limpieza.</p>
+<hr/>
+<h2>Tema 8B — Compartir memoria: páginas y bibliotecas compartidas, copia en escritura</h2>
+<p>El tema 8A trataba de <b>repartir</b> la memoria. Este trata de <b>compartirla</b>: que varios procesos usen <b>los mismos marcos</b> sin pisarse.</p>
+<pre>   ESPACIOS I y D ──► PÁGINAS COMPARTIDAS ──► COPIA EN ESCRITURA (fork)
+                          │
+                          └──► BIBLIOTECAS COMPARTIDAS ──► ARCHIVOS ASOCIADOS
+                                    (código indep. de la posición)
+
+   y aparte: POLÍTICA DE LIMPIEZA (demonio de paginación) · INTERFAZ DE MV</pre>
+<hr/>
+<h3>8.7 Espacios I y D separados (pág. 221, fig. 3-25)</h3>
+<p>Se usó por primera vez en la <b>PDP-11</b>. El proceso tiene <b>dos espacios de direcciones</b>, los dos empezando en 0:</p>
+<ul><li>el <b>espacio I</b>, para las instrucciones;</li><li>el <b>espacio D</b>, para los datos.</li></ul>
+<p>Cada uno tiene <b>su propia tabla de páginas</b>. El hardware sabe cuál usar: si busca una instrucción, va al espacio I; si es un dato, al espacio D.</p>
+<ul><li><b>+</b> Se <b>duplica</b> el espacio de direcciones disponible, sin otra complicación.</li><li>⚠️ El <b>enlazador</b> tiene que saberlo, porque los datos se reubican a partir de la dirección virtual 0 y no a continuación del programa.</li></ul>
+<hr/>
+<h3>8.8 Páginas compartidas (págs. 221–223, fig. 3-26)</h3>
+<p><b>Intuición:</b> si 20 usuarios abren el mismo editor, tener 20 copias del código en RAM es absurdo.</p>
+<ul><li><b>Solo se comparten directamente las páginas de SOLO LECTURA</b>, como el <b>texto</b> del programa. Las páginas de datos no.</li><li>Con espacios I y D, es fácil: los dos procesos usan <b>la misma tabla del espacio I</b> y <b>una tabla propia para el espacio D</b>. Cada proceso tiene en la tabla de procesos dos apuntadores, uno por tabla.</li></ul>
+<p>Hay dos problemas:</p>
+<ul><li>⚠️ Si el planificador <b>saca a A</b> de memoria con todas sus páginas, <b>B empieza a dar fallos</b>, porque esas páginas también eran suyas.</li><li>⚠️ Cuando <b>A termina</b>, hay que saber que las páginas <b>siguen en uso</b> para no liberarlas. Recorrer todas las tablas es caro, así que se necesitan <b>estructuras especiales</b> que lleven la cuenta.</li></ul>
+<h4>Copia en escritura (copy-on-write) ★ (págs. 222–223)</h4>
+<p>Después de un <code>fork</code>, padre e hijo tienen que tener <b>los mismos datos</b>. La forma obvia es copiar todo, y es carísima. La copia en escritura funciona así:</p>
+<pre> fork()
+   │  cada uno tiene SU tabla, pero apuntan a LOS MISMOS marcos
+   │  TODAS las páginas → SOLO LECTURA (en las dos tablas)
+   ▼
+ mientras solo lean ──► nada que hacer, sigue compartido
+   │
+ alguien ESCRIBE una palabra
+   ▼
+ MMU: escritura en página de solo lectura → TRAP al SO
+   ▼
+ SO: copia ESA página → cada uno con su copia privada
+     ambas copias → LECTURA-ESCRITURA → reinicia la instrucción</pre>
+<ul><li><b>+</b> Las páginas que nunca se modifican, incluido <b>todo el programa</b>, <b>no se copian nunca</b>.</li><li>🧠 <b>Conexión con la U2:</b> en <code>fork</code> + <code>execve</code>, el hijo descarta su espacio casi enseguida. Sin copia en escritura, el <code>fork</code> habría copiado todo para tirarlo después.</li><li>⚠️ El mismo trap, «escritura en página de solo lectura», puede deberse a copia en escritura o a un <b>error real</b>, como escribir en el código. El SO los distingue: en el segundo caso le manda una <b>señal</b> al proceso.</li></ul>
+<hr/>
+<h3>8.9 Bibliotecas compartidas (DLL) (págs. 223–225)</h3>
+<p><b>Enlazado estático</b> (<code>ld *.o -lc -lm</code>): las funciones que faltan, llamadas <b>externas indefinidas</b> (por ejemplo <code>printf</code>, que a su vez necesita <code>write</code>), se <b>copian dentro del ejecutable</b>. Con bibliotecas gráficas de 20–50 MB en cientos de programas, se desperdicia disco <b>y</b> RAM.</p>
+<p><b>Biblioteca compartida (en Windows, DLL):</b> el enlazador pone una <b>rutina auxiliar chica</b> que se vincula con la función <b>en tiempo de ejecución</b>. Hay <b>una sola copia en RAM</b>, que se reutiliza si otro programa ya la cargó.</p>
+<ul><li>⚠️ <b>No se carga entera</b>: se <b>pagina bajo demanda</b>, una página a la vez.</li><li><b>+</b> Si se corrige un error en la DLL (por ejemplo, con Windows Update), todos los programas usan la versión nueva <b>sin recompilar</b>.</li></ul>
+<p><b>El «pequeño problema»</b> (fig. 3-27): la biblioteca queda en <b>una dirección virtual distinta en cada proceso</b>.</p>
+<pre> proceso 1: biblioteca en 36K    proceso 2: biblioteca en 12K
+ instrucción "JMP 36K+16"  ✔ en P1   ✘ en P2 (tendría que ser 12K+16)</pre>
+<ul><li>Reubicar al cargar no sirve, porque <b>el código es uno solo</b> para los dos procesos.</li><li>Hacer copia en escritura y reubicar cada copia anula el propósito de compartir.</li><li>✅ <b>La solución es el código independiente de la posición</b>: se compila sin direcciones absolutas, <b>solo con saltos relativos</b> («saltar n bytes»).</li><li>🧠 La <b>dirección física</b> no importa: esa la resuelve la MMU.</li></ul>
+<hr/>
+<h3>8.10 Archivos asociados a memoria (pág. 225)</h3>
+<p>Una llamada al sistema <b>asocia un archivo a una parte del espacio virtual</b>. Desde ahí, el archivo se usa <b>como un arreglo en memoria</b>, sin <code>read</code> ni <code>write</code>.</p>
+<ul><li>Se pagina <b>bajo demanda</b>, con el archivo como almacén de respaldo.</li><li>Al desasociarlo o al terminar el proceso, las páginas <b>modificadas se escriben</b> en el archivo.</li><li>Si <b>dos procesos asocian el mismo archivo</b>, se comunican por <b>memoria compartida</b>, con mucho ancho de banda.</li><li>🧠 Las bibliotecas compartidas son <b>un caso particular</b> de esto.</li></ul>
+<hr/>
+<h3>8.11 Política de limpieza: el demonio de paginación (pág. 226)</h3>
+<p><b>Idea:</b> la paginación anda mejor si <b>siempre hay marcos libres</b>. Así, ante un fallo no hay que escribir una sucia al disco con apuro.</p>
+<p>El <b>demonio de paginación</b> es un proceso en segundo plano que se despierta periódicamente:</p>
+<ol><li>si hay <b>pocos marcos libres</b>, elige víctimas con un algoritmo de reemplazo;</li><li>si están <b>sucias</b>, las escribe al disco;</li><li><b>recuerda su contenido</b>: si la página se vuelve a pedir antes de que se pise el marco, <b>se recupera</b> de la reserva de libres.</li></ol>
+<p><b>Implementación con reloj de dos manecillas:</b></p>
+<ul><li>la <b>principal</b>, del demonio, va <b>limpiando</b>: si la página está sucia la escribe y avanza, y si está limpia solo avanza;</li><li>la <b>secundaria</b> hace el <b>reemplazo</b>, como en el reloj común, y ahora encuentra páginas limpias con más frecuencia.</li></ul>
+<hr/>
+<h3>8.12 Interfaz de memoria virtual (págs. 226–227)</h3>
+<p>Algunos sistemas le dan al programador control sobre su mapa de memoria:</p>
+<ul><li><b>Memoria compartida con nombre:</b> un proceso le pasa a otro el nombre de una región para que la asocie.</li><li><b>Mensajes sin copiar:</b> el emisor desasocia las páginas y el receptor las asocia. Se copian <b>los nombres de las páginas</b>, no los datos.</li><li><b>Memoria compartida distribuida:</b> las páginas se comparten <b>por la red</b>. Un fallo de página hace que se pida la página a otra máquina; el libro la desarrolla en el cap. 8.</li></ul>
+<p>📖 <i>Tanenbaum 3.5.4–3.5.9, págs. 221–227, figs. 3-25 a 3-27.</i></p>
+<hr/>
+<hr/>
+<h4>Preguntas</h4>
+<p><b>1.</b> Un proceso tiene <b>4 páginas de texto, 10 de datos y 2 de pila</b>. Hace <code>fork()</code>. El hijo <b>escribe en 3 páginas de datos y en 1 de pila</b>, y después hace <code>execve()</code>. ¿Cuántas páginas se copiaron <b>sin</b> copia en escritura y cuántas <b>con</b> copia en escritura? ¿Por qué el texto no cuenta en ninguno de los dos casos?</p>
+<p><b>2.</b> ¿Por qué en una biblioteca <b>compartida</b> no alcanza con reubicar las direcciones al cargarla, como se hace con una biblioteca estática? ¿Cómo se resuelve?</p>
+<h3>Corrección</h3>
+<p><b>1. ✅ Los números están bien: 12 sin copia en escritura y 4 con copia en escritura.</b></p>
+<pre>sin COW: el fork copia TODO lo escribible → 10 datos + 2 pila = 12
+         (y con el execve se tiran las 12; 8 de ellas ni se tocaron)
+con COW: se copia solo lo que se escribió → 3 datos + 1 pila  = 4</pre>
+<p>Al explicar por qué el texto no cuenta, decís «porque no se escribió». Es correcto, pero incompleto. La razón de fondo es que <b>el texto es de solo lectura siempre</b>: no se puede escribir, así que <b>se comparte en los dos casos</b>, incluso en un fork sin copia en escritura. Si alguien intentara escribirlo, no habría copia: habría un <b>trap por violación real</b> y una señal al proceso.</p>
+<p>📌 Frase de examen: <i>«El texto se comparte siempre porque es de solo lectura; la copia en escritura solo cambia qué pasa con los datos y la pila.»</i></p>
+<p>Un detalle de redacción: no uses «quedaron en lectura» para describir el estado final. Después del <code>execve</code> el hijo <b>descarta todo</b> su espacio. Lo que importa es <b>cuántas copias se hicieron en el camino</b>.</p>
+<hr/>
+<p><b>2. 🟡 Parcial.</b> La parte de cómo se comparte está bien: cada proceso la ve en <b>una dirección virtual distinta</b>, sus tablas apuntan <b>a los mismos marcos</b> y es código de solo lectura. Te faltan dos cosas.</p>
+<p><b>El porqué de que reubicar no alcance.</b> Reubicar significa <b>escribir la dirección final dentro del código</b>, por ejemplo <code>JMP 36K+16</code>. Pero hay <b>una sola copia del código en RAM</b> para los dos procesos:</p>
+<pre> marcos compartidos:  JMP 36K+16   ← reubicado para P1
+ P1 (biblioteca en 36K) → salta bien ✔
+ P2 (biblioteca en 12K) → salta a 36K+16 ✘  (tendría que ser 12K+16)</pre>
+<p>Una página compartida no puede tener <b>dos contenidos distintos</b>, uno para cada proceso. Hacer una copia por proceso, con copia en escritura, arruina justamente la idea de compartir.</p>
+<p><b>La solución, con su nombre.</b> Tu frase «pegan saltos según dónde esté» va por buen camino, pero el examen pide el término: <b>código independiente de la posición</b>. La biblioteca se compila con una <b>bandera especial</b> para que <b>no use direcciones absolutas, solo saltos relativos</b> («saltar +16 bytes»). Ese salto funciona igual en 36K que en 12K.</p>
+<p>En la pestaña 2 de copia_en_escritura.html podés mover dónde queda la biblioteca en cada proceso y ver cómo el salto absoluto falla y el relativo no.</p>
+<hr/>
+<hr/>
+<h2>Tema 9 — Cuestiones de implementación: el fallo de página paso a paso</h2>
+<p>Hasta acá vimos <b>qué</b> decide el SO. Ahora vemos <b>cómo lo hace por dentro</b>.</p>
+<pre>   ¿CUÁNDO trabaja el SO en la paginación? (4 momentos)
+        │
+        └─ en el FALLO ──► los 10 PASOS ★
+                              ├─ paso 8: RESPALDO DE INSTRUCCIÓN
+                              └─ y mientras espera el disco:
+                                   BLOQUEO DE PÁGINAS (E/S)
+   ¿DÓNDE van las páginas en el disco? → ALMACÉN DE RESPALDO
+   ¿cómo se ORGANIZA el código? → POLÍTICA vs. MECANISMO</pre>
+<hr/>
+<h3>9.1 Los 4 momentos en que el SO trabaja con la paginación (págs. 227–228)</h3>
+<table><tr><th>Momento</th><th>Qué hace el SO</th></tr><tr><td><b>Crear</b> un proceso</td><td>decide su tamaño inicial, <b>crea e inicializa la tabla de páginas</b>, reserva el <b>área de intercambio</b> en disco y la carga con el texto y los datos; anota todo en la <b>tabla de procesos</b></td></tr><tr><td><b>Ejecutar</b> un proceso</td><td><b>reinicia la MMU</b>, <b>vacía la TLB</b> (tiene restos del proceso anterior) y carga la tabla del nuevo; opcionalmente prepagina, por ejemplo la página a la que apunta el PC</td></tr><tr><td><b>Fallo</b> de página</td><td>los 10 pasos (abajo)</td></tr><tr><td><b>Terminar</b> un proceso</td><td>libera la tabla, las páginas y su espacio en disco. ⚠️ Las <b>compartidas</b> se liberan recién cuando <b>termina el último</b> proceso que las usa (lo vimos en el tema 8B)</td></tr></table>
+<hr/>
+<h3>9.2 Manejo de un fallo de página: los 10 pasos ★ (págs. 228–229)</h3>
+<p><b>Intuición:</b> es como cuando estás leyendo y te falta un libro. Marcás la página donde quedaste (pasos 1–2). Fijás qué libro te falta (3). Verificás que sea un libro tuyo (4). Hacés lugar en el escritorio (5). Lo pedís y, mientras llega, hacés otra cosa (6). Cuando llega, lo acomodás (7). Volvés al principio del párrafo (8). Retomás donde estabas (9–10).</p>
+<pre> ┌ HARDWARE ─── 1. TRAP al kernel; guarda el PC en la pila
+ │                 (+ info de la instrucción a medias en registros especiales)
+ ├ ENSAMBLADOR  2. guarda registros generales e info volátil; llama al SO
+ ├ SO ───────── 3. ¿qué página virtual? (registro de HW, o analiza la instrucción)
+ │              4. ¿dirección válida y protección ok?  NO → señal / eliminar
+ │                 ¿hay marco libre?  NO → algoritmo de REEMPLAZO
+ │              5. víctima SUCIA → planifica escritura + CAMBIO DE CONTEXTO
+ │                 (A suspendido, corre otro; el marco se marca OCUPADO)
+ │              6. marco limpio → busca la dirección de disco y planifica la LECTURA
+ │                 (A sigue suspendido, corre otro)
+ ├ DISCO ────── 7. interrupción: llegó → actualiza la TABLA, marco en estado normal
+ ├ SO ───────── 8. RESPALDA la instrucción; PC → inicio de la instrucción
+ │              9. planifica a A; vuelve a la rutina en ensamblador
+ └ ENSAMBLADOR 10. recarga registros → modo usuario → "como si nada"</pre>
+<p><b>Notas de memoria:</b></p>
+<ul><li>🧠 <b>1–2 y 9–10 son espejo</b>: lo que se guarda al entrar se restaura al salir. Es el mismo esquema que el <b>tratamiento de una interrupción</b> de la U1 y el <b>cambio de contexto</b> de la U2.</li><li>🧠 El fallo de página es un <b>trap</b>: lo provoca la propia instrucción, de forma sincrónica. No es una interrupción de un dispositivo; esa aparece recién en el paso 7, cuando el disco avisa.</li><li>⚠️ Mientras espera el disco, el proceso está <b>BLOQUEADO</b> y la CPU la usa <b>otro proceso</b>. Cuando llega la página pasa a <b>LISTO</b>, no directamente a ejecución: el paso 9 dice que <b>se planifica</b>.</li><li>⚠️ El paso 6 <b>busca la dirección de disco</b>. Ese dato <b>no está en la tabla de páginas</b> (lo viste en el tema 5): lo guarda el SO aparte.</li><li>⚠️ <b>Errata del libro en español, paso 4:</b> dice «si la dirección es válida y no ha ocurrido un <b>fallo de página</b>». Tiene que decir «y no hubo una <b>violación de protección</b>», porque el fallo de página ya ocurrió.</li></ul>
+<p>La cátedra copia estos 10 pasos textuales en su resumen: <b>se toman para recitar</b>.</p>
+<hr/>
+<h3>9.3 Respaldo de instrucción (págs. 229–230, fig. 3-28)</h3>
+<p>El paso 8 parece fácil y no lo es. Hay que <b>volver al inicio de la instrucción</b>, pero el PC puede haber quedado en el medio.</p>
+<pre> MOV.L #6(A1), 2(A0)   (Motorola 680x0, 6 bytes)
+ 1000 │ código de operación │
+ 1002 │ 1er operando: 6     │   ← según QUÉ referencia falló, el PC
+ 1004 │ 2do operando: 2     │     puede valer 1000, 1002 o 1004</pre>
+<ul><li>Si el PC vale 1002, el SO <b>no puede saber</b> si esa palabra es un operando de la instrucción de 1000 o el código de operación de otra instrucción.</li><li><b>Peor todavía:</b> con <b>autoincremento o autodecremento</b>, un registro pudo haberse modificado antes del fallo, y hay que deshacerlo. Depende de cada instrucción y de cada modelo de CPU.</li><li><b>Solución de hardware:</b> un <b>registro interno oculto</b> donde se copia el PC antes de cada instrucción, y otro que indica qué registros se autoincrementaron y en cuánto. Sin eso, el SO tiene que deducirlo («hacer peripecias», dice el libro).</li></ul>
+<hr/>
+<h3>9.4 Bloqueo de páginas en memoria (pinning) (págs. 230–231)</h3>
+<p>Es un escenario con trampa:</p>
+<ol><li>el proceso A pide leer del disco a <b>un búfer suyo</b> y queda bloqueado;</li><li>corre B y tiene un fallo de página;</li><li>con <b>reemplazo global</b>, la víctima puede ser <b>justo la página del búfer de A</b>;</li><li>el <b>DMA</b> sigue escribiendo, y parte de los datos cae en el búfer y parte <b>encima de la página nueva de B</b>.</li></ol>
+<p><b>Soluciones:</b></p>
+<ul><li><b>fijar (pin)</b> en memoria las páginas que participan en una E/S, para que no se puedan desalojar;</li><li>hacer toda la E/S a <b>búferes del kernel</b> y después copiar los datos al usuario.</li></ul>
+<p>🧠 <b>Conexión con la U1:</b> el DMA trabaja con <b>direcciones físicas</b> y no se entera de que el SO cambió la página de lugar.</p>
+<hr/>
+<h3>9.5 Almacén de respaldo: ¿dónde van las páginas en el disco? (págs. 231–232, fig. 3-29)</h3>
+<p>Se usa una <b>partición de intercambio</b>: sin sistema de archivos, con bloques numerados desde su inicio, mejor si está en otro disco. La mayoría de los UNIX funcionan así. Cada proceso tiene en la <b>tabla de procesos</b> la dirección de su área de intercambio.</p>
+<table><tr><th>(a) Área <b>estática</b></th><th>(b) Respaldo <b>dinámico</b></th></tr><tr><td>cada página tiene un <b>lugar fijo</b>: <code>inicio del área + n.º de página</code></td><td>se asigna lugar <b>recién al sacar</b> la página</td></tr><tr><td>una página en RAM siempre tiene una <b>copia sombra</b> en disco (obsoleta si M = 1)</td><td>una página en RAM <b>no tiene</b> copia en disco</td></tr><tr><td><b>+</b> cálculo trivial</td><td><b>+</b> los procesos en memoria no acaparan disco</td></tr><tr><td><b>−</b> problema: los datos y la pila <b>crecen</b> → conviene usar áreas separadas para texto, datos y pila</td><td><b>−</b> necesita un <b>mapa de disco</b> por proceso: una dirección de disco por página virtual</td></tr></table>
+<p>Hay otras opciones:</p>
+<ul><li>Usar <b>archivos</b> dentro del sistema de archivos común en lugar de una partición; es lo que hace <b>Windows</b>.</li><li>Usar el <b>propio ejecutable</b> como respaldo del <b>texto</b>. Como es de solo lectura, cuando hace falta lugar las páginas de texto <b>se descartan</b> y después se vuelven a leer del ejecutable. Las bibliotecas compartidas también pueden trabajar así.</li></ul>
+<hr/>
+<h3>9.6 Separación de política y mecanismo (págs. 233–234, fig. 3-30)</h3>
+<p>La idea viene de <b>Mach</b>: sacar la <b>política</b> del kernel. El administrador de memoria queda en tres partes (⚠️ el libro dice «dos partes» y después lista tres):</p>
+<pre> ESPACIO DE USUARIO:  proceso de usuario          PAGINADOR EXTERNO (política)
+                            │1. fallo                ▲2. pág. necesaria │3. la pide
+ ESPACIO DE KERNEL:   MANEJADOR DE FALLOS (mecanismo) ◄─5. aquí está─────┘ al disco
+                            │6. asocia la página     (4. llega del disco)
+                      MANEJADOR DE LA MMU (dependiente de la máquina)</pre>
+<ul><li><b>+</b> Es más <b>modular y flexible</b>.</li><li><b>−</b> Hay que <b>cruzar varias veces el límite entre usuario y kernel</b> y mandar muchos mensajes.</li><li>⚠️ El algoritmo de reemplazo es difícil de ubicar en el paginador externo, porque este <b>no tiene acceso a los bits R y M</b>. Por eso suele quedar en el kernel.</li></ul>
+<p>📖 <i>Tanenbaum 3.6.1–3.6.6, págs. 227–234, figs. 3-28 a 3-30.</i></p>
+<hr/>
+<hr/>
+<h4>Preguntas</h4>
+<p><b>1.</b> Recitá los <b>10 pasos</b> del manejo de un fallo de página. En cada uno indicá <b>quién lo ejecuta</b>: hardware, rutina en ensamblador, SO o disco.</p>
+<p><b>2. Escenario.</b> Un proceso A queda bloqueado esperando una lectura de disco por <b>DMA</b> a un búfer suyo. Mientras tanto, B tiene un fallo de página, el SO usa <b>reemplazo global</b> y la víctima elegida es justo la página del búfer de A. ¿Qué pasa? ¿Cómo se evita?</p>
+<h3>Corrección</h3>
+<p><b>1. ✅ Muy bien.</b> Están los 10 pasos, en orden y cada uno con su actor. Para dejarlo redondo en el examen, ajustá tres detalles:</p>
+<ul><li><b>Paso 4.</b> «Lo mata» es incompleto. El libro dice que el proceso <b>recibe una señal o es eliminado</b>. Con una señal, el proceso puede tener un manejador que la atienda; no siempre muere.</li><li><b>Paso 5.</b> Te faltó que <b>el marco se marca como ocupado</b> mientras se escribe, para que nadie lo use para otra cosa. Es corto, pero el libro lo dice.</li><li><b>Paso 7 vs. paso 9: cuándo pasa A a LISTO.</b> Lo pusiste en el paso 9. El cambio de BLOQUEADO a LISTO lo provoca <b>la interrupción de disco del paso 7</b>, que es el evento que A esperaba (U2: termina la E/S, el proceso pasa a LISTO). En el paso 9 el libro dice «el proceso fallido <b>se planifica</b>»: el planificador lo elige y vuelve a correr. No es un error grave, porque el libro no lo dice explícitamente, pero es lo coherente con el diagrama de estados.</li></ul>
+<pre> paso 5–6: A BLOQUEADO (espera al disco)
+ paso 7:   interrupción de disco → A pasa a LISTO
+ paso 9:   el planificador elige a A → EJECUCIÓN</pre>
+<p>Tu observación de que el paso 6 busca la dirección de disco en las <b>tablas de software del SO</b> está muy bien: es la trampa del tema 5.</p>
+<hr/>
+<p><b>2. ✅ Correcta.</b> La solución tiene el nombre justo: <b>fijar la página (pinning)</b>.</p>
+<p>Te ajusto dos cosas de la explicación:</p>
+<ul><li><b>Qué se rompe:</b> el DMA sigue escribiendo en <b>ese marco físico</b>. Los datos de la lectura terminan <b>una parte en el búfer de A</b> (antes del reemplazo) y <b>otra parte encima de la página nueva de B</b>. Se arruinan <b>las dos cosas</b>: B pierde su página y A recibe sus datos incompletos.</li><li><b>La segunda solución del libro:</b> hacer toda la E/S a <b>búferes del kernel</b>, que no se paginan, y después <b>copiar</b> los datos a la página de A.</li></ul>
+<p>🧠 La raíz del problema es que el DMA trabaja con <b>direcciones físicas</b> y no se entera de que el SO le cambió el dueño al marco (conexión con la U1).</p>
+<hr/>
+<p>Vamos bien con el plan: <b>ya hiciste 9 de los 11 temas de la U3</b>. Escribí <b>«seguí»</b> y pasamos al <b>tema 10: segmentación</b>. Es el último tema largo y lo voy a partir en dos: primero segmentación pura y la comparación con paginación, después MULTICS y el Pentium.</p>
+<hr/>
+<h2>Tema 10A — Segmentación</h2>
+<p>Hasta ahora la memoria virtual era <b>unidimensional</b>: un solo espacio de 0 al máximo. La segmentación propone <b>muchos espacios independientes</b>.</p>
+<pre>   problema: tablas que crecen y CHOCAN en un espacio lineal (fig. 3-31)
+        ▼
+   SEGMENTOS: muchos espacios independientes, longitud variable
+        ├─ ventajas: crecer sin chocar · vincular · compartir · proteger
+        ├─ vs. PAGINACIÓN (fig. 3-33) ★
+        └─ problema: tamaño variable → TABLERO DE AJEDREZ → compactación
+                                   → solución real: PAGINAR los segmentos (10B)</pre>
+<hr/>
+<h3>10.1 El problema y la idea (págs. 234–236, figs. 3-31 y 3-32)</h3>
+<p><b>El ejemplo del libro es un compilador</b>, que maneja cinco tablas:</p>
+<ul><li>el texto fuente;</li><li>la tabla de símbolos;</li><li>las constantes;</li><li>el árbol sintáctico;</li><li>la pila de llamadas.</li></ul>
+<p>Las cuatro primeras <b>crecen todo el tiempo</b> y la pila crece y se achica.</p>
+<pre> espacio LINEAL (fig. 3-31):
+ ┌──────────┬──────────┬──────────┬──────────┬──────┐
+ │ texto    │ símbolos▶│▶ ¡choca! │ árbol    │ pila │   ← hay lugar libre en otra
+ └──────────┴──────────┴──────────┴──────────┴──────┘     tabla, pero no sirve</pre>
+<p>Las salidas posibles en un espacio lineal son malas:</p>
+<ul><li>abortar con «demasiadas variables», que «no parece muy deportivo»;</li><li>hacer de <b>Robin Hood</b>: sacarle espacio a una tabla para dárselo a otra. Es tedioso, como manejar overlays a mano.</li></ul>
+<p><b>La solución</b> es darle a la máquina <b>muchos espacios de direcciones independientes</b>, llamados <b>segmentos</b>:</p>
+<ul><li>cada uno va de <b>0 a un máximo</b>;</li><li>cada uno tiene <b>su propia longitud</b>, que <b>puede cambiar</b> durante la ejecución;</li><li>cada uno crece sin afectar a los demás.</li></ul>
+<p><b>La dirección es bidimensional:</b> <code>(número de segmento, dirección dentro del segmento)</code>.</p>
+<p>🧠 <b>Un segmento es una entidad LÓGICA</b> que el programador conoce: un procedimiento, un arreglo, una pila. Por lo general <b>no mezcla tipos</b>.</p>
+<hr/>
+<h3>10.2 Ventajas de la segmentación (págs. 236–237)</h3>
+<ol><li><b>Crecimiento independiente.</b> Una tabla crece sin chocar con las otras.</li><li><b>Vinculación más simple.</b> Si cada procedimiento está en su propio segmento, se lo llama con <code>(n, 0)</code>. Si se recompila y queda más grande, <b>no cambia la dirección de ningún otro</b>. En memoria lineal, los procedimientos van uno al lado del otro, y agrandar uno corre a todos los demás.</li><li><b>Compartición.</b> Una biblioteca gráfica entera va en <b>un segmento</b> que comparten muchos procesos. Con paginación pura también se puede, pero el libro dice que eso se hace «<b>simulando la segmentación</b>».</li><li><b>Protección por tipo.</b> Un procedimiento puede ser de <b>solo ejecución</b> (no se puede leer ni escribir), y un arreglo de <b>lectura/escritura pero no ejecutable</b> (si se intenta saltar a él, se atrapa).</li></ol>
+<p>🧠 <b>¿Por qué la protección tiene sentido en segmentación y no en paginación?</b> Porque <b>cada segmento contiene un solo tipo de objeto</b>. El contenido de una página es <b>accidental</b>: una página puede tener el final del código y el principio de los datos. Para proteger por páginas, el programador tendría que saber dónde caen los límites de página, y la paginación se inventó justamente para que no tuviera que saberlo.</p>
+<hr/>
+<h3>10.3 Paginación vs. segmentación (fig. 3-33, pág. 238) ★ se toma tal cual</h3>
+<table><tr><th>Consideración</th><th>Paginación</th><th>Segmentación</th></tr><tr><td>¿El programador tiene que saber que se usa?</td><td><b>No</b></td><td><b>Sí</b></td></tr><tr><td>¿Cuántos espacios lineales hay?</td><td><b>1</b></td><td><b>Muchos</b></td></tr><tr><td>¿El espacio total puede superar la memoria física?</td><td><b>Sí</b></td><td><b>Sí</b> ⚠️</td></tr><tr><td>¿Se pueden proteger por separado procedimientos y datos?</td><td>No</td><td>Sí</td></tr><tr><td>¿Se acomodan las tablas que cambian de tamaño?</td><td>No</td><td>Sí</td></tr><tr><td>¿Se facilita compartir procedimientos?</td><td>No</td><td>Sí</td></tr><tr><td>¿Para qué se inventó?</td><td>espacio lineal <b>grande</b> sin comprar RAM</td><td>espacios <b>lógicamente independientes</b> → <b>compartir y proteger</b></td></tr></table>
+<p>⚠️ <b>La trampa:</b> todo es No/Sí <b>salvo</b> «¿puede superar la memoria física?», que es <b>Sí en las dos</b>. No es una diferencia.</p>
+<p>🧠 <b>Mnemotecnia:</b> la paginación es para <b>el tamaño</b> (la memoria «parece» más grande); la segmentación es para <b>la organización</b> (la memoria «parece» ordenada como el programa).</p>
+<hr/>
+<h3>10.4 Implementación de la segmentación pura: el tablero de ajedrez (págs. 237–238, fig. 3-34)</h3>
+<p><b>La diferencia esencial:</b> <b>las páginas tienen tamaño fijo y los segmentos no.</b> Eso trae el mismo problema que la asignación con particiones variables del tema 3.</p>
+<pre> (a)          (b) sale 1,     (c) sale 4,     (d) sale 3,     (e) COMPACTACIÓN
+               entra 7 (5K)    entra 5 (4K)    entra 6 (4K)
+ ┌──────┐     ┌──────┐        ┌──────┐        ┌──────┐        ┌──────┐
+ │ 4 7K │     │ 4 7K │        │ (3K) │        │ (3K) │        │      │
+ │      │     │      │        │ 5 4K │        │ 5 4K │        │(10K) │
+ ├──────┤     ├──────┤        ├──────┤        │ (4K) │        │      │
+ │ 3 8K │     │ 3 8K │        │ 3 8K │        │ 6 4K │        ├──────┤
+ ├──────┤     ├──────┤        ├──────┤        ├──────┤        │ 5 4K │
+ │ 2 5K │     │ 2 5K │        │ 2 5K │        │ 2 5K │        │ 6 4K │
+ ├──────┤     │ (3K) │        │ (3K) │        │ (3K) │        │ 2 5K │
+ │ 1 8K │     │ 7 5K │        │ 7 5K │        │ 7 5K │        │ 7 5K │
+ ├──────┤     ├──────┤        ├──────┤        ├──────┤        ├──────┤
+ │ 0 4K │     │ 0 4K │        │ 0 4K │        │ 0 4K │        │ 0 4K │
+ └──────┘     └──────┘        └──────┘        └──────┘        └──────┘</pre>
+<ul><li>Después de un rato la memoria queda con <b>segmentos y huecos alternados</b>. Eso es el <b>efecto tablero de ajedrez</b>, o <b>fragmentación externa</b>.</li><li>En (d) hay <b>10K libres en total</b>, pero en huecos de 3K, 4K y 3K. Un segmento de 5K <b>no entra</b>.</li><li>Se arregla con <b>compactación</b> (e): se mueven todos los segmentos hacia un extremo. Según la cátedra, <b>es costosa</b>.</li></ul>
+<p>⚠️ <b>Par que se confunde:</b></p>
+<table><tr><th></th><th>Paginación</th><th>Segmentación pura</th></tr><tr><td>Fragmentación</td><td><b>interna</b> (½ página por segmento, tema 8)</td><td><b>externa</b> (huecos entre segmentos)</td></tr></table>
+<p>🧠 <b>Conexión con temas anteriores de la U3:</b> es el mismo problema de <b>huecos</b> que la asignación con particiones variables y el intercambio (temas 2–3), y la misma solución de <b>compactación</b>.</p>
+<hr/>
+<h3>10.5 Traducción de una dirección (s, d): complemento</h3>
+<p>⚠️ <b>El libro no da una cuenta numérica para la segmentación pura.</b> Te muestro la lógica porque es el mismo <b>base/límite</b> del tema 2, pero <b>con un par por segmento</b>:</p>
+<pre> (s, d) ──► tabla de segmentos[s] = { base, límite, protección }
+              │
+              ├─ ¿existe s?        NO → trap
+              ├─ ¿d &lt; límite?      NO → trap (fuera del segmento)
+              ├─ ¿prot. permite?   NO → trap (violación de protección)
+              └─ física = base + d
+
+ Ej.: seg 2 = {base 4300, límite 400, R}    (2, 53) leer → 4300 + 53 = 4353</pre>
+<p>🧠 <b>Diferencia con paginación:</b> acá se <b>SUMA</b> la base, porque un segmento puede empezar en cualquier dirección. En paginación se <b>PEGAN</b> los bits del marco y del desplazamiento, porque los marcos están alineados a potencias de 2.</p>
+<p>📖 <i>Tanenbaum 3.7 y 3.7.1, págs. 234–238, figs. 3-31 a 3-34.</i></p>
+<hr/>
+<hr/>
+<h4>Preguntas</h4>
+<p><b>1. Ejercicio.</b> La tabla de segmentos de un proceso es:</p>
+<table><tr><th>Seg</th><th>Base</th><th>Límite</th><th>Protección</th></tr><tr><td>0</td><td>2000</td><td>600</td><td>X (solo ejecución)</td></tr><tr><td>1</td><td>5000</td><td>1400</td><td>RW</td></tr><tr><td>2</td><td>900</td><td>100</td><td>R</td></tr></table>
+<p>¿Qué pasa con cada acceso? Si es válido, dá la dirección física; si no, decí qué falla.</p>
+<ul><li>a) <b>escribir</b> en (1, 1300)</li><li>b) <b>ejecutar</b> en (0, 700)</li><li>c) <b>escribir</b> en (2, 50)</li></ul>
+<p><b>2. V o F, justificá:</b> <i>«La segmentación pura sufre fragmentación interna y la paginación sufre fragmentación externa.»</i></p>
+<h3>Corrección del tema 10A</h3>
+<p><b>1. Ejercicio: 3/3 ✅</b></p>
+<table><tr><th>Acceso</th><th>Chequeo</th><th>Resultado</th></tr><tr><td>a) escribir (1, 1300)</td><td>1300 &lt; 1400 ✓ · RW permite escribir ✓</td><td><b>5000 + 1300 = 6300</b> ✅</td></tr><tr><td>b) ejecutar (0, 700)</td><td>700 ≥ 600 ✗</td><td><b>trap: fuera del segmento</b> ✅</td></tr><tr><td>c) escribir (2, 50)</td><td>50 &lt; 100 ✓ · R no permite escribir ✗</td><td><b>trap: violación de protección</b> ✅</td></tr></table>
+<p>Dos detalles para que la respuesta quede de final:</p>
+<ul><li><b>En b), la X no importa.</b> Ejecutar en el segmento 0 está permitido, pero el acceso falla antes, en el límite. Si te piden «qué falla», nombrá el primer chequeo que no pasa.</li><li><b>En b) y c) el trap es distinto.</b> En b) el desplazamiento está fuera del segmento; en c) la dirección es válida pero la operación no está permitida. Es la misma distinción del tema 9 entre dirección inválida y violación de protección, y en los dos casos el proceso recibe <b>SIGSEGV</b>.</li></ul>
+<p><b>2. V/F: correcto ✅.</b> Es <b>falso</b>, porque está al revés.</p>
+<ul><li>La <b>paginación</b> tiene fragmentación <b>interna</b>: la última página queda a medio llenar, en promedio ½ página por segmento del programa.</li><li>La <b>segmentación pura</b> tiene fragmentación <b>externa</b>: el tablero de ajedrez, con huecos entre segmentos que se arreglan compactando.</li></ul>
+<p>Para sumar en la justificación: <i>«…y la paginación no tiene externa porque cualquier marco libre sirve para cualquier página»</i>.</p>
+<hr/>
+<p>El tema 10A queda firme. Sigue el <b>10B: segmentación con paginación</b>, con <b>MULTICS</b> y el <b>Pentium</b>. Ahí se resuelve el tablero de ajedrez: se paginan los segmentos para tener lo bueno de las dos técnicas.</p>
+<hr/>
+<h2>Tema 10B — Segmentación con paginación: MULTICS y Pentium</h2>
+<p><b>El problema del 10A</b>: los segmentos son de tamaño variable, así que aparece el tablero de ajedrez. Además, un segmento grande puede no entrar entero en memoria.</p>
+<p><b>La solución es paginar cada segmento.</b> Así solo tienen que estar en memoria las páginas que se usan, y se combina lo mejor de las dos técnicas:</p>
+<pre>   de la PAGINACIÓN:   tamaño uniforme · no hace falta el segmento entero en RAM
+                       (se acaba la fragmentación externa)
+   de la SEGMENTACIÓN: programación modular · protección · compartición</pre>
+<p>El libro presenta dos casos: <b>MULTICS</b> (el primero) y el <b>Intel Pentium</b> (uno más moderno).</p>
+<hr/>
+<h3>10.6 MULTICS (págs. 238–242, figs. 3-35 a 3-38)</h3>
+<p><b>Números de MULTICS:</b></p>
+<ul><li>hasta <b>2¹⁸ segmentos</b>, más de 250.000;</li><li>cada uno de hasta <b>65.536 palabras</b> de 36 bits;</li><li>páginas de <b>1024 palabras</b>.</li></ul>
+<p><b>La dirección virtual tiene 34 bits</b> (fig. 3-36):</p>
+<pre> ┌──────────────────────┬─────────┬──────────────┐
+ │  nº de segmento (18) │ pág (6) │  desp. (10)  │
+ └──────────────────────┴─────────┴──────────────┘
+                         └─ dirección dentro del segmento ─┘
+   6 bits de página × 10 bits de desplazamiento = 2^16 = 65.536 palabras ✓</pre>
+<p><b>El descriptor de segmento</b> (fig. 3-35b). Cada programa tiene una tabla de segmentos con un descriptor por segmento. 🧠 Como puede tener más de 250.000 entradas, <b>la tabla de segmentos es en sí un segmento, y se pagina</b>. Cada descriptor contiene:</p>
+<ul><li>si el segmento está en memoria; se considera que está si <b>cualquier parte</b> de él está;</li><li>un <b>puntero de 18 bits</b> a su tabla de páginas. Alcanza con 18 bits porque las direcciones físicas son de 24 y las tablas se alinean a 64 bytes, así que los 6 bits bajos siempre valen 000000;</li><li>la <b>longitud</b> del segmento en páginas, los <b>bits de protección</b> y algunos bits más.</li></ul>
+<p>⚠️ <b>Trampa de examen:</b> la <b>dirección del segmento en el disco NO está en el descriptor</b>. Está en otra tabla, la que usa el <b>manejador de fallos de segmento</b>.</p>
+<p><b>El algoritmo de referencia (pág. 240), para recitar:</b></p>
+<pre> 1. El nº de segmento indexa el segmento de descriptores → descriptor
+ 2. ¿La tabla de páginas del segmento está en memoria?
+        no → FALLO DE SEGMENTO
+    ¿Hay violación de protección? → TRAP
+ 3. Se examina la entrada de la página:
+        no está → FALLO DE PÁGINA
+        está    → se obtiene el origen del marco
+ 4. origen del marco + desplazamiento = dirección física
+ 5. Se hace la lectura o escritura</pre>
+<p>⚠️ <b>Hay dos fallos distintos.</b> El <b>fallo de segmento</b> ocurre cuando falta <b>la tabla de páginas</b> del segmento; el <b>fallo de página</b> ocurre cuando falta <b>la página</b>.</p>
+<p><b>TLB (fig. 3-38).</b> Hacer ese recorrido en cada instrucción sería lentísimo, así que el hardware tiene un <b>TLB de 16 entradas</b> que compara <b>(segmento, página)</b> en paralelo y guarda también la protección. Si no hay acierto, se recorren las tablas y se carga la entrada; sale la de uso menos reciente, según un campo <b>edad</b>. Los programas cuyo conjunto de trabajo entra en 16 páginas andan muy rápido.</p>
+<hr/>
+<h3>10.7 Intel Pentium (págs. 242–247, figs. 3-39 a 3-43)</h3>
+<p><b>Números del Pentium:</b> <b>16K segmentos</b>, de hasta <b>mil millones de palabras</b> de 32 bits. Tiene menos segmentos que MULTICS pero mucho más grandes, porque pocos programas usan más de 1000 segmentos y muchos necesitan segmentos grandes.</p>
+<p><b>Hay dos tablas:</b></p>
+<table><tr><th></th><th><b>LDT</b> (Local Descriptor Table)</th><th><b>GDT</b> (Global Descriptor Table)</th></tr><tr><td>¿Cuántas?</td><td><b>una por programa</b></td><td><b>una sola</b>, compartida por todos</td></tr><tr><td>¿Qué describe?</td><td>código, datos, pila… del programa</td><td>segmentos del <b>sistema</b>, incluido el SO</td></tr></table>
+<p><b>El selector (fig. 3-39)</b> es un número de 16 bits que se carga en un registro de segmento, como <b>CS</b> (código) o <b>DS</b> (datos):</p>
+<pre> ┌─────────────────────┬────┬──────┐
+ │     índice (13)     │ TI │ RPL  │   TI: 0 = GDT, 1 = LDT
+ └─────────────────────┴────┴──────┘   RPL: nivel de privilegio (0 a 3)
+     13 bits → 8K descriptores por tabla</pre>
+<ul><li>El <b>descriptor 0 está prohibido</b>: se puede cargar para indicar «registro no disponible», pero usarlo da trap.</li><li><b>El truco del libro:</b> se ponen en 0 los 3 bits bajos del selector y se le suma la dirección de la tabla. El resultado apunta justo al descriptor, porque cada descriptor ocupa <b>8 bytes</b>.</li><li><b>Ejemplo del libro:</b> selector <b>72</b> = <code>0000000001001 0 00</code> → índice <b>9</b>, <b>GDT</b>, nivel 0 → el descriptor está en <b>GDT + 72</b>.</li></ul>
+<p><b>La traducción, en orden (figs. 3-41 y 3-42):</b></p>
+<pre> (selector, desplazamiento)
+   1. descriptor (8 bytes): Base 32 bits · Límite 20 bits · G · P · DPL · Tipo
+   2. ¿selector 0 o P = 0 (segmento paginado afuera)? → TRAP
+   3. ¿desplazamiento &gt; Límite? → TRAP
+        G = 0 → Límite en BYTES  (hasta 1 MB)
+        G = 1 → Límite en PÁGINAS de 4 KB (hasta 2^32 bytes)
+   4. DIRECCIÓN LINEAL = Base + desplazamiento         ← se SUMA
+   5. ¿paginación deshabilitada? → física = lineal      (SEGMENTACIÓN PURA)
+      ¿habilitada? → la lineal es VIRTUAL y se pagina en DOS niveles:
+        ┌──────────┬───────────┬──────────────┐
+        │ Dir (10) │ Pág (10)  │  Desp (12)   │   1024 × 1024 × 4 KB = 4 GB
+        └──────────┴───────────┴──────────────┘
+        Dir → directorio de páginas → tabla de páginas → marco + Desp
+   (antes de todo esto se consulta un TLB de (Dir, Pág) → marco)</pre>
+<ul><li><b>¿Por qué dos niveles?</b> Con 32 bits y páginas de 4 KB, un segmento podría tener <b>1 millón de páginas</b>. Cada tabla cubre <b>4 MB</b>, así que un segmento chico paga solo <b>dos páginas</b> (directorio y tabla) y no una tabla de un millón de entradas.</li><li>Cada entrada de la tabla tiene 32 bits: <b>20 para el marco</b>, y el resto para los bits de acceso, sucio y protección.</li></ul>
+<p>🧠 <b>Las dos frases que se toman siempre:</b></p>
+<ul><li><b>Paginación deshabilitada → segmentación pura.</b> El hardware no impide que los segmentos se superpongan.</li><li><b>Todos los segmentos con Base 0 y Límite máximo → paginación pura.</b> El desplazamiento ya es la dirección lineal. <b>Así funcionan todos los SO actuales en el Pentium</b>; según el libro, OS/2 fue el único que usó toda la potencia de la arquitectura.</li></ul>
+<p><b>Protección: los anillos (fig. 3-43)</b></p>
+<pre>        ┌─────────── 3 · programas de usuario ───────────┐
+        │   ┌─────── 2 · bibliotecas compartidas ────┐   │
+        │   │   ┌─── 1 · llamadas al sistema ───┐    │   │
+        │   │   │       0 · KERNEL              │    │   │</pre>
+<ul><li>El nivel actual está en <b>2 bits del PSW</b>, y cada segmento tiene su nivel.</li><li>Se permite acceder a <b>datos de un nivel más alto</b>, es decir, menos privilegiado. Acceder a <b>datos de un nivel inferior</b> da <b>trap</b>.</li><li>Para <b>llamar a otro nivel</b>, el CALL tiene que llevar un selector de <b>compuerta de llamada</b>, no una dirección. Así solo se entra por <b>puntos de entrada oficiales</b>. Los traps y las interrupciones usan un mecanismo parecido.</li><li>Las compuertas y los niveles vienen de los <b>anillos de protección de MULTICS</b>.</li></ul>
+<p>🧠 <b>Conexión con la U1:</b> los anillos 0 y 3 son el <b>modo kernel y el modo usuario</b>. La compuerta de llamada es la forma controlada de hacer el <b>TRAP de una llamada al sistema</b>.</p>
+<p>📖 <i>Tanenbaum 3.7.2 y 3.7.3, págs. 238–247.</i> Según la cátedra, «todos los SO modernos en Pentium usan paginación y simulan segmentación mínima».</p>
+<hr/>
+<hr/>
+<h4>Preguntas</h4>
+<p><b>1. Ejercicio Pentium.</b> Un programa usa el selector <b>0x002F</b> y el desplazamiento <b>0x2345</b>. El descriptor correspondiente tiene Base = <b>0x00300000</b>, Límite = <b>0x00008</b>, <b>G = 1</b> y P = 1. La paginación está habilitada, y la entrada que corresponde en la tabla de páginas apunta al marco <b>0x0A1B0</b>.</p>
+<ul><li>a) ¿Qué índice, qué tabla (LDT o GDT) y qué nivel de privilegio indica el selector?</li><li>b) ¿Pasa el chequeo de límite? Justificá con el tamaño del segmento.</li><li>c) ¿Cuál es la dirección lineal? ¿Cuánto valen Dir, Página y Desp?</li><li>d) ¿Cuál es la dirección física?</li></ul>
+<p><b>2. MULTICS.</b> Un proceso referencia <code>(7, 3, 12)</code>. El descriptor del segmento 7 indica que su tabla de páginas <b>no está en memoria</b>. ¿Qué tipo de fallo ocurre, en qué se diferencia de un fallo de página, y de dónde saca el SO la ubicación del segmento en el disco?</p>
+<h3>Cómo resolver el ejercicio del Pentium: ¿binario o hexa?</h3>
+<p>Sí, pero <b>no hace falta pasar todo a binario</b>. Hay partes que convienen en binario y partes que salen directo en hexa. Te muestro el método con <b>otros números</b> para no resolverte el ejercicio.</p>
+<hr/>
+<h4>a) El selector: conviene en binario</h4>
+<p>Pasás los 16 bits a binario, <b>un dígito hexa = 4 bits</b>, y cortás desde la derecha en <b>2 | 1 | 13</b>:</p>
+<pre> 0x000F = 0000 0000 0000 1111
+          └──── 13 ────┘ │ └┘
+        0000000000001   1  11
+          índice = 1   TI=1  RPL = 3
+                       (LDT)</pre>
+<p>🧠 <b>Atajo sin binario:</b> índice = selector ÷ 8 (sin decimales), TI = el bit de valor 4, RPL = selector mod 4. Igual el binario se ve más claro.</p>
+<h4>b) El límite: en decimal, sin binario</h4>
+<ul><li>Si <b>G = 1</b>, el límite está en <b>páginas de 4 KB</b>: tamaño = Límite × 4096.</li><li>Si <b>G = 0</b>, el límite está en bytes, tal cual.</li></ul>
+<p>Después pasás el desplazamiento a decimal y comparás: <b>desplazamiento &lt; tamaño</b>, y si no, trap.</p>
+<h4>c) La lineal y la partición: hexa y después binario solo donde hace falta</h4>
+<ol><li><b>Lineal = Base + desplazamiento.</b> Es una suma en hexa y se hace directo.</li><li><b>Desp (12 bits) = los últimos 3 dígitos hexa</b>, porque 12 bits son justo 3 dígitos hexa. Sale sin binario.</li><li><b>Dir y Página (10 + 10 bits)</b> son los otros 5 dígitos hexa. ⚠️ Como 10 no es múltiplo de 4, <b>no podés cortar en hexa</b>: esos 5 dígitos los pasás a binario (20 bits) y cortás 10 | 10.</li></ol>
+<p>Ejemplo con lineal <b>0x00C05ABC</b>:</p>
+<pre> 0x00C05ABC
+   └─────┘└─┘
+   00C05   ABC  → Desp = 0xABC
+     │
+     ▼ a binario (20 bits)
+ 0000 0000 1100 0000 0101
+ └── 10 bits ──┘└── 10 bits ──┘
+  0000000011     0000000101
+   Dir = 3        Pág = 5</pre>
+<h4>d) La física: en hexa, pegando</h4>
+<p><b>Física = marco (5 dígitos hexa) seguido del Desp (3 dígitos hexa).</b> No se suma: se <b>pega</b>, porque el marco está alineado a 4 KB.</p>
+<ul><li>Ejemplo: marco 0x12345 y Desp 0xABC → <b>0x12345ABC</b>.</li><li>Es lo mismo que marco × 4096 + Desp.</li></ul>
+<hr/>
+<p><b>Resumen:</b></p>
+<table><tr><th>Parte</th><th>Cómo</th></tr><tr><td>Selector</td><td><b>binario</b>, cortar 13 \</td><td>1 \</td><td>2</td></tr><tr><td>Límite</td><td><b>decimal</b> (× 4096 si G = 1)</td></tr><tr><td>Lineal</td><td><b>suma en hexa</b></td></tr><tr><td>Desp</td><td>últimos <b>3 dígitos hexa</b></td></tr><tr><td>Dir y Pág</td><td>primeros 5 hexa → <b>binario</b> → 10 \</td><td>10</td></tr><tr><td>Física</td><td><b>pegar</b> marco y Desp en hexa</td></tr></table>
+<p>Probalo con tus números. Si querés comprobar el resultado, en la pestaña <b>Pentium</b> del simulador cargás el descriptor <code>L 5 0x00300000 0x00008 1 1</code> y la página que te dé, y lo recorrés paso a paso. Hacelo <b>después</b> de resolverlo vos 😉</p>
+<h3>Corrección del tema 10B</h3>
+<h3>1. Ejercicio Pentium: 4/4 ✅</h3>
+<p>Todo correcto, y lo resolviste en <b>decimal</b>, que es válido. Lo paso a hexa para que veas que coincide:</p>
+<table><tr><th></th><th>Tu respuesta</th><th>En hexa</th><th>✓</th></tr><tr><td>a)</td><td>índice 5, LDT, nivel 3</td><td>0x002F = <code>0000000000101 1 11</code></td><td>✅</td></tr><tr><td>b)</td><td>32768 B; 9029 &lt; 32768</td><td>8 páginas × 4 KB = 32 KB; 0x2345 &lt; 0x8000</td><td>✅</td></tr><tr><td>c)</td><td>lineal 3154757; Dir 0, Pág 770, Desp 837</td><td><b>0x00302345</b> → Dir 0, Pág <b>0x302</b>, Desp <b>0x345</b></td><td>✅</td></tr><tr><td>d)</td><td>169542469</td><td><b>0x0A1B0345</b> (se pegan marco y Desp)</td><td>✅</td></tr></table>
+<p><b>Consejo de examen:</b> dá el resultado <b>en hexa</b>, o en las dos bases. Si el enunciado viene en hexa, el docente corrige más rápido mirando <code>0x0A1B0345</code>, y ves enseguida que la física es el marco pegado al Desp. En decimal tuviste que hacer 41392 × 4096 + 837, que es una cuenta larga y donde es fácil equivocarse.</p>
+<p>🧠 Un detalle lindo de tu c): <b>Dir = 0</b> porque la lineal (0x00302345) es menor que 4 MB (0x00400000). Todo el segmento cae en la <b>primera tabla de páginas</b>: eso es el «segmento chico que paga solo dos páginas» del libro.</p>
+<hr/>
+<h3>2. MULTICS: parcial (≈ 2/3)</h3>
+<p><b>✅ Fallo de segmento:</b> correcto.</p>
+<p><b>🟡 La diferencia</b> está bien encaminada, pero conviene decirla completa, porque falta el contraste:</p>
+<div class="clave">En el <b>fallo de segmento</b> falta <b>la tabla de páginas</b> del segmento, así que ni siquiera se puede mirar si la página está. En el <b>fallo de página</b> la tabla <b>sí</b> está en memoria, pero la entrada de esa página dice que la página no está.</div>
+<p>Además, después de resolver el fallo de segmento puede venir <b>otro fallo</b>, el de página, si la página 3 tampoco está cargada.</p>
+<p><b>⚠️ De dónde saca la ubicación en disco:</b> acá está lo que se toma.</p>
+<ul><li>La respuesta de examen es: <b>«de otra tabla que usa el manejador de fallos de segmento; la dirección en disco NO está en el descriptor»</b>. La trampa clásica es justamente decir que está en el descriptor, así que esa negación tiene que aparecer.</li><li>Ojo con «<b>marcos</b> en el disco»: los <b>marcos</b> son de la <b>RAM</b>. En el disco no hay marcos.</li></ul>
+<p>📖 <i>Tanenbaum 3.7.2, pág. 239.</i></p>
+<hr/>
+<p><b>El tema 10 queda firme.</b> Te falla un poco la precisión del vocabulario, no el concepto.</p>
+<p>Sigue el <b>tema 11, el último: casos de estudio</b>. Es corto: la gestión de memoria en <b>Linux</b> (<code>malloc</code> / <code>free</code> / <code>calloc</code> / <code>realloc</code> y los comandos de la cátedra), <b>caché</b> y el administrador de memoria de <b>Windows</b>. Después viene el <b>cierre</b> con los puntos clave de la U3.</p>
+<hr/>
+<h2>Tema 11 — Casos de estudio: caché y Linux</h2>
+<p>Son tres casos cortos, y te los paso en dos tandas:</p>
+<ul><li><b>11A:</b> caché</li><li><b>11B:</b> Linux (llamadas al sistema y comandos de la cátedra)</li><li><b>11C:</b> Windows, en la próxima tanda</li></ul>
+<hr/>
+<h3>11A. Memoria caché (Tanenbaum 1.3.2, págs. 23–25)</h3>
+<p><b>La intuición:</b> la caché es el «escritorio» de la CPU. Lo que usás seguido lo tenés a mano, y lo demás queda en el «archivo» (la RAM).</p>
+<pre> registros  &lt;1 KB · sin retraso          ▲ más rápido, más caro, más chico
+ caché L1   16 KB · dentro de la CPU     │
+ caché L2   varios MB · 1–2 ciclos más   │
+ RAM        "el caballo de batalla"      │
+ disco                                   ▼ más lento, más barato, más grande</pre>
+<p><b>Cómo funciona:</b></p>
+<ul><li>La RAM se divide en <b>líneas de caché de 64 bytes</b>: la línea 0 va de la dirección 0 a la 63, la línea 1 de la 64 a la 127, y así.</li><li><b>Acierto de caché:</b> la línea está en la caché y se resuelve en unos <b>2 ciclos</b>, sin usar el bus.</li><li><b>Fallo de caché:</b> hay que ir a la RAM, con un <b>castigo de tiempo considerable</b>.</li><li>La caché la controla <b>el hardware, de manera parcial</b>.</li></ul>
+<p><b>Las 4 preguntas de cualquier caché</b>, que el libro lista y conviene saber de memoria:</p>
+<ol><li><b>Cuándo</b> se pone un elemento nuevo. En la caché de CPU, en cada fallo.</li><li><b>En qué línea</b> se pone.</li><li><b>Qué elemento se saca</b> cuando falta lugar.</li><li><b>Dónde se escribe</b> el desalojado en la memoria más grande.</li></ol>
+<p><b>Ejemplo del libro (en qué línea):</b> con <b>4096 líneas de 64 B</b> y direcciones de 32 bits:</p>
+<pre> 31 ............ 18 │ 17 .......... 6 │ 5 ..... 0
+       (resto)      │ LÍNEA (12 bits) │ BYTE (6 bits)
+                      2^12 = 4096        2^6 = 64</pre>
+<p>Ejemplo propio: la dirección <b>0x12345678</b>.</p>
+<ul><li>Byte = 6 bits bajos: 0x78 = <code>0111 1000</code>, los últimos 6 son <code>111000</code> = <b>56</b>.</li><li>Línea = bits 6 a 17: (0x12345678 ÷ 64) mod 4096 = 0x48D159 mod 0x1000 = <b>0x159 = 345</b>.</li></ul>
+<p><b>L1, L2 y multinúcleo:</b></p>
+<ul><li>La <b>L1</b> está siempre dentro de la CPU. Suele haber dos: una para <b>instrucciones</b> y otra para <b>datos</b>.</li><li>La <b>L2</b> puede ser <b>compartida</b> entre núcleos (Intel), lo que necesita un controlador más complejo, o <b>una por núcleo</b> (AMD), lo que hace más difícil mantener las cachés <b>consistentes</b>.</li></ul>
+<p>🧠 <b>La caché es una idea general, no solo de hardware.</b> El SO cachea:</p>
+<ul><li>bloques de <b>archivos</b> en RAM;</li><li>la <b>traducción de rutas</b> a direcciones de disco;</li><li>la traducción <b>URL → IP</b>.</li></ul>
+<p>🧠 <b>Conexiones:</b></p>
+<ul><li>El <b>TLB</b> (tema 5) es una <b>caché de traducciones</b>.</li><li>El <b>conjunto de trabajo</b> y la <b>localidad de referencia</b> son la misma idea que hace que la caché acierte.</li><li>El <b>algoritmo óptimo</b> (tema 6) aparece en la U3 justamente porque «este problema aparece también en memorias caché», según el apunte de la cátedra.</li></ul>
+<hr/>
+<h3>11B. Linux: llamadas al sistema de memoria y comandos (Tanenbaum 10.4.2, págs. 761–762, y apunte de comandos)</h3>
+<p><b><code>malloc</code></b> es un <b>procedimiento de biblioteca de ANSI C</b>, no una llamada al sistema. <b>POSIX no especifica llamadas para administrar memoria</b>, porque se consideró algo demasiado dependiente de la máquina; el libro le dice a eso «<b>pasar la cubeta</b>». <code>malloc</code> usa por debajo estas llamadas reales (fig. 10-14):</p>
+<table><tr><th>Llamada</th><th>Qué hace</th></tr><tr><td><code>s = brk(direc)</code></td><td>Cambia el tamaño del <b>segmento de datos</b>: le das la dirección del primer byte después del final. Si es mayor, el segmento crece; si es menor, se achica.</td></tr><tr><td><code>a = mmap(direc, lon, prot, banderas, fd, despl)</code></td><td><b>Mapea un archivo</b> en memoria. <code>direc</code> y <code>lon</code> tienen que ser <b>múltiplos del tamaño de página</b>; si <code>direc</code> = 0, la elige el SO. <code>prot</code> es L/E/X; <code>banderas</code> dice si es privado o compartido; <code>fd</code> es el archivo (<b>tiene que estar abierto</b>); <code>despl</code> es desde dónde del archivo, en un límite de página.</td></tr><tr><td><code>s = munmap(direc, lon)</code></td><td>Desmapea. Si se desmapea solo una parte, el resto sigue mapeado.</td></tr></table>
+<p>⚠️ <b>Lo que no está en el material:</b> el programa pide <code>free</code>, <code>calloc</code> y <code>realloc</code>, pero <b>el libro y los apuntes solo nombran <code>malloc</code></b>. Lo que sigue es lo estándar de C, <b>no sale de las fuentes</b>, así que preguntale a la cátedra si lo toman:</p>
+<ul><li><code>free(p)</code> devuelve un bloque pedido con malloc;</li><li><code>calloc(n, tam)</code> pide n × tam bytes <b>inicializados en cero</b>;</li><li><code>realloc(p, tam)</code> cambia el tamaño de un bloque y puede moverlo.</li></ul>
+<p><b>Cómo administra Linux la memoria por dentro</b> (10.4.3, como contexto):</p>
+<ul><li>En 32 bits, cada proceso tiene <b>3 GB de usuario</b> y <b>1 GB para el kernel</b>, que solo es visible en modo kernel.</li><li>Los marcos se asignan con el <b>algoritmo de colegas</b> (el <i>sistema compañero</i>, fig. 10-17). Sobre él trabaja el <b>asignador de losas</b> para objetos chicos como <code>task_struct</code>, y <b>vmalloc</b> se usa para memoria contigua solo en lo virtual.</li></ul>
+<p><b>Comandos de la cátedra</b>, que se toman como lectura de salida:</p>
+<table><tr><th>Comando</th><th>Para qué</th><th>Qué mirar</th></tr><tr><td><code>free -h</code></td><td>Resumen de RAM y swap</td><td>⚠️ <b><code>available</code></b>, no <code>free</code>. Linux usa la RAM libre como <code>buff/cache</code>, así que <code>free</code> siempre parece bajo.</td></tr><tr><td><code>smem -r -k</code></td><td>Memoria por proceso</td><td><b>USS</b> = exclusiva (lo que se liberaría al cerrarlo); <b>PSS</b> = privada + parte proporcional de la compartida (<b>la mejor para comparar</b>); <b>RSS</b> = cuenta la compartida entera, así que <b>exagera</b>.</td></tr><tr><td><code>vmstat 1</code></td><td>Estado general cada 1 s</td><td><code>r</code> alto = esperan CPU; <code>b</code> o <code>wa</code> altos = esperan E/S; <b><code>si</code>/<code>so</code> altos = uso intenso de swap</b>; <code>cs</code> = cambios de contexto por segundo.</td></tr><tr><td><code>cat /proc/meminfo</code></td><td>Detalle completo, que <code>free</code> resume</td><td><code>MemAvailable</code>, <code>Dirty</code> (sucias por escribir), <code>Active</code>/<code>Inactive</code>, <b><code>PageTables</code></b>.</td></tr></table>
+<p>🧠 <b>Conexiones:</b></p>
+<ul><li><b>RSS vs. PSS</b> es la <b>compartición de páginas</b> del tema 8B: las DLL y el texto compartido se cuentan una vez por cada proceso en RSS.</li><li><b><code>Dirty</code></b> es el <b>bit M</b>.</li><li><b><code>si</code>/<code>so</code> altos y sostenidos</b> son la pista de algo que ya viste en la unidad… (ver la pregunta 2 😉).</li></ul>
+<p>📖 <i>Tanenbaum 1.3.2, págs. 23–25; 10.4.2–10.4.3, págs. 761–767; apunte <code>comandos_linux_memoria.pdf</code>.</i></p>
+<hr/>
+<h4>Preguntas</h4>
+<p><b>1. Caché.</b> Con 4096 líneas de 64 bytes y direcciones de 32 bits, ¿en qué <b>línea</b> de caché y en qué <b>byte</b> de la línea cae la dirección <b>0x0000A1C5</b>?</p>
+<p><b>2. Escenario Linux.</b> Un compañero corre <code>free -h</code> y ve <code>free = 300Mi</code> y <code>available = 9Gi</code>, y dice: <i>«me quedé sin RAM»</i>.</p>
+<ul><li>a) ¿Tiene razón? ¿Qué columna tiene que mirar y por qué <code>free</code> da tan bajo?</li><li>b) Otro día, <code>vmstat 1</code> muestra durante minutos <b><code>si</code> y <code>so</code> altos</b>, <b><code>wa</code> alto</b> e <b><code>id</code> bajo</b>, y todo anda lentísimo. ¿Qué fenómeno de la U3 es, y qué lo causa?</li></ul>
+<h3>Corrección de 11A y 11B</h3>
+<h3>1. Caché: correcto ✅</h3>
+<p><b>Línea 647 (0x287) y byte 5.</b> Lo hiciste bien en binario: los últimos 6 bits dan el byte, y los 12 siguientes la línea.</p>
+<h3>2. Escenario Linux: casi todo correcto (≈ 95 %)</h3>
+<p><b>a) ✅</b> Está perfecto: hay que mirar <b><code>available</code></b>, y <code>free</code> da bajo porque Linux usa la RAM libre como <code>buff/cache</code> y la devuelve cuando un programa la pide.</p>
+<p><b>b) ✅ Sobrepaginación (thrashing)</b>, con la causa correcta: la suma de los <b>conjuntos de trabajo</b> supera la RAM. Una sola corrección:</p>
+<p>⚠️ <b>«dejando la CPU ociosa (id bajo)» se contradice.</b> <code>id</code> es el <b>porcentaje de tiempo que la CPU está ociosa</b>, así que <b><code>id</code> bajo significa que la CPU <i>no</i> figura como ociosa</b>. En la sobrepaginación pasa esto:</p>
+<ul><li>casi todo el tiempo se va a <b><code>wa</code></b>, esperando el disco;</li><li>y otra parte a <b><code>sy</code></b>, el kernel atendiendo fallos de página;</li><li>y casi nada queda en <b><code>us</code></b>, que es el trabajo útil.</li></ul>
+<p>La frase correcta es: <i>«la CPU casi no hace trabajo útil (<code>us</code> bajo): su tiempo se va en esperar E/S (<code>wa</code>) y en el kernel (<code>sy</code>)»</i>. Lo de «CPU ociosa» viene del gráfico clásico de la sobrepaginación (tema 8A), donde el <b>uso útil</b> de la CPU se desploma. En <code>vmstat</code> eso <b>no</b> aparece como <code>id</code>.</p>
+<p>🧠 <b>Para sumar en el final</b>, porque en el tema 8A te faltó: la solución es el <b>control de carga</b>. Se hace <b>swapping de un proceso entero</b> al disco para bajar el grado de multiprogramación, o se usa <b>PFF</b> para repartir marcos. Comprar más RAM también funciona, pero no es la respuesta de SO.</p>
+<hr/>
+<p>Queda <b>11C: el administrador de memoria de Windows</b>, y con eso termina la teoría de la U3. Ya te abrí su simulador, <b>listas_paginas_windows.html</b>, que sigue la vida de un marco por las listas de la fig. 11-36. Está verificado y ya figura en el índice y en 🎛.</p>
+<hr/>
+<h2>Tema 11C — El administrador de memoria de Windows</h2>
+<p>Es el componente <b>más grande</b> del ejecutivo de Windows. Te lo cuento en orden y con las conexiones a lo que ya viste, que es lo que más rinde en el examen.</p>
+<pre> 11C ── espacio de direcciones (2 GB + 2 GB)
+     ├─ estados de una página virtual: inválida / reservada / confirmada
+     ├─ archivo de paginación "justo a tiempo"
+     ├─ API Win32 (VirtualAlloc…) y VADs
+     ├─ fallos de página: 5 categorías · suave vs. duro ★
+     ├─ reemplazo: conjunto de trabajo con mín./máx., 3 niveles
+     └─ memoria física: las 5 listas y la base PFN ★ (simulador)</pre>
+<hr/>
+<h3>1. El espacio de direcciones (fig. 11-30)</h3>
+<p>En x86 cada proceso tiene <b>4 GB virtuales</b>: <b>2 GB de usuario</b> y <b>2 GB de kernel</b>. En servidores se puede configurar 3 GB y 1 GB. La página es de <b>4 KB</b>, y también hay <b>páginas grandes de 4 MB</b> que mejoran el TLB.</p>
+<pre> 4 GB ┌──────────────────────────┐ ← últimos 64 KB inválidos
+      │ SO + HAL, datos sistema   │  ┐ COMPARTIDO por todos los procesos
+      │ reservas (con/sin pagin.) │  │ (salvo tablas de páginas y listas
+      │ tablas de páginas de A    │  ┘  del conj. de trabajo: por proceso)
+ 2 GB ├──────────────────────────┤
+      │ código y datos PRIVADOS   │
+      │ del proceso A             │
+   0  └──────────────────────────┘ ← primeros 64 KB inválidos</pre>
+<ul><li><b>¿Por qué los 64 KB de abajo y de arriba son inválidos?</b> Para atrapar errores: un puntero 0 o 1 da <b>trap inmediato</b> en vez de leer basura.</li><li><b>¿Por qué el kernel está en el espacio de cada proceso?</b> Para que una <b>llamada al sistema no cambie el mapa de memoria</b>: el kernel lee los parámetros y los búferes del usuario directamente. La desventaja es que queda <b>menos espacio privado</b> por proceso; a cambio, las llamadas son <b>más rápidas</b>.</li></ul>
+<p>🧠 <b>Conexión con el 10B:</b> según el libro, Windows <b>no admite la segmentación de ninguna forma</b> en x86. Es el «Base 0, Límite máximo» del Pentium, es decir, paginación pura.</p>
+<hr/>
+<h3>2. Los tres estados de una página virtual (págs. 881–882)</h3>
+<table><tr><th>Estado</th><th>Qué es</th><th>Qué pasa si se referencia</th></tr><tr><td><b>Inválida</b></td><td>No está asignada a nada</td><td>Fallo de página → <b>violación de acceso</b></td></tr><tr><td><b>Reservada</b></td><td>Inválida, pero esas direcciones <b>no se usan para otra cosa</b></td><td>Fallo de página (ej.: crecimiento de la pila)</td></tr><tr><td><b>Confirmada</b></td><td>Tiene código o datos asignados</td><td>Fallo de página → se trae la página</td></tr></table>
+<p><b>El ejemplo del libro es la pila.</b> Al crear el proceso se <b>reservan muchas páginas</b> de pila pero se <b>confirma una sola</b>. A medida que la pila crece, el administrador confirma más. Las reservadas funcionan como <b>páginas de guardia</b>, para que la pila no pise otros datos.</p>
+<hr/>
+<h3>3. Archivo de paginación: «justo a tiempo» (págs. 881–882)</h3>
+<ul><li>Una página confirmada <b>no recibe lugar en el archivo de paginación hasta que hay que sacarla</b> de memoria. Si la memoria virtual total entra en la RAM, <b>no hace falta archivo de paginación</b>.</li><li><b>Ventaja:</b> las páginas modificadas se <b>agrupan y se escriben en trozos grandes</b>, en lugares contiguos del archivo, con menos búsquedas en el disco.</li><li>Una página leída del archivo <b>conserva su lugar allí hasta que se modifica</b>. Para detectar la primera escritura, se carga como <b>solo lectura</b>: al escribir, el SO libera el lugar en el archivo, da permiso de escritura y el hilo reintenta. Es el mismo truco del trap que la <b>copia en escritura</b> (tema 8B).</li><li>Hay hasta <b>16 archivos de paginación</b>, conviene repartirlos en varios discos, y es mejor crearlos con el tamaño máximo desde el principio, porque si crecen después quedan fragmentados.</li><li><b>El código</b> (EXE, DLL) y los datos de solo lectura <b>no van al archivo de paginación</b>: si hacen falta otra vez, <b>se releen del archivo del programa</b>.</li></ul>
+<hr/>
+<h3>4. API Win32 y VADs (fig. 11-31, págs. 884–886)</h3>
+<table><tr><th>Función</th><th>Qué hace</th></tr><tr><td><code>VirtualAlloc</code> / <code>VirtualFree</code></td><td>Reserva o confirma / libera o desconfirma una región</td></tr><tr><td><code>VirtualProtect</code> / <code>VirtualQuery</code></td><td>Cambia la protección L/E/X / consulta el estado</td></tr><tr><td><code>VirtualLock</code> / <code>VirtualUnlock</code></td><td><b>Fija</b> la región en memoria (sin paginación) / la vuelve paginable</td></tr><tr><td><code>CreateFileMapping</code>, <code>MapViewOfFile</code>, <code>UnmapViewOfFile</code>, <code>OpenFileMapping</code></td><td><b>Archivos mapeados</b> y memoria compartida entre procesos</td></tr></table>
+<ul><li>Las regiones empiezan siempre en <b>límites de 64 KB</b>, por portabilidad a arquitecturas con páginas más grandes.</li><li>🧠 <b><code>VirtualLock</code> es el <i>pinning</i> del tema 9</b>: lo usa un programa de tiempo real para no tener fallos en momentos críticos. Hay un límite para que nadie acapare memoria.</li><li>🧠 <b><code>CreateFileMapping</code> y <code>MapViewOfFile</code> son el <code>mmap</code> de Linux.</b></li><li>Por cada región asignada, el administrador crea un <b>VAD</b> (<i>Virtual Address Descriptor</i>) con el rango, el archivo de respaldo, el desplazamiento y los permisos. Los VAD forman un <b>árbol balanceado</b>, así que los huecos entre regiones <b>no gastan nada</b>.</li></ul>
+<hr/>
+<h3>5. Fallos de página: 5 categorías ★ (págs. 887–889)</h3>
+<p>El fallo produce un <b>trap al kernel</b>. El administrador de memoria valida el acceso, busca en los <b>VAD</b> y arma o completa la entrada de la tabla de páginas.</p>
+<table><tr><th>#</th><th>Categoría</th><th>Qué hace Windows</th></tr><tr><td>1</td><td>La página <b>no está confirmada</b></td><td><b>Violación de acceso</b> → en general, el proceso termina (error de programación)</td></tr><tr><td>2</td><td><b>Violó los permisos</b></td><td><b>Violación de acceso</b> (ej.: escribir en una página de solo lectura)</td></tr><tr><td>3</td><td>Escritura en una página <b>de copia en escritura</b></td><td>Mismo síntoma que la 2, <b>pero no es un error</b>: hace una <b>copia privada</b> y el hilo reintenta</td></tr><tr><td>4</td><td><b>La pila necesita crecer</b></td><td>Da una <b>página en ceros</b> dentro de la reserva de la pila</td></tr><tr><td>5</td><td>Confirmada pero <b>no asignada a un marco</b></td><td>El fallo normal; la busca en memoria o en disco</td></tr></table>
+<p>⚠️ <b>Las 2 y la 3 se confunden.</b> Son el mismo síntoma (escribir en solo lectura), pero la 3 se resuelve copiando y la 2 termina el proceso.</p>
+<p><b>Fallo suave vs. fallo duro</b> ★ se toma seguro:</p>
+<ul><li><b>Suave:</b> la página <b>se encuentra en memoria</b>. Puede estar compartida con otro proceso, en la lista <b>en espera o de modificadas</b> (se la había sacado del conjunto de trabajo y se pide de vuelta), o puede que solo haga falta una <b>página en ceros</b>. <b>Tiene poco costo.</b></li><li><b>Duro:</b> hay que <b>leerla del disco</b>.</li></ul>
+<p><b>SuperFetch:</b> Windows recuerda el patrón de referencias de un programa y <b>prepagina</b> al iniciarlo. Las páginas se ponen en la <b>lista en espera</b>, no en la tabla de páginas, así que los fallos que iban a ser duros se vuelven suaves.</p>
+<p><b>La PTE de x86 (fig. 11-33)</b> tiene 32 bits:</p>
+<ul><li><b>20 para el número de página física</b>;</li><li>los bits <b>P</b> (presente), <b>R/W</b>, <b>U/S</b> (usuario o supervisor), <b>A</b> (accedida = R), <b>D</b> (sucia = M), <b>G</b>, <b>PCD</b> y <b>PWT</b> (caché);</li><li>y <b>AVL</b>, libres para el SO.</li></ul>
+<p>🧠 <b>A y D los pone el hardware.</b> Son los <b>bits R y M</b> de los temas 6 y 7, y con ellos Windows aproxima el <b>LRU</b>.</p>
+<hr/>
+<h3>6. Reemplazo: conjunto de trabajo con mínimo y máximo (págs. 890–891)</h3>
+<ul><li><b>Cada proceso</b>, no cada hilo, tiene un conjunto de trabajo con un <b>mínimo</b> (al principio, 20–50 páginas) y un <b>máximo</b> (al principio, 45–345). <b>No son límites duros.</b></li><li><b>Solo actúa cuando escasea la memoria.</b> Si sobra, los procesos pueden pasarse del máximo.</li><li>El <b>administrador del conjunto de trabajo</b> corre <b>cada 1 segundo</b> y tiene <b>3 niveles</b>:</li></ul>
+<pre> 1. MUCHA memoria      → explora, limpia los bits A y estima la EDAD de cada página
+ 2. EMPIEZA A ESCASEAR → los procesos con muchas páginas sin usar dejan de crecer
+                          y reemplazan sus páginas MÁS VIEJAS
+ 3. ESCASA             → RECORTA los conjuntos por debajo del máximo (saca las más viejas)</pre>
+<p>🧠 <b>Conexiones:</b> es <b>política local con tamaño variable</b> (tema 8A), <b>envejecimiento</b> (tema 7B) y <b>conjunto de trabajo</b> (tema 7B), todo junto. El libro cierra con esto: <i>«la administración de memoria en sistemas reales es mucho más que un simple algoritmo de paginación»</i>.</p>
+<hr/>
+<h3>7. Memoria física: las 5 listas y la base PFN ★ (figs. 11-35 y 11-36, págs. 891–894)</h3>
+<p>Todo marco está en algún <b>conjunto de trabajo</b> o en una de estas <b>5 listas</b>. Juntas forman la <b>base de datos PFN</b>, indexada por número de marco:</p>
+<ul><li><b>modificadas</b> (sucias);</li><li><b>en espera</b> (limpias, todavía con su contenido);</li><li><b>libres</b>;</li><li><b>en ceros</b>;</li><li><b>defectuosas</b> (con errores de hardware).</li></ul>
+<pre>                    (1) desalojo del CT
+  ┌───────────────┐ ───────────────► ┌─────────────┐  (4) escritor de    ┌───────────┐
+  │   CONJUNTOS   │   (sucia)        │ MODIFICADAS │ ─── páginas mod. ─► │ EN ESPERA │
+  │   DE TRABAJO  │ ◄─── (2) fallo SUAVE (sin E/S) ── desde las dos ──── │ (limpias) │
+  └───────────────┘ ───────────────────────────────────────────────────► └───────────┘
+     ▲      ▲   │ (5) desasignación / (3) termina el proceso                   │ (3)
+     │      │   ▼                                                              ▼
+     │      │  ┌─────────┐  (7) hilo ZeroPage   ┌──────────┐      ┌──────────────┐
+     │      └──│ LIBRES  │ ───────────────────► │ EN CEROS │      │ DEFECTUOSAS  │
+     │ (6)     └─────────┘                      └──────────┘      └──────────────┘
+     │ página referenciada                           │
+     │ (fallo DURO, lee del disco)                   │
+     └────────────── (8) se necesita página cero ────┘</pre>
+<ul><li><b>(1)</b> Al sacar una página del conjunto de trabajo, <b>no se escribe al disco</b>: va a <b>modificadas</b> o a <b>en espera</b>, según el bit D.</li><li><b>(4)</b> El <b>escritor de páginas modificadas</b> (y el <b>de páginas asignadas</b>, para archivos mapeados) las escribe en segundo plano y las pasa a en espera. 🧠 Es el <b>demonio de paginación</b> y la <b>política de limpieza</b> del tema 8A.</li><li><b>(3)</b> Cuando termina un proceso, sus páginas van a libres <b>sin escribirse</b>, aunque estén sucias.</li><li><b>(7)</b> El hilo <b>ZeroPage</b> tiene la <b>prioridad más baja</b> y pone en ceros páginas libres cuando la CPU está ociosa. Se hace <b>por seguridad</b>: una página nueva no puede tener datos de otro proceso.</li><li><b>(6) vs. (8):</b> para <b>leer del disco</b> se usa una página <b>libre</b>, porque igual se va a sobrescribir entera. Para la <b>pila</b> o una <b>página nueva</b> se usa una <b>en ceros</b>.</li></ul>
+<p>En <b>listas_paginas_windows.html</b> seguís un marco por todo el ciclo. Tiene un recorrido guiado de 9 pasos o modo libre, en el que solo se habilitan las transiciones válidas, y cuenta fallos suaves, duros y escrituras.</p>
+<p>📖 <i>Tanenbaum 11.5.1–11.5.3, págs. 879–894.</i> El apunte de la cátedra no desarrolla Windows; todo esto sale del libro.</p>
+<hr/>
+<h4>Preguntas</h4>
+<p><b>1. Clasificá cada fallo.</b> Para cada caso, decí en qué categoría de las 5 cae, si es <b>suave</b>, <b>duro</b> o <b>violación de acceso</b>, y qué hace Windows.</p>
+<ul><li>a) Un hilo hace <code>push</code> y toca una página <b>reservada</b> de su pila.</li><li>b) Un proceso escribe en una página de datos de una <b>DLL</b> cargada como <b>copia en escritura</b>.</li><li>c) Un proceso desreferencia un puntero <b>NULL</b>.</li><li>d) Un proceso vuelve a usar una página que el administrador del conjunto de trabajo le sacó hace un segundo. Estaba <b>limpia</b>.</li></ul>
+<p><b>2. V o F, justificá:</b></p>
+<ul><li>a) <i>«Cuando el administrador del conjunto de trabajo saca una página sucia del conjunto de un proceso, Windows la escribe inmediatamente en el archivo de paginación.»</i></li><li>b) <i>«En Windows, cada página confirmada recibe su lugar en el archivo de paginación en el momento en que se confirma.»</i></li></ul>
+<h3>Corrección del tema 11C: 6/6 ✅</h3>
+<p>Todo está bien. Es tu mejor tanda de la unidad.</p>
+<table><tr><th></th><th>Categoría</th><th>Tipo</th><th>Comentario</th></tr><tr><td>1a) push en pila reservada</td><td>4 ✅</td><td>suave ✅</td><td>✅</td></tr><tr><td>1b) DLL con copia en escritura</td><td>3 ✅</td><td>suave ✅</td><td>✅, con un matiz abajo</td></tr><tr><td>1c) puntero NULL</td><td>1 ✅</td><td>violación de acceso ✅</td><td>✅ Bien usado lo de los 64 KB inferiores</td></tr><tr><td>1d) página limpia recién recortada</td><td>5 ✅</td><td>suave ✅</td><td>✅ Lista en espera, sin disco</td></tr><tr><td>2a)</td><td><b>F</b> ✅</td><td></td><td>Perfecto: lista de modificadas, escritor en segundo plano y posible fallo suave</td></tr><tr><td>2b)</td><td><b>F</b> ✅</td><td></td><td>Perfecto: justo a tiempo, con las dos ventajas</td></tr></table>
+<p><b>El matiz de 1b:</b> para la copia no hace falta una página <b>en ceros</b>. Se va a <b>sobrescribir entera</b> con el contenido original, así que alcanza con una <b>libre</b>. Es la misma lógica que la transición (6) del libro: <i>«no importa que contenga información confidencial, ya que está a punto de ser sobrescrita por completo»</i>. Las páginas en ceros se guardan para cuando el contenido <b>no</b> se sobrescribe, como la pila o una página nueva.</p>
+<hr/>
+<hr/>
+<h2>Cierre de la Unidad 3</h2>
+<h3>Los 8 puntos más importantes</h3>
+<ol><li><b>Abstraer la memoria.</b> Sin abstracción, dos programas chocan. Con <b>registros base y límite</b>, cada proceso tiene su espacio. El <b>intercambio</b> deja <b>huecos</b>, que se administran con <b>mapa de bits</b> o <b>listas</b>, y se asignan con primer, siguiente, mejor o peor ajuste.</li><li><b>Paginación.</b> La dirección virtual es <b>página | desplazamiento</b>. La <b>MMU</b> busca el <b>marco</b> en la tabla de páginas (P, R, M, protección, marco) y <b>pega</b> marco y desplazamiento. Si la página no está, hay <b>fallo de página</b>.</li><li><b>Hacerla rápida y chica.</b> El <b>TLB</b> es una caché de traducciones, y existen fallos suaves y duros del TLB. Para que las tablas no sean enormes, se usan <b>tablas multinivel</b> o <b>invertidas</b>.</li><li><b>Reemplazo.</b> El <b>óptimo</b> es la cota, imposible de implementar. Después vienen <b>NRU</b> (4 clases R/M), <b>FIFO</b> (anomalía de Belady), <b>segunda oportunidad</b> y <b>reloj</b>, <b>LRU</b> (matriz o envejecimiento) y <b>conjunto de trabajo</b> y <b>WSClock</b>.</li><li><b>Diseño.</b> Asignación <b>local o global</b>; <b>PFF</b>; <b>hiperpaginación</b>, que se resuelve con <b>control de carga</b> (swapping); tamaño de página óptimo <b>p = √(2se)</b>; <b>compartición</b> y <b>copia en escritura</b>; <b>limpieza</b> con el demonio de paginación.</li><li><b>El fallo de página en 10 pasos.</b> Quién hace cada uno, el <b>respaldo de instrucción</b> y el <b>pinning</b> de páginas en E/S.</li><li><b>Segmentación.</b> Muchos espacios lógicos, la tabla de la <b>fig. 3-33</b> y la <b>fragmentación externa</b> que se arregla con compactación. Después, <b>segmentación paginada</b>: <b>MULTICS</b> (18 | 6 | 10, fallo de segmento) y <b>Pentium</b> (selector, LDT/GDT, lineal, dos niveles, anillos).</li><li><b>Casos reales.</b> <b>Caché</b> (líneas de 64 B, L1/L2); <b>Linux</b> (<code>brk</code>/<code>mmap</code>, <code>free -h</code> → available, PSS, <code>si</code>/<code>so</code>); <b>Windows</b> (inválida/reservada/confirmada, fallo <b>suave vs. duro</b>, las 5 listas).</li></ol>
+<h3>Lo que más se toma en los exámenes de la cátedra</h3>
+<p>Según los parciales, prácticos y exámenes del material:</p>
+<ul><li>★★★ <b>Traducción de dirección virtual a física</b> en binario o hexa, con páginas de 1 KB y 4 KB.</li><li>★★★ <b>Segunda oportunidad con la tabla de páginas</b> (bits R, M, P y marco). Hay que decir la <b>víctima</b>, <b>justificar</b> y dejar el <b>estado final de la cola</b>.</li><li>★★ <b>Contar fallos de página</b> con N marcos en <b>FIFO, LRU y óptimo</b>.</li><li>★★ Teoría: los <b>10 pasos del fallo</b>, la <b>hiperpaginación</b> y su solución, y <b>paginación vs. segmentación</b>.</li></ul>
+<h3>⚠️ Tus errores de esta unidad, para no repetirlos</h3>
+<ul><li><b>Tema 7A:</b> la dirección física te dio <b>0x3CEE</b> y era <b>0x333A</b>. Nunca vimos dónde estuvo el error: <b>conviene repetir un ejercicio de traducción</b> antes del cuestionario. Tampoco sabías qué era la <b>«cola final»</b> de la segunda oportunidad, y eso cae ★★★.</li><li><b>WSClock:</b> una página vieja y <b>sucia</b> <b>no se copia en ese momento</b>: <b>se planifica la escritura</b> y la manecilla avanza.</li><li><b>Hiperpaginación:</b> te faltó nombrarla y dar la solución, que es el <b>control de carga</b> (swapping de un proceso entero) o <b>PFF</b>.</li><li><b>DLL:</b> la reubicación falla porque hay <b>una sola copia compartida</b>. La solución se llama <b>código independiente de la posición</b>.</li><li><b>Vocabulario:</b> los <b>marcos son de la RAM</b>, no del disco; la ubicación en disco <b>no está en el descriptor</b>; y <b><code>id</code> bajo</b> no significa «CPU ociosa».</li></ul>
+<hr/>
+</body></html>

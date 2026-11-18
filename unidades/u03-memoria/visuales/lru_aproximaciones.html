@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LRU y sus aproximaciones</title>
+<style>
+  :root{
+    --bg:#f4f5f8; --panel:#fff; --borde:#d6dae2; --texto:#1b1f24; --suave:#5b6572; --acento:#3d63c9;
+    --ok:#15803d; --ok-bg:#e9f8ee; --fal:#dc2626; --fal-bg:#fdecec; --vic:#c2410c; --vic-bg:#fff0e8;
+    --ins:#2563eb; --ins-bg:#e8f0ff; --cer:#7c3aed; --cer-bg:#f3edff; --hl:#facc15;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+      --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --vic:#fb923c; --vic-bg:#2c1b12;
+      --ins:#60a5fa; --ins-bg:#15233d; --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+    --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --vic:#fb923c; --vic-bg:#2c1b12;
+    --ins:#60a5fa; --ins-bg:#15233d; --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--texto); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .envoltura{max-width:1150px; margin:0 auto; padding:18px 16px 48px}
+  h1{font-size:1.35rem; margin:0 0 4px}
+  h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave); margin:0 0 6px}
+  .sub{color:var(--suave); margin:0 0 14px; font-size:.92rem}
+  .tarjeta{background:var(--panel); border:1px solid var(--borde); border-radius:12px; padding:14px 16px; margin-bottom:12px}
+  .pestanas{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px}
+  .pestanas button{font-weight:650}
+  .pestanas button.act{background:var(--acento); color:#fff; border-color:var(--acento)}
+  button{font:inherit; font-size:.9rem; padding:7px 12px; border-radius:8px; border:1px solid var(--borde); background:var(--panel); color:var(--texto); cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--acento)}
+  button:disabled{opacity:.45; cursor:not-allowed}
+  button.prim{background:var(--acento); color:#fff; border-color:var(--acento); font-weight:650}
+  .ejemplos{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px}
+  .ejemplos button{font-size:.8rem; padding:4px 9px}
+  label{font-size:.83rem; font-weight:650; display:block; margin-bottom:3px}
+  .ayuda{font-size:.76rem; color:var(--suave); margin-top:2px}
+  input,select,textarea{width:100%; font:inherit; padding:6px 9px; border-radius:8px; border:1px solid var(--borde); background:var(--bg); color:var(--texto)}
+  input[type=range]{padding:0}
+  textarea{font-family:ui-monospace,Consolas,monospace; font-size:.85rem; min-height:120px; resize:vertical}
+  .datos{display:grid; grid-template-columns:2fr 1fr 1fr; gap:12px; align-items:start}
+  @media (max-width:820px){ .datos{grid-template-columns:1fr} }
+  .barra{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:10px 0 2px}
+  .contador{margin-left:auto; color:var(--suave); font-size:.88rem}
+  @media (max-width:820px){ .contador{margin-left:0} }
+  .error{color:var(--fal); font-weight:650; margin-top:6px}
+  .grilla{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  @media (max-width:880px){ .grilla{grid-template-columns:1fr} }
+  .codigo{font:13px/1.5 ui-monospace,Consolas,monospace; margin:0; padding:0; list-style:none}
+  .codigo li{display:flex; gap:8px; padding:2px 6px; border-radius:6px; white-space:pre-wrap}
+  .codigo .nl{color:var(--suave); flex:0 0 18px; text-align:right}
+  .codigo li.ahora{background:var(--hl); color:#000}
+  .codigo li.ahora .nl{color:#000}
+  .quien{font-size:.78rem; color:var(--suave); margin-top:8px}
+  .porque{border:1px solid var(--borde); border-left:5px solid var(--acento); border-radius:10px; padding:12px 14px}
+  .porque .tit{font-weight:700; font-size:1.02rem; margin:0 0 4px}
+  .marca{display:block; margin-top:8px; border-radius:8px; padding:7px 10px; font-size:.88rem}
+  .marca.ojo{background:var(--fal-bg); border:1px solid var(--fal)}
+  .marca.cer{background:var(--cer-bg); border:1px solid var(--cer)}
+  .tw{overflow-x:auto}
+  table{border-collapse:collapse; font-size:.88rem}
+  th,td{border:1px solid var(--borde); padding:4px 8px; text-align:center}
+  th{background:var(--bg); font-size:.78rem}
+  td.mono, .mono{font-family:ui-monospace,Consolas,monospace}
+  td.uno{background:var(--ins-bg); color:var(--ins); font-weight:800}
+  td.cambio{outline:2px solid var(--cer); outline-offset:-2px; background:var(--cer-bg)}
+  tr.vic td{background:var(--vic-bg)}
+  tr.vic td:first-child{color:var(--vic); font-weight:800}
+  tr.mira td{box-shadow:inset 0 0 0 2px var(--hl)}
+  td.ok{color:var(--ok); font-weight:700}
+  td.mal{color:var(--fal); font-weight:700}
+  .chip{display:inline-block; padding:1px 8px; border-radius:99px; font-size:.78rem; font-weight:700; border:1px solid var(--borde)}
+  .chip.vic{background:var(--vic-bg); color:var(--vic); border-color:var(--vic)}
+  .chip.ok{background:var(--ok-bg); color:var(--ok); border-color:var(--ok)}
+  .chip.ins{background:var(--ins-bg); color:var(--ins); border-color:var(--ins)}
+  .ideas{margin-top:14px}
+  .ideas li{margin-bottom:5px}
+  .oculto{display:none}
+  .anillo{display:flex; flex-wrap:wrap; gap:8px; margin-top:6px}
+  .nodo{border:2px solid var(--borde); border-radius:10px; padding:6px 10px; min-width:92px; text-align:center; font-family:ui-monospace,Consolas,monospace; font-size:.85rem; position:relative}
+  .nodo b{display:block; font-family:system-ui,sans-serif}
+  .nodo.mano{border-color:var(--hl); box-shadow:0 0 0 3px var(--hl)}
+  .nodo.vic{border-color:var(--vic); background:var(--vic-bg)}
+  .nodo.esc{border-color:var(--cer); background:var(--cer-bg)}
+  .nodo.nueva{border-color:var(--ins); background:var(--ins-bg)}
+  .flecha{align-self:center; color:var(--suave)}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <h1>LRU y sus aproximaciones</h1>
+  <p class="sub">Tanenbaum 3.4.6–3.4.9 (págs. 205–214). Hay tres pestañas: la <b>matriz LRU</b> por hardware, el <b>envejecimiento</b> (con NFU al lado para comparar) y el <b>conjunto de trabajo / WSClock</b>. En cada una cargás los datos, avanzás con «Siguiente paso» y a la derecha ves la línea del algoritmo que se ejecuta y el porqué. Lo que acaba de cambiar se marca en <span class="chip" style="background:var(--cer-bg);border-color:var(--cer)">violeta</span>.</p>
+
+  <div class="pestanas">
+    <button data-tab="mat" class="act">1 · Matriz LRU (hardware)</button>
+    <button data-tab="env">2 · Envejecimiento vs. NFU</button>
+    <button data-tab="ct">3 · Conjunto de trabajo y WSClock</button>
+  </div>
+
+  <!-- ===== MATRIZ ===== -->
+  <section id="tab-mat">
+    <div class="tarjeta">
+      <div class="datos">
+        <div><label for="m-refs">Referencias (páginas 0 … n−1)</label><input id="m-refs" value="0 1 2 3 2 1 0 3 2 3"><div class="ayuda">Separadas por espacios.</div></div>
+        <div><label for="m-n">Marcos n</label><input id="m-n" type="number" min="2" max="8" value="4"></div>
+        <div><label>&nbsp;</label><button class="prim" id="m-cargar">Cargar</button></div>
+      </div>
+      <div class="ejemplos"><button data-m="0 1 2 3 2 1 0 3 2 3|4">Libro, fig. 3-17</button><button data-m="0 1 2 0 1 2 1|3">3 marcos</button></div>
+      <div class="error" id="m-err"></div>
+      <div class="barra"><button id="m-ant">◀ Anterior</button><button class="prim" id="m-sig">Siguiente paso ▶</button><button id="m-rei">Reiniciar</button><span class="contador" id="m-cont"></span></div>
+    </div>
+    <div class="grilla">
+      <div class="tarjeta"><h2>Matriz n × n (fila k = página k)</h2><div class="tw" id="m-vista"></div></div>
+      <div class="tarjeta">
+        <h2>Algoritmo (lo ejecuta el HARDWARE en cada referencia)</h2><ol class="codigo" id="m-cod"></ol>
+        <div class="quien" id="m-quien"></div>
+        <div class="porque" style="margin-top:10px" id="m-porque"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== ENVEJECIMIENTO ===== -->
+  <section id="tab-env" class="oculto">
+    <div class="tarjeta">
+      <div class="datos">
+        <div><label for="e-r">Bits R en cada pulso de reloj (una línea por pulso; un bit por página)</label><textarea id="e-r">1 0 1 0 1 1
+1 1 0 0 1 0
+1 1 0 1 0 1
+1 0 0 0 1 0
+0 1 1 0 0 0</textarea></div>
+        <div><label for="e-bits">Bits del contador: <span id="e-bits-v">8</span></label><input id="e-bits" type="range" min="3" max="12" value="8"><div class="ayuda">El libro usa 8: con pulsos de ~20 ms cubren 160 ms de historia.</div></div>
+        <div><label>&nbsp;</label><button class="prim" id="e-cargar">Cargar</button></div>
+      </div>
+      <div class="ejemplos"><button data-e="libro">Libro, fig. 3-18</button><button data-e="nfu">NFU «no olvida» (compilador de varias pasadas)</button><button data-e="empate">Empate: se pierde el orden dentro del pulso</button></div>
+      <div class="error" id="e-err"></div>
+      <div class="barra"><button id="e-ant">◀ Anterior</button><button class="prim" id="e-sig">Siguiente paso ▶</button><button id="e-rei">Reiniciar</button><span class="contador" id="e-cont"></span></div>
+    </div>
+    <div class="grilla">
+      <div class="tarjeta"><h2>Contadores después del pulso</h2><div class="tw" id="e-vista"></div></div>
+      <div class="tarjeta">
+        <h2>Algoritmo (lo ejecuta el SO en la interrupción de reloj)</h2><ol class="codigo" id="e-cod"></ol>
+        <div class="quien" id="e-quien"></div>
+        <div class="porque" style="margin-top:10px" id="e-porque"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CONJUNTO DE TRABAJO / WSCLOCK ===== -->
+  <section id="tab-ct" class="oculto">
+    <div class="tarjeta">
+      <div class="datos">
+        <div><label for="c-tabla">Páginas en RAM: <span class="mono">nombre últimoUso R M</span> (en orden de la lista / anillo)</label><textarea id="c-tabla">A 2084 1 0
+B 2003 1 0
+C 1980 1 0
+D 1213 0 0
+E 2014 1 0
+F 2020 1 0
+G 2032 1 0
+H 1620 0 0</textarea></div>
+        <div>
+          <label for="c-algo">Algoritmo</label><select id="c-algo"><option value="CT">Conjunto de trabajo (recorre toda la tabla)</option><option value="WS">WSClock (anillo + manecilla)</option></select>
+          <label for="c-t" style="margin-top:8px">Tiempo virtual actual</label><input id="c-t" type="number" value="2204">
+          <label for="c-mano" style="margin-top:8px">Manecilla (solo WSClock): posición 1…n</label><input id="c-mano" type="number" min="1" value="1">
+        </div>
+        <div>
+          <label for="c-tau">τ = <span id="c-tau-v">600</span></label><input id="c-tau" type="range" min="0" max="1500" step="10" value="600">
+          <div class="ayuda">El libro no da un valor de τ: con 600 sale la de 1213 y la de 1620 sigue en el conjunto de trabajo.</div>
+          <button class="prim" id="c-cargar" style="margin-top:10px">Cargar</button>
+        </div>
+      </div>
+      <div class="ejemplos"><button data-c="f320">Libro, fig. 3-20 (conjunto de trabajo)</button><button data-c="f321">Libro, fig. 3-21 (WSClock)</button><button data-c="sucia">WSClock con la vieja sucia</button><button data-c="todas">Todas en el conjunto de trabajo</button></div>
+      <div class="error" id="c-err"></div>
+      <div class="barra"><button id="c-ant">◀ Anterior</button><button class="prim" id="c-sig">Siguiente paso ▶</button><button id="c-rei">Reiniciar</button><span class="contador" id="c-cont"></span></div>
+    </div>
+    <div class="grilla">
+      <div class="tarjeta"><h2 id="c-tit-vista">Tabla de páginas</h2><div class="tw" id="c-vista"></div></div>
+      <div class="tarjeta">
+        <h2>Algoritmo (lo ejecuta el SO en el fallo de página)</h2><ol class="codigo" id="c-cod"></ol>
+        <div class="quien" id="c-quien"></div>
+        <div class="porque" style="margin-top:10px" id="c-porque"></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="tarjeta ideas">
+    <h2>Ideas clave para el examen</h2>
+    <ul>
+      <li><b>LRU</b> saca la que hace <b>más tiempo que no se usa</b>. Es excelente, pero exige actualizar algo <b>en cada referencia a memoria</b>, y por eso necesita hardware especial: el contador C de 64 bits o la matriz n × n, donde la fila con el <b>menor valor binario</b> es la LRU.</li>
+      <li><b>NFU</b> suma R al contador en cada pulso. ⚠️ <b>Nunca olvida</b>: una página muy usada hace mucho le gana a una que se usa ahora. El <b>envejecimiento</b> lo arregla así: <b>desplaza a la derecha y mete R por la izquierda</b>. Lo reciente pesa más.</li>
+      <li>🧠 El envejecimiento difiere de LRU en dos cosas. (1) Con un bit por pulso, <b>no sabe el orden dentro del pulso</b>. (2) Tiene <b>horizonte finito</b>: dos contadores en 0 empatan aunque una página se haya usado hace 9 pulsos y la otra hace 1000.</li>
+      <li><b>Conjunto de trabajo</b>: son las páginas usadas en los últimos <b>τ de tiempo virtual</b>, que es el tiempo de CPU del proceso. Si R = 0 y la edad es mayor que τ, la página está fuera y sale. <b>WSClock</b> hace lo mismo sobre el anillo del reloj. ⚠️ Si la candidata está <b>sucia</b>, no sale: se <b>planifica su escritura</b> y la manecilla sigue. Los dos mejores en la práctica son <b>envejecimiento y WSClock</b>.</li>
+    </ul>
+  </div>
+</div>
+
+<script id="motor">
+// ======== MOTOR (sin DOM: se verifica con Node) ========
+function parsearNums(txt) {
+  const t = String(txt).trim(); if (!t) throw new Error("No hay datos.");
+  return t.split(/[\s,]+/).map(x => { if (!/^\d+$/.test(x)) throw new Error("Valor inválido: «" + x + "»."); return Number(x); });
+}
+
+// --- Matriz LRU: fila k ← 1, columna k ← 0 ---
+function matrizLRU(txt, n) {
+  n = Number(n); if (!(n >= 2 && n <= 8)) throw new Error("n tiene que estar entre 2 y 8.");
+  const refs = parsearNums(txt);
+  refs.forEach(r => { if (r >= n) throw new Error("La página " + r + " no existe con n = " + n + " (van de 0 a " + (n - 1) + ")."); });
+  let m = Array.from({ length: n }, () => Array(n).fill(0));
+  const pasos = [];
+  const valores = mm => mm.map(f => parseInt(f.join(""), 2));
+  refs.forEach((k, i) => {
+    const antes = m.map(f => f.slice());
+    for (let j = 0; j < n; j++) m[k][j] = 1;
+    const medio = m.map(f => f.slice());
+    for (let j = 0; j < n; j++) m[j][k] = 0;
+    const despues = m.map(f => f.slice());
+    const v = valores(despues);
+    const orden = v.map((x, p) => p).sort((a, b) => v[a] - v[b] || a - b);
+    pasos.push({ i, k, sub: 1, m: medio, antes, linea: 1 });
+    pasos.push({ i, k, sub: 2, m: despues, antes: medio, linea: 2, valores: v, lru: orden[0], orden });
+  });
+  return { refs, n, pasos };
+}
+
+// --- Envejecimiento y NFU ---
+function parsearPulsos(txt) {
+  const lineas = String(txt).trim().split(/\n+/).map(l => l.trim()).filter(Boolean);
+  if (!lineas.length) throw new Error("No hay pulsos.");
+  const pulsos = lineas.map((l, i) => l.split(/[\s,]+/).map(x => { if (x !== "0" && x !== "1") throw new Error("Pulso " + (i + 1) + ": los bits R son 0 o 1 («" + x + "»)."); return Number(x); }));
+  const np = pulsos[0].length;
+  pulsos.forEach((p, i) => { if (p.length !== np) throw new Error("El pulso " + (i + 1) + " tiene " + p.length + " bits y el primero tiene " + np + "."); });
+  return pulsos;
+}
+function envejecer(txt, bits) {
+  bits = Number(bits); const pulsos = parsearPulsos(txt), np = pulsos[0].length;
+  let env = Array(np).fill(0), nfu = Array(np).fill(0);
+  const alto = 1 << (bits - 1);
+  const pasos = pulsos.map((R, i) => {
+    const antes = env.slice();
+    env = env.map((c, p) => (c >> 1) | (R[p] ? alto : 0));
+    nfu = nfu.map((c, p) => c + R[p]);
+    const minE = Math.min(...env), minN = Math.min(...nfu);
+    return { pulso: i, R, antes, env: env.slice(), nfu: nfu.slice(),
+      vicEnv: env.map((c, p) => c === minE ? p : -1).filter(p => p >= 0),
+      vicNfu: nfu.map((c, p) => c === minN ? p : -1).filter(p => p >= 0) };
+  });
+  return { bits, np, pasos };
+}
+const binario = (v, bits) => v.toString(2).padStart(bits, "0");
+
+// --- Conjunto de trabajo y WSClock ---
+function parsearPaginas(txt) {
+  const filas = String(txt).trim().split(/\n+/).map(l => l.trim()).filter(Boolean).map((l, i) => {
+    const c = l.split(/[\s,]+/);
+    if (c.length !== 4) throw new Error("Línea " + (i + 1) + ": tiene que ser «nombre últimoUso R M».");
+    const [nom, u, R, M] = c;
+    if (!/^\d+$/.test(u) || !/^[01]$/.test(R) || !/^[01]$/.test(M)) throw new Error("Línea " + (i + 1) + ": últimoUso es un número y R, M valen 0 o 1.");
+    return { nom, ultimo: Number(u), R: Number(R), M: Number(M) };
+  });
+  if (filas.length < 2) throw new Error("Hacen falta al menos 2 páginas.");
+  return filas;
+}
+function conjuntoTrabajo(txt, t, tau) {
+  t = Number(t); tau = Number(tau);
+  const pags = parsearPaginas(txt).map(p => ({ ...p }));
+  const pasos = []; let victima = -1, masVieja = -1;
+  const foto = () => pags.map(p => ({ ...p }));
+  pags.forEach((p, i) => {
+    if (p.R === 1) {
+      p.ultimo = t;
+      pasos.push({ i, linea: 1, cambio: [i + ":ultimo"], pags: foto(), tit: p.nom + ": R = 1 → está en el conjunto de trabajo",
+        texto: "Se usó durante el pulso actual. El SO anota último uso = " + t + " (el tiempo virtual actual) y la deja. No es candidata." });
+    } else {
+      const edad = t - p.ultimo;
+      if (edad > tau && victima < 0) {
+        victima = i;
+        pasos.push({ i, linea: 3, cambio: [], pags: foto(), vic: i, edad, tit: p.nom + ": R = 0 y edad " + edad + " > τ = " + tau + " → VÍCTIMA",
+          texto: "Edad = " + t + " − " + p.ultimo + " = " + edad + ". Ya no está en el conjunto de trabajo: la nueva página la reemplaza" + (p.M ? " (está sucia: primero se escribe al disco)" : "") + ". El recorrido sigue igual, para actualizar las demás entradas." });
+      } else if (edad > tau) {
+        pasos.push({ i, linea: 3, cambio: [], pags: foto(), vic: victima, edad, tit: p.nom + ": R = 0, edad " + edad + " > τ, pero ya hay víctima",
+          texto: "También está fuera del conjunto de trabajo, pero ya se eligió " + pags[victima].nom + ". Se sigue recorriendo." });
+      } else {
+        if (masVieja < 0 || p.ultimo < pags[masVieja].ultimo) masVieja = i;
+        pasos.push({ i, linea: 5, cambio: [], pags: foto(), vic: victima, edad, tit: p.nom + ": R = 0 pero edad " + edad + " ≤ τ = " + tau + " → se reserva",
+          texto: "No se usó en este pulso, pero sigue dentro del conjunto de trabajo. Se anota por si al final no aparece ninguna fuera: la más vieja con R = 0 hasta ahora es " + pags[masVieja].nom + "." });
+      }
+    }
+  });
+  let motivo;
+  if (victima >= 0) motivo = "fuera";
+  else if (masVieja >= 0) { victima = masVieja; motivo = "masVieja"; }
+  else { const limpia = pags.findIndex(p => p.M === 0); victima = limpia >= 0 ? limpia : 0; motivo = "azar"; }
+  const v = pags[victima];
+  pasos.push({ i: victima, linea: motivo === "fuera" ? 6 : (motivo === "masVieja" ? 7 : 8), cambio: [victima + ":nom"], pags: foto(), vic: victima, fin: true,
+    tit: "Resultado: sale " + v.nom + (v.M ? " (sucia → se escribe al disco)" : " (limpia → se descarta)"),
+    texto: motivo === "fuera" ? v.nom + " era la primera página encontrada fuera del conjunto de trabajo." :
+      motivo === "masVieja" ? "Todas están en el conjunto de trabajo. Entre las de R = 0 se saca la de menor último uso: " + v.nom + " (" + v.ultimo + ")." :
+      "Todas tienen R = 1. Se elige una al azar, de preferencia limpia: el simulador toma la primera limpia (" + v.nom + ").",
+    ojo: motivo !== "fuera" ? "Ninguna estaba fuera del conjunto de trabajo: esto anticipa sobrepaginación (el tema 8)." : null });
+  return { pasos, victima: v.nom, motivo, final: pags };
+}
+function wsclock(txt, t, tau, manoIni) {
+  t = Number(t); tau = Number(tau);
+  const pags = parsearPaginas(txt).map(p => ({ ...p, esc: false }));
+  const n = pags.length; let mano = Number(manoIni) - 1;
+  if (!(mano >= 0 && mano < n)) throw new Error("La manecilla tiene que estar entre 1 y " + n + ".");
+  const pasos = []; const foto = () => pags.map(p => ({ ...p }));
+  const inicio = mano; let planificadas = [], limpiaVista = -1, vuelta = false, victima = -1, motivo = "";
+  for (let guardia = 0; guardia < 4 * n + 4 && victima < 0; guardia++) {
+    if (mano === inicio && guardia > 0) {
+      if (!vuelta) {
+        vuelta = true;
+        if (planificadas.length) {
+          const q = planificadas[0]; pags[q].M = 0; pags[q].esc = false;
+          pasos.push({ mano, linea: 7, cambio: [q + ":M"], pags: foto(), tit: "Vuelta completa con escrituras planificadas",
+            texto: "La manecilla volvió al inicio. Como se planificó al menos una escritura, sigue girando hasta encontrar una página limpia. El simulador supone que terminó la escritura de " + pags[q].nom + " (ahora M = 0).",
+            ojo: "En la realidad no es necesariamente la primera escritura planificada: el controlador de disco puede reordenarlas." });
+        } else {
+          victima = limpiaVista >= 0 ? limpiaVista : mano; motivo = limpiaVista >= 0 ? "limpiaVista" : "actual";
+          break;
+        }
+      }
+    }
+    const p = pags[mano];
+    if (p.M === 0 && limpiaVista < 0) limpiaVista = mano;
+    if (p.R === 1) {
+      p.R = 0;
+      pasos.push({ mano, linea: 1, cambio: [mano + ":R"], pags: foto(), tit: p.nom + ": R = 1 → R = 0 y avanza",
+        texto: "Se usó en el pulso actual: no es buena candidata. Se le borra R y la manecilla pasa a la siguiente (igual que en el reloj)." });
+    } else {
+      const edad = t - p.ultimo;
+      if (edad > tau && p.M === 0) {
+        victima = mano; motivo = "fuera"; break;
+      } else if (edad > tau && p.M === 1) {
+        if (!p.esc) { p.esc = true; planificadas.push(mano); }
+        pasos.push({ mano, linea: 4, cambio: [mano + ":esc"], pags: foto(), tit: p.nom + ": R = 0, edad " + edad + " > τ, pero SUCIA → se planifica la escritura",
+          texto: "Está fuera del conjunto de trabajo, pero no hay copia válida en disco. Para no bloquearse esperando el disco (evitar un cambio de proceso), el SO planifica su escritura y la manecilla avanza: más adelante puede haber una vieja y limpia." });
+      } else {
+        pasos.push({ mano, linea: 5, cambio: [], pags: foto(), tit: p.nom + ": R = 0 pero edad " + edad + " ≤ τ → sigue",
+          texto: "Todavía está en el conjunto de trabajo. La manecilla avanza." });
+      }
+    }
+    mano = (mano + 1) % n;
+  }
+  const v = pags[victima], edadV = t - v.ultimo;
+  const textoFin = motivo === "fuera" ? "R = 0, edad " + edadV + " > τ = " + tau + " y está limpia: hay copia válida en disco. Se reclama el marco y la página nueva entra ahí con último uso " + t + " y R = 1. La manecilla avanza." :
+    motivo === "limpiaVista" ? "Dio la vuelta sin planificar escrituras: todas están en el conjunto de trabajo. Se reclama una página limpia vista en el recorrido: " + v.nom + "." :
+    "Dio la vuelta, no hay escrituras planificadas ni páginas limpias: sale la página actual (" + v.nom + ") y se escribe al disco.";
+  const nombreVic = v.nom;
+  pags[victima] = { nom: "nueva", ultimo: t, R: 1, M: 0, esc: false };
+  const manoFin = (victima + 1) % n;
+  pasos.push({ mano: victima, manoFin, linea: motivo === "fuera" ? 3 : 8, cambio: [victima + ":nom", victima + ":ultimo", victima + ":R"], pags: foto(), vic: victima, fin: true,
+    tit: "Resultado: sale " + nombreVic, texto: textoFin });
+  return { pasos, victima: nombreVic, motivo, final: pags, manoFin };
+}
+if (typeof module !== "undefined") module.exports = { matrizLRU, envejecer, binario, conjuntoTrabajo, wsclock, parsearPulsos };
+</script>
+
+<script>
+// ======== INTERFAZ ========
+const $ = id => document.getElementById(id);
+document.querySelectorAll(".pestanas button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".pestanas button").forEach(x => x.classList.toggle("act", x === b));
+  ["mat", "env", "ct"].forEach(t => $("tab-" + t).classList.toggle("oculto", t !== b.dataset.tab));
+});
+function pintarCodigo(el, lineas, activa) {
+  el.innerHTML = lineas.map((l, i) => `<li class="${i === activa ? "ahora" : ""}"><span class="nl">${i + 1}</span><span>${l}</span></li>`).join("");
+}
+function porque(el, p) {
+  el.innerHTML = `<p class="tit">${p.tit}</p><div>${p.texto}</div>` + (p.ojo ? `<span class="marca ojo">⚠️ ${p.ojo}</span>` : "") + (p.cer ? `<span class="marca cer">🧠 ${p.cer}</span>` : "");
+}
+function controlador(pref, construir, render) {
+  let datos = null, idx = 0;
+  const go = () => { $(pref + "-cont").textContent = datos ? `paso ${idx + 1} de ${datos.pasos.length}` : ""; $(pref + "-ant").disabled = !datos || idx === 0; $(pref + "-sig").disabled = !datos || idx >= datos.pasos.length - 1; if (datos) render(datos, idx); };
+  const cargar = () => { $(pref + "-err").textContent = ""; try { datos = construir(); idx = 0; } catch (e) { datos = null; $(pref + "-err").textContent = e.message; } go(); };
+  $(pref + "-cargar").onclick = cargar;
+  $(pref + "-sig").onclick = () => { idx++; go(); };
+  $(pref + "-ant").onclick = () => { idx--; go(); };
+  $(pref + "-rei").onclick = () => { idx = 0; go(); };
+  return cargar;
+}
+
+// --- Matriz ---
+const COD_M = ["referencia a la página k:", "  fila k ← 1 1 … 1", "  columna k ← 0 0 … 0", "fallo: sale la fila con menor valor binario"];
+const cargarM = controlador("m", () => matrizLRU($("m-refs").value, $("m-n").value), (d, idx) => {
+  const p = d.pasos[idx];
+  let h = `<p>Referencia ${p.i + 1} de ${d.refs.length}: página <b>${p.k}</b> · secuencia: ${d.refs.map((r, j) => j === p.i ? `<b style="background:var(--hl);color:#000;padding:0 3px;border-radius:4px">${r}</b>` : r).join(" ")}</p>`;
+  h += `<table><tr><th>pág.</th>${Array.from({ length: d.n }, (_, j) => `<th>${j}</th>`).join("")}<th>valor</th></tr>`;
+  const vals = p.m.map(f => parseInt(f.join(""), 2));
+  const minV = Math.min(...vals);
+  p.m.forEach((f, r) => {
+    const esLru = p.sub === 2 && r === p.lru;
+    h += `<tr class="${esLru ? "vic" : ""}"><td><b>${r}</b></td>` + f.map((b, c) => `<td class="mono ${b ? "uno" : ""} ${b !== p.antes[r][c] ? "cambio" : ""}">${b}</td>`).join("") + `<td class="mono">${vals[r]}</td></tr>`;
+  });
+  h += `</table>`;
+  if (p.sub === 2) h += `<p style="margin-top:8px">Orden de uso (de menos a más reciente): <b>${p.orden.join(" → ")}</b>. Si hubiera un fallo ahora saldría la <span class="chip vic">página ${p.lru}</span>.</p>`;
+  $("m-vista").innerHTML = h;
+  pintarCodigo($("m-cod"), COD_M, p.linea);
+  $("m-quien").textContent = "Lo hace el HARDWARE de la MMU en cada referencia a memoria: el SO no podría (sería una interrupción por instrucción).";
+  porque($("m-porque"), p.sub === 1 ?
+    { tit: "Fila " + p.k + " ← todo 1", texto: "La página " + p.k + " pasa a ser «más reciente» que todas las demás: su fila se llena de unos." } :
+    { tit: "Columna " + p.k + " ← todo 0", texto: "Ninguna otra página es más reciente que la " + p.k + ": se borra su columna (incluida la diagonal). Ahora la fila " + p.lru + " tiene el menor valor (" + p.valores[p.lru] + ") y es la LRU.",
+      cer: "Regla para recitar: «fila en 1, columna en 0; la fila más chica es la LRU»." });
+});
+document.querySelectorAll("[data-m]").forEach(b => b.onclick = () => { const [r, n] = b.dataset.m.split("|"); $("m-refs").value = r; $("m-n").value = n; cargarM(); });
+
+// --- Envejecimiento ---
+const COD_E = ["en cada pulso de reloj, para cada página:", "  NFU:   contador ← contador + R", "  ENV:   contador ← (contador >> 1) | (R << bits−1)", "  R ← 0", "fallo: sale la del contador más chico"];
+$("e-bits").oninput = () => $("e-bits-v").textContent = $("e-bits").value;
+const EJ_E = {
+  libro: "1 0 1 0 1 1\n1 1 0 0 1 0\n1 1 0 1 0 1\n1 0 0 0 1 0\n0 1 1 0 0 0",
+  nfu: "1 0\n1 0\n1 0\n1 0\n1 0\n0 1\n0 1\n0 1",
+  empate: "1 1 0\n0 0 1\n0 0 1"
+};
+const cargarE = controlador("e", () => envejecer($("e-r").value, $("e-bits").value), (d, idx) => {
+  const p = d.pasos[idx], bits = d.bits;
+  let h = `<p>Pulso <b>${idx}</b> · bits R: <span class="mono">${p.R.join(" ")}</span></p><table><tr><th>pág.</th><th>R</th><th>antes</th><th>envejecimiento (después)</th><th>valor</th><th>NFU</th></tr>`;
+  for (let q = 0; q < d.np; q++) {
+    h += `<tr class="${p.vicEnv.includes(q) ? "vic" : ""}"><td><b>${q}</b></td><td class="mono ${p.R[q] ? "uno" : ""}">${p.R[q]}</td><td class="mono">${binario(p.antes[q], bits)}</td><td class="mono cambio">${binario(p.env[q], bits)}</td><td class="mono">${p.env[q]}</td><td class="mono">${p.nfu[q]}</td></tr>`;
+  }
+  h += `</table><p style="margin-top:8px">Fallo ahora → <b>envejecimiento</b> saca ${p.vicEnv.length > 1 ? "una de " : "la "}<span class="chip vic">${p.vicEnv.join(", ")}</span> · <b>NFU</b> sacaría ${p.vicNfu.length > 1 ? "una de " : "la "}<span class="chip ins">${p.vicNfu.join(", ")}</span></p>`;
+  $("e-vista").innerHTML = h;
+  pintarCodigo($("e-cod"), COD_E, 2);
+  $("e-quien").textContent = "Lo hace el SO (software) en cada interrupción de reloj: así se evita el hardware especial de LRU.";
+  const usadas = p.R.map((r, q) => r ? q : -1).filter(q => q >= 0);
+  const libro = $("e-r").value.trim() === EJ_E.libro && bits === 8;
+  porque($("e-porque"), {
+    tit: "Pulso " + idx + ": cada contador corre un lugar a la derecha y entra R por la izquierda",
+    texto: "Se usaron " + (usadas.length ? "las páginas " + usadas.join(", ") : "ninguna página") + ": su bit de más a la izquierda queda en 1. Las demás solo se desplazan, así que su valor cae a la mitad: es como si «envejecieran». Un 1 reciente (a la izquierda) vale más que todos los viejos juntos.",
+    ojo: libro && (idx === 3 || idx === 4) ? "Errata del libro en español: para la página 2 imprime " + (idx === 3 ? "00100000" : "10010000") + ", pero lo correcto es " + binario(p.env[2], 8) + " (lo que muestra la tabla)." :
+      (p.vicEnv.length > 1 ? "Empate en el contador: el envejecimiento no sabe cuál se usó último dentro del pulso, ni cuánto hace que se usó si los contadores llegaron a 0. Elige cualquiera." : null),
+    cer: !p.vicEnv.every(x => p.vicNfu.includes(x)) ? "Acá NFU y envejecimiento eligen distinto: NFU suma todo el pasado («nunca olvida»), el envejecimiento da más peso a lo reciente." : null
+  });
+});
+document.querySelectorAll("[data-e]").forEach(b => b.onclick = () => { $("e-r").value = EJ_E[b.dataset.e]; $("e-bits").value = 8; $("e-bits-v").textContent = 8; cargarE(); });
+
+// --- Conjunto de trabajo / WSClock ---
+const COD_CT = ["para cada página de la tabla:", "  si R == 1: último uso ← tiempo actual", "  si R == 0:  edad ← actual − último uso", "    si edad > τ: ¡víctima! (sigue recorriendo)", "", "    si edad ≤ τ: recordar la de menor tiempo", "al final: si hubo víctima, sale esa", "  si no: sale la más vieja con R = 0", "  si todas R = 1: una al azar (mejor limpia)"];
+const COD_WS = ["mirar la página de la manecilla:", "  si R == 1: R ← 0, avanzar", "  si R == 0 y edad > τ:", "    limpia → ¡víctima! la nueva entra ahí", "    sucia  → planificar escritura, avanzar", "  si R == 0 y edad ≤ τ: avanzar", "si la manecilla da la vuelta:", "  hubo escrituras → seguir hasta una limpia", "  no hubo → cualquier limpia, o la actual"];
+$("c-tau").oninput = () => $("c-tau-v").textContent = $("c-tau").value;
+const EJ_C = {
+  f320: ["A 2084 1 0\nB 2003 1 0\nC 1980 1 0\nD 1213 0 0\nE 2014 1 0\nF 2020 1 0\nG 2032 1 0\nH 1620 0 0", "CT", 2204, 600, 1],
+  f321: ["A 1213 0 0\nB 2084 1 0\nC 2032 1 0\nD 1620 0 0\nE 2020 1 0\nF 2003 1 0\nG 1980 1 0\nH 2014 1 0", "WS", 2204, 600, 8],
+  sucia: ["A 1213 0 1\nB 2084 1 0\nC 2032 1 0\nD 1500 0 0\nE 2020 1 0\nF 2003 1 0", "WS", 2204, 600, 1],
+  todas: ["A 2100 0 1\nB 2150 1 0\nC 1900 0 0\nD 2180 1 1", "CT", 2204, 600, 1]
+};
+const cargarC = controlador("c", () => {
+  const ws = $("c-algo").value === "WS";
+  const r = ws ? wsclock($("c-tabla").value, $("c-t").value, $("c-tau").value, $("c-mano").value) : conjuntoTrabajo($("c-tabla").value, $("c-t").value, $("c-tau").value);
+  r.ws = ws; return r;
+}, (d, idx) => {
+  const p = d.pasos[idx], t = Number($("c-t").value), tau = Number($("c-tau").value);
+  $("c-tit-vista").textContent = d.ws ? "Anillo de marcos (WSClock)" : "Tabla de páginas (conjunto de trabajo)";
+  const cambia = (i, c) => p.cambio.includes(i + ":" + c) ? "cambio" : "";
+  let h = "";
+  if (d.ws) {
+    h += `<div class="anillo">` + p.pags.map((q, i) => {
+      const cls = p.fin && i === p.vic ? "nueva" : (i === p.mano && !p.fin ? "mano" : (q.esc ? "esc" : ""));
+      return `<div class="nodo ${cls}"><b>${q.nom}</b>${q.ultimo} · R=${q.R} · M=${q.M}${q.esc ? "<br>✎ escritura planif." : ""}${i === (p.fin ? p.manoFin : p.mano) ? "<br>◀ manecilla" : ""}</div>` + (i < p.pags.length - 1 ? `<span class="flecha">→</span>` : `<span class="flecha">↺</span>`);
+    }).join("") + `</div>`;
+  }
+  h += `<table style="margin-top:10px"><tr><th>pág.</th><th>último uso</th><th>R</th><th>M</th><th>edad</th><th>¿en el CT? (edad ≤ τ o R = 1)</th></tr>`;
+  p.pags.forEach((q, i) => {
+    const edad = t - q.ultimo, dentro = q.R === 1 || edad <= tau;
+    const cls = (p.vic === i && p.vic >= 0 ? "vic " : "") + ((d.ws ? i === p.mano : i === p.i) && !p.fin ? "mira" : "");
+    h += `<tr class="${cls}"><td class="${cambia(i, "nom")}"><b>${q.nom}</b></td><td class="mono ${cambia(i, "ultimo")}">${q.ultimo}</td><td class="mono ${cambia(i, "R")} ${q.R ? "uno" : ""}">${q.R}</td><td class="mono ${cambia(i, "M")} ${cambia(i, "esc")}">${q.M}${q.esc ? " ✎" : ""}</td><td class="mono">${edad}</td><td class="${dentro ? "ok" : "mal"}">${dentro ? "sí" : "no"}</td></tr>`;
+  });
+  h += `</table><p class="ayuda">Tiempo virtual actual ${t} · τ = ${tau}. La fila con borde amarillo es la que se mira; la naranja, la víctima.</p>`;
+  if (p.fin) h += `<p><span class="chip vic">sale ${d.victima}</span></p>`;
+  $("c-vista").innerHTML = h;
+  pintarCodigo($("c-cod"), d.ws ? COD_WS : COD_CT, p.linea);
+  $("c-quien").textContent = "Lo ejecuta el SO en el fallo de página. Los bits R y M los pone el hardware; el reloj borra R en cada pulso.";
+  porque($("c-porque"), p);
+});
+document.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { const [tab, a, t, tau, m] = EJ_C[b.dataset.c]; $("c-tabla").value = tab; $("c-algo").value = a; $("c-t").value = t; $("c-tau").value = tau; $("c-tau-v").textContent = tau; $("c-mano").value = m; cargarC(); });
+
+cargarM(); cargarE(); cargarC();
+</script>
+</body>
+</html>

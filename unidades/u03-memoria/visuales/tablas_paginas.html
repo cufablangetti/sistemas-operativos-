@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tablas de páginas grandes</title>
+<style>
+  :root{
+    --bg:#f4f5f8; --panel:#fff; --borde:#d6dae2; --texto:#1b1f24; --suave:#5b6572; --acento:#3d63c9;
+    --n1:#2563eb; --n1-bg:#e8f0ff; --n2:#7c3aed; --n2-bg:#f3edff; --des:#15803d; --des-bg:#e9f8ee; --inv:#c2410c; --inv-bg:#fff0e8;
+    --ok:#15803d; --ok-bg:#e9f8ee; --lim:#a16207; --lim-bg:#fef6dc; --sat:#dc2626; --sat-bg:#fdecec; --hl:#facc15;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+      --n1:#60a5fa; --n1-bg:#15233d; --n2:#a78bfa; --n2-bg:#221a38; --des:#4ade80; --des-bg:#13291b; --inv:#fb923c; --inv-bg:#2c1b12;
+      --ok:#4ade80; --ok-bg:#13291b; --lim:#facc15; --lim-bg:#2b2410; --sat:#f87171; --sat-bg:#2d1515; --hl:#eab308;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+    --n1:#60a5fa; --n1-bg:#15233d; --n2:#a78bfa; --n2-bg:#221a38; --des:#4ade80; --des-bg:#13291b; --inv:#fb923c; --inv-bg:#2c1b12;
+    --ok:#4ade80; --ok-bg:#13291b; --lim:#facc15; --lim-bg:#2b2410; --sat:#f87171; --sat-bg:#2d1515; --hl:#eab308;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--texto); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .envoltura{max-width:1100px; margin:0 auto; padding:18px 16px 48px}
+  h1{font-size:1.35rem; margin:0 0 4px}
+  h2{font-size:1.05rem; margin:0 0 6px}
+  h3{font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave); margin:10px 0 6px}
+  .sub{color:var(--suave); margin:0 0 14px; font-size:.92rem}
+  .tarjeta{background:var(--panel); border:1px solid var(--borde); border-radius:12px; padding:14px 16px; margin-bottom:14px}
+  .pestanas{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px}
+  .pestanas button{font-weight:650}
+  .pestanas button.act{background:var(--acento); color:#fff; border-color:var(--acento)}
+  button{font:inherit; font-size:.9rem; padding:7px 12px; border-radius:8px; border:1px solid var(--borde); background:var(--panel); color:var(--texto); cursor:pointer}
+  button:hover{border-color:var(--acento)}
+  .ejemplos{display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 10px}
+  .ejemplos button{font-size:.8rem; padding:4px 9px}
+  label{font-size:.83rem; font-weight:650; display:flex; justify-content:space-between; gap:6px}
+  label output{font-family:ui-monospace,Consolas,monospace; color:var(--acento)}
+  input[type=range]{width:100%}
+  input[type=text],select{width:100%; font:inherit; padding:6px 9px; border-radius:8px; border:1px solid var(--borde); background:var(--bg); color:var(--texto)}
+  .controles{display:grid; grid-template-columns:repeat(3,1fr); gap:12px 18px}
+  @media (max-width:760px){ .controles{grid-template-columns:1fr} }
+  .res{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:12px}
+  @media (max-width:760px){ .res{grid-template-columns:1fr} }
+  .caja{border:1.5px solid var(--borde); border-radius:10px; padding:10px 12px}
+  .caja .et{font-size:.78rem; color:var(--suave)}
+  .caja .v{font:700 1.15rem ui-monospace,Consolas,monospace}
+  .caja .det{font-size:.8rem; color:var(--suave)}
+  .caja.n1{border-color:var(--n1); background:var(--n1-bg)} .caja.n2{border-color:var(--n2); background:var(--n2-bg)} .caja.inv{border-color:var(--inv); background:var(--inv-bg)}
+  .medidor{margin-top:12px}
+  .barra-ext{height:18px; border-radius:9px; background:var(--bg); border:1px solid var(--borde); overflow:hidden}
+  .barra-int{height:100%; transition:width .3s}
+  .estado{display:inline-block; margin-top:6px; padding:3px 10px; border-radius:999px; font-weight:700; font-size:.85rem}
+  .estado.ok{background:var(--ok-bg); color:var(--ok)} .estado.lim{background:var(--lim-bg); color:var(--lim)} .estado.sat{background:var(--sat-bg); color:var(--sat)}
+  .bits{display:flex; flex-wrap:wrap; gap:2px; margin:6px 0}
+  .bit{width:22px; height:30px; display:grid; place-items:center; font:700 13px ui-monospace,Consolas,monospace; border-radius:4px; border:1.5px solid var(--borde)}
+  .bit.n1{background:var(--n1-bg); border-color:var(--n1); color:var(--n1)}
+  .bit.n2{background:var(--n2-bg); border-color:var(--n2); color:var(--n2)}
+  .bit.d{background:var(--des-bg); border-color:var(--des); color:var(--des)}
+  .bit.sep{margin-left:8px}
+  .campos{display:flex; flex-wrap:wrap; gap:10px; margin-top:8px}
+  .campo{border-radius:9px; padding:7px 12px; font-size:.9rem}
+  .campo b{font:700 1.1rem ui-monospace,Consolas,monospace}
+  .campo.n1{background:var(--n1-bg); color:var(--n1)} .campo.n2{background:var(--n2-bg); color:var(--n2)} .campo.d{background:var(--des-bg); color:var(--des)}
+  .recorrido{list-style:none; padding:0; margin:10px 0 0}
+  .recorrido li{padding:6px 10px; border-left:4px solid var(--borde); margin-bottom:4px; font-size:.9rem}
+  .recorrido li.n1{border-color:var(--n1)} .recorrido li.n2{border-color:var(--n2)} .recorrido li.d{border-color:var(--des)}
+  .marca{display:block; margin-top:10px; border-radius:8px; padding:7px 10px; font-size:.88rem}
+  .marca.ojo{background:var(--sat-bg); border:1px solid var(--sat)}
+  .marca.cer{background:var(--n2-bg); border:1px solid var(--n2)}
+  .paneles{display:grid; grid-template-columns:repeat(3,1fr); gap:12px}
+  @media (max-width:860px){ .paneles{grid-template-columns:1fr} }
+  .panel{border:1.5px solid var(--borde); border-radius:12px; padding:12px; display:flex; flex-direction:column}
+  .panel.n1{border-color:var(--n1)} .panel.n2{border-color:var(--n2)} .panel.inv{border-color:var(--inv)}
+  .panel h2{font-size:1rem}
+  .panel.n1 h2{color:var(--n1)} .panel.n2 h2{color:var(--n2)} .panel.inv h2{color:var(--inv)}
+  .diag{background:var(--bg); border-radius:9px; padding:8px; margin:6px 0 10px}
+  .diag svg{width:100%; height:auto; display:block}
+  .mas,.menos{list-style:none; padding:0; margin:4px 0; font-size:.88rem}
+  .mas li::before{content:"+ "; color:var(--ok); font-weight:800}
+  .menos li::before{content:"− "; color:var(--sat); font-weight:800}
+  .uso{margin-top:auto; font-size:.82rem; color:var(--suave); border-top:1px dashed var(--borde); padding-top:6px}
+  .ideas li{margin:5px 0}
+  .oculto{display:none}
+  .regiones{display:flex; flex-wrap:wrap; gap:4px; margin:6px 0}
+  .reg{width:30px; height:30px; border-radius:6px; border:1.5px solid var(--borde); font:700 .7rem ui-monospace,Consolas,monospace; display:grid; place-items:center; cursor:pointer; background:var(--bg)}
+  .reg.on{background:var(--n2-bg); border-color:var(--n2); color:var(--n2)}
+  .reg.gap{border:none; background:none; cursor:default; width:auto; padding:0 4px; color:var(--suave)}
+  code{font-family:ui-monospace,Consolas,monospace}
+  svg text{font-family:system-ui,sans-serif}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <h1>Tablas de páginas para memorias grandes: multinivel e invertida</h1>
+  <p class="sub">El TLB hace rápida la traducción, pero no resuelve que la tabla sea <b>enorme</b>. Acá tenés tres herramientas:
+    una <b>calculadora</b> de tamaños de tabla, un <b>divisor de direcciones</b> en TP1 | TP2 | desplazamiento, y la <b>comparación</b> de las tres estructuras.
+    (Tanenbaum, cap. 3.3.4, págs. 198–201)</p>
+
+  <div class="pestanas" id="pestanas">
+    <button data-p="calc" class="act">🧮 ¿Cuánto ocupa la tabla?</button>
+    <button data-p="div">✂️ Dividir una dirección (2 niveles)</button>
+    <button data-p="comp">🧩 Comparar las 3 tablas</button>
+  </div>
+
+  <!-- ================= CALCULADORA ================= -->
+  <section id="p-calc">
+    <div class="tarjeta">
+      <h2>Calculadora: tamaño de la tabla de páginas</h2>
+      <div class="ejemplos">
+        <button data-e="l32">Libro: 32 bits, 4 KB</button>
+        <button data-e="l64">Libro: 64 bits, 4 KB, 1 GB de RAM</button>
+        <button data-e="l64g">Libro: 64 bits, páginas de 4 MB</button>
+      </div>
+      <div class="controles">
+        <div><label>Bits de la dirección virtual <output id="o-bits"></output></label><input type="range" id="bits" min="16" max="64" step="1" value="32"></div>
+        <div><label>Tamaño de página <output id="o-pag"></output></label><input type="range" id="pag" min="9" max="22" step="1" value="12"></div>
+        <div><label>Tamaño de una entrada <output id="o-ent"></output></label><input type="range" id="ent" min="2" max="3" step="1" value="2"></div>
+        <div><label>RAM física <output id="o-ram"></output></label><input type="range" id="ram" min="24" max="36" step="1" value="30"></div>
+        <div><label>Procesos en memoria <output id="o-proc"></output></label><input type="range" id="proc" min="1" max="200" step="1" value="1"></div>
+        <div><label>Trozos usados del nivel superior (2 niveles) <output id="o-trozos"></output></label><input type="range" id="trozos" min="1" max="64" step="1" value="3"></div>
+      </div>
+      <div class="res" id="res"></div>
+      <div class="medidor">
+        <h3>Tabla de un nivel (todos los procesos) comparada con la RAM</h3>
+        <div class="barra-ext"><div class="barra-int" id="barra"></div></div>
+        <span class="estado" id="estado"></span> <span id="estado-txt" style="font-size:.88rem"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= DIVISOR ================= -->
+  <section id="p-div" class="oculto">
+    <div class="tarjeta">
+      <h2>Dividir una dirección de 32 bits en TP1 | TP2 | desplazamiento</h2>
+      <div class="ejemplos">
+        <button data-d="0x00403004">Libro: 0x00403004</button>
+        <button data-d="0x0080500C">0x0080500C</button>
+        <button data-d="0xFFFFF123">Pila: 0xFFFFF123</button>
+        <button data-d="0x00001A2B">Texto: 0x00001A2B</button>
+      </div>
+      <div class="controles">
+        <div><label for="dir">Dirección virtual (hexa con 0x o decimal)</label><input type="text" id="dir" value="0x00403004"></div>
+        <div><label>Bits de TP1 <output id="o-b1"></output></label><input type="range" id="b1" min="1" max="15" value="10"></div>
+        <div><label>Bits de TP2 <output id="o-b2"></output></label><input type="range" id="b2" min="1" max="15" value="10"></div>
+      </div>
+      <div class="bits" id="bitsdir"></div>
+      <div class="campos" id="campos"></div>
+      <ol class="recorrido" id="recorrido"></ol>
+      <div id="nota-div"></div>
+
+      <h3 style="margin-top:16px">¿Cuántas tablas hacen falta? Hacé clic en los trozos de 4 MB que usa el proceso</h3>
+      <div class="regiones" id="regiones"></div>
+      <div id="cuenta-reg" style="font-size:.92rem"></div>
+    </div>
+  </section>
+
+  <!-- ================= COMPARACIÓN ================= -->
+  <section id="p-comp" class="oculto">
+    <div class="paneles">
+      <div class="panel n1">
+        <h2>Tabla de un nivel</h2>
+        <div class="diag"><svg viewBox="0 0 220 150" role="img" aria-label="Tabla de un nivel indexada por página virtual">
+          <rect x="8" y="58" width="56" height="26" rx="5" fill="none" stroke="currentColor"/><text x="36" y="75" font-size="11" text-anchor="middle" fill="currentColor">pág | desp</text>
+          <line x1="64" y1="71" x2="104" y2="71" stroke="currentColor" marker-end="url(#fl)"/>
+          <g fill="none" stroke="currentColor"><rect x="106" y="8" width="60" height="134" rx="3"/>
+          <line x1="106" y1="26" x2="166" y2="26"/><line x1="106" y1="44" x2="166" y2="44"/><line x1="106" y1="62" x2="166" y2="62"/><line x1="106" y1="80" x2="166" y2="80"/><line x1="106" y1="98" x2="166" y2="98"/><line x1="106" y1="116" x2="166" y2="116"/></g>
+          <rect x="106" y="62" width="60" height="18" fill="#2563eb" opacity=".25"/>
+          <text x="136" y="140" font-size="9" text-anchor="middle" fill="currentColor">2²⁰ entradas</text>
+          <line x1="166" y1="71" x2="182" y2="71" stroke="currentColor" marker-end="url(#fl)"/><text x="185" y="75" font-size="10" fill="currentColor">marco</text>
+          <defs><marker id="fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs>
+        </svg></div>
+        <div><b>Una entrada por página virtual</b>, indexada por el número de página. La tabla está completa aunque el proceso use solo una parte.</div>
+        <ul class="mas"><li>Traducción directa: un índice y listo</li><li>Simple</li></ul>
+        <ul class="menos"><li>Enorme: 32 bits con páginas de 4 KB dan 2²⁰ entradas, 4 MB <i>por proceso</i></li><li>Con 64 bits es imposible (32 PB)</li></ul>
+        <div class="uso">El esquema básico de las figuras 3-9 y 3-10.</div>
+      </div>
+      <div class="panel n2">
+        <h2>Multinivel (2 niveles)</h2>
+        <div class="diag"><svg viewBox="0 0 220 150" role="img" aria-label="Tabla de dos niveles">
+          <rect x="4" y="60" width="64" height="24" rx="5" fill="none" stroke="currentColor"/><text x="36" y="76" font-size="10" text-anchor="middle" fill="currentColor">TP1|TP2|d</text>
+          <g fill="none" stroke="currentColor"><rect x="80" y="20" width="40" height="110" rx="3"/>
+          <line x1="80" y1="38" x2="120" y2="38"/><line x1="80" y1="56" x2="120" y2="56"/><line x1="80" y1="112" x2="120" y2="112"/></g>
+          <rect x="80" y="38" width="40" height="18" fill="#7c3aed" opacity=".3"/>
+          <rect x="80" y="56" width="40" height="56" fill="currentColor" opacity=".08"/>
+          <text x="100" y="88" font-size="8" text-anchor="middle" fill="currentColor">P = 0</text>
+          <text x="100" y="15" font-size="9" text-anchor="middle" fill="currentColor">superior</text>
+          <line x1="68" y1="72" x2="80" y2="47" stroke="currentColor" marker-end="url(#fl2)"/>
+          <g fill="none" stroke="currentColor"><rect x="150" y="10" width="34" height="38" rx="3"/><rect x="150" y="56" width="34" height="38" rx="3"/><rect x="150" y="102" width="34" height="38" rx="3"/></g>
+          <rect x="150" y="56" width="34" height="38" fill="#7c3aed" opacity=".2"/>
+          <line x1="120" y1="29" x2="150" y2="29" stroke="currentColor" marker-end="url(#fl2)"/>
+          <line x1="120" y1="47" x2="150" y2="75" stroke="currentColor" marker-end="url(#fl2)"/>
+          <line x1="120" y1="121" x2="150" y2="121" stroke="currentColor" marker-end="url(#fl2)"/>
+          <text x="167" y="148" font-size="8" text-anchor="middle" fill="currentColor">2º nivel (solo las usadas)</text>
+          <line x1="184" y1="75" x2="212" y2="75" stroke="currentColor" marker-end="url(#fl2)"/>
+          <defs><marker id="fl2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs>
+        </svg></div>
+        <div>TP1 indexa la tabla <b>superior</b>, que apunta a una tabla de <b>2º nivel</b>. TP2 indexa esa tabla, que da el marco. Las regiones no usadas tienen <b>P = 0 en el nivel superior</b>, y su tabla de 2º nivel ni existe.</div>
+        <ul class="mas"><li>Solo existen las tablas que se usan: el proceso de 12 MB del libro necesita 4 tablas (16 KB) en vez de 4 MB</li><li>El "hueco" entre datos y pila no gasta memoria</li></ul>
+        <ul class="menos"><li>Un acceso a memoria más por cada nivel (el TLB lo disimula)</li><li>Con 64 bits harían falta demasiados niveles</li></ul>
+        <div class="uso">Típico en <b>32 bits</b>. Más de 3 niveles rara vez conviene.</div>
+      </div>
+      <div class="panel inv">
+        <h2>Invertida (+ hash)</h2>
+        <div class="diag"><svg viewBox="0 0 220 150" role="img" aria-label="Tabla invertida con hash">
+          <rect x="4" y="60" width="54" height="24" rx="5" fill="none" stroke="currentColor"/><text x="31" y="76" font-size="10" text-anchor="middle" fill="currentColor">(proc, pág)</text>
+          <rect x="68" y="60" width="34" height="24" rx="12" fill="#c2410c" opacity=".25" stroke="currentColor"/><text x="85" y="76" font-size="10" text-anchor="middle" fill="currentColor">hash</text>
+          <line x1="58" y1="72" x2="68" y2="72" stroke="currentColor"/>
+          <g fill="none" stroke="currentColor"><rect x="114" y="14" width="44" height="122" rx="3"/>
+          <line x1="114" y1="32" x2="158" y2="32"/><line x1="114" y1="50" x2="158" y2="50"/><line x1="114" y1="68" x2="158" y2="68"/><line x1="114" y1="86" x2="158" y2="86"/><line x1="114" y1="104" x2="158" y2="104"/></g>
+          <rect x="114" y="68" width="44" height="18" fill="#c2410c" opacity=".3"/>
+          <line x1="102" y1="72" x2="114" y2="77" stroke="currentColor"/>
+          <text x="136" y="10" font-size="8" text-anchor="middle" fill="currentColor">1 entrada por MARCO</text>
+          <text x="136" y="148" font-size="8" text-anchor="middle" fill="currentColor">2¹⁸ (1 GB / 4 KB)</text>
+          <rect x="172" y="68" width="40" height="18" rx="3" fill="none" stroke="currentColor" stroke-dasharray="3 2"/>
+          <line x1="158" y1="77" x2="172" y2="77" stroke="currentColor"/>
+          <text x="192" y="100" font-size="8" text-anchor="middle" fill="currentColor">cadena de</text><text x="192" y="110" font-size="8" text-anchor="middle" fill="currentColor">colisiones</text>
+        </svg></div>
+        <div><b>Una entrada por marco físico</b>, no por página virtual. Cada entrada dice <i>qué proceso y qué página virtual</i> ocupan ese marco. Es <b>una sola tabla para todo el sistema</b>.</div>
+        <ul class="mas"><li>Tamaño proporcional a la RAM, no al espacio virtual: 1 GB con 4 KB son 262.144 entradas</li><li>Sirve para 64 bits</li></ul>
+        <ul class="menos"><li>Ya no se puede indexar por página: hay que <b>buscar</b> (proc, pág) en toda la tabla</li><li>Eso exigiría una búsqueda en <b>cada</b> acceso: se resuelve con el <b>TLB</b> y, si falla, con un <b>hash</b> recorrido por software</li></ul>
+        <div class="uso">Típico en <b>64 bits</b>, junto con TLB y hash.</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="tarjeta" style="margin-top:14px">
+    <h2 style="font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave)">Ideas clave y frases de examen</h2>
+    <ul class="ideas">
+      <li><b>El TLB resuelve la velocidad; multinivel e invertida resuelven el tamaño.</b> Son problemas distintos.</li>
+      <li><b>Multinivel:</b> "no mantener en memoria las tablas que no se necesitan". El hueco entre datos y pila tiene P = 0 en el nivel superior, y las tablas de 2º nivel de ese hueco no existen.</li>
+      <li><b>Invertida:</b> una entrada por <b>marco</b>, con el par (proceso, página virtual). Es chica pero cuesta traducir, y por eso va con <b>TLB + hash</b>. Según la cátedra: 32 bits → multinivel; 64 bits → invertida + TLB.</li>
+      <li>⚠️ En la edición en español, el ejemplo 0x00403004 dice <b>TP2 = 2</b>, pero es <b>TP2 = 3</b>. El mismo párrafo dice después "extrae la entrada 3". Si te lo toman, justificá con los bits.</li>
+      <li>🧠 Con 2 niveles, cada traducción sin TLB cuesta <b>2 accesos a tablas + 1 al dato</b>. Por eso el TLB es todavía más importante acá.</li>
+    </ul>
+  </div>
+</div>
+
+<script id="motor">
+// ===== Motor (sin DOM), verificable con Node =====
+function fmtBytes(b) {
+  var u = ["B", "KB", "MB", "GB", "TB", "PB", "EB"], i = 0;
+  while (b >= 1024 && i < u.length - 1) { b /= 1024; i++; }
+  var s = (Math.round(b * 100) / 100).toString().replace(".", ",");
+  return s + " " + u[i];
+}
+function fmtNum(n) {
+  if (n >= 1e15) return "2^" + Math.round(Math.log2(n));
+  return Math.round(n).toLocaleString("es-AR");
+}
+// cfg: {bits, logPag, logEnt, logRam, procesos, trozos}
+function calcular(cfg) {
+  var bitsDes = cfg.logPag, bitsPag = cfg.bits - cfg.logPag;
+  if (bitsPag < 1) return { error: "La página no puede ser más grande que todo el espacio virtual." };
+  var ent = Math.pow(2, cfg.logEnt);
+  var entradas1 = Math.pow(2, bitsPag);
+  var tabla1 = entradas1 * ent;
+  var total1 = tabla1 * cfg.procesos;
+  var ram = Math.pow(2, cfg.logRam);
+  var marcos = Math.pow(2, Math.max(0, cfg.logRam - cfg.logPag));
+  var inv = marcos * ent;
+  // 2 niveles: TP2 llena una pagina de tabla (pagina / entrada), TP1 el resto
+  var bitsTP2 = Math.min(bitsPag, cfg.logPag - cfg.logEnt);
+  var bitsTP1 = bitsPag - bitsTP2;
+  var tamTabla2 = Math.pow(2, bitsTP2) * ent;
+  var tamSup = Math.pow(2, bitsTP1) * ent;
+  var trozos = Math.min(cfg.trozos, Math.pow(2, bitsTP1));
+  var multi = tamSup + trozos * tamTabla2;
+  var frac = total1 / ram;
+  var estado = frac < 0.05 ? "ok" : (frac < 0.5 ? "lim" : "sat");
+  return { bitsDes: bitsDes, bitsPag: bitsPag, entradas1: entradas1, tabla1: tabla1, total1: total1, ram: ram, marcos: marcos, inv: inv,
+    bitsTP1: bitsTP1, bitsTP2: bitsTP2, tamSup: tamSup, tamTabla2: tamTabla2, trozoBytes: Math.pow(2, bitsTP2 + cfg.logPag), trozos: trozos, multi: multi * cfg.procesos, multiProc: multi, frac: frac, estado: estado };
+}
+function leerDir(txt) {
+  var t = String(txt).trim().replace(/\s+/g, "");
+  if (/^0x[0-9a-f]+$/i.test(t)) return parseInt(t.slice(2), 16);
+  if (/^[0-9a-f]+h$/i.test(t)) return parseInt(t.slice(0, -1), 16);
+  if (/^\d+$/.test(t)) return parseInt(t, 10);
+  return NaN;
+}
+// divide una direccion de 32 bits
+function dividir(v, b1, b2) {
+  var bd = 32 - b1 - b2;
+  if (bd < 0) return { error: "TP1 + TP2 no pueden pasar de 32 bits." };
+  if (isNaN(v) || v < 0 || v > 0xFFFFFFFF) return { error: "Escribí una dirección de 32 bits válida (0x00000000 a 0xFFFFFFFF)." };
+  var tp1 = Math.floor(v / Math.pow(2, b2 + bd));
+  var tp2 = Math.floor(v / Math.pow(2, bd)) % Math.pow(2, b2);
+  var d = v % Math.pow(2, bd);
+  var bin = v.toString(2); while (bin.length < 32) bin = "0" + bin;
+  return { tp1: tp1, tp2: tp2, d: d, bd: bd, bin: bin, trozo: Math.pow(2, b2 + bd), pagina: Math.pow(2, bd) };
+}
+if (typeof module !== "undefined") module.exports = { calcular: calcular, dividir: dividir, leerDir: leerDir, fmtBytes: fmtBytes };
+</script>
+
+<script>
+var $ = function (id) { return document.getElementById(id); };
+// pestañas
+Array.prototype.forEach.call(document.querySelectorAll("#pestanas button"), function (b) {
+  b.onclick = function () {
+    Array.prototype.forEach.call(document.querySelectorAll("#pestanas button"), function (x) { x.classList.toggle("act", x === b); });
+    ["calc", "div", "comp"].forEach(function (p) { $("p-" + p).classList.toggle("oculto", p !== b.dataset.p); });
+  };
+});
+// calculadora
+var EJ = { l32: { bits: 32, pag: 12, ent: 2, ram: 30, proc: 1, trozos: 3 }, l64: { bits: 64, pag: 12, ent: 3, ram: 30, proc: 1, trozos: 3 }, l64g: { bits: 64, pag: 22, ent: 3, ram: 30, proc: 1, trozos: 3 } };
+Array.prototype.forEach.call(document.querySelectorAll("[data-e]"), function (b) {
+  b.onclick = function () { var e = EJ[b.dataset.e]; for (var k in e) $(k).value = e[k]; calc(); };
+});
+function calc() {
+  var cfg = { bits: +$("bits").value, logPag: +$("pag").value, logEnt: +$("ent").value, logRam: +$("ram").value, procesos: +$("proc").value, trozos: +$("trozos").value };
+  $("o-bits").textContent = cfg.bits + " bits"; $("o-pag").textContent = fmtBytes(Math.pow(2, cfg.logPag)); $("o-ent").textContent = Math.pow(2, cfg.logEnt) + " B";
+  $("o-ram").textContent = fmtBytes(Math.pow(2, cfg.logRam)); $("o-proc").textContent = cfg.procesos; $("o-trozos").textContent = cfg.trozos;
+  var r = calcular(cfg);
+  if (r.error) { $("res").innerHTML = '<div class="caja">' + r.error + "</div>"; return; }
+  $("res").innerHTML =
+    '<div class="caja n1"><div class="et">Un nivel: entradas por proceso</div><div class="v">2^' + r.bitsPag + " = " + fmtNum(r.entradas1) + '</div><div class="det">' + r.bitsPag + " bits de página + " + r.bitsDes + " de desplazamiento</div>" +
+      '<div class="et" style="margin-top:6px">Tamaño por proceso</div><div class="v">' + fmtBytes(r.tabla1) + '</div><div class="det">× ' + cfg.procesos + " proceso(s) = " + fmtBytes(r.total1) + "</div></div>" +
+    '<div class="caja n2"><div class="et">2 niveles: TP1 | TP2 | desp</div><div class="v">' + r.bitsTP1 + " | " + r.bitsTP2 + " | " + r.bitsDes + '</div><div class="det">Cada tabla de 2º nivel ocupa ' + fmtBytes(r.tamTabla2) + " (una página) y cubre un trozo de " + fmtBytes(r.trozoBytes) + "</div>" +
+      '<div class="et" style="margin-top:6px">Con ' + r.trozos + " trozo(s) usados</div><div class=\"v\">" + fmtBytes(r.multiProc) + '</div><div class="det">superior ' + fmtBytes(r.tamSup) + " + " + r.trozos + " × " + fmtBytes(r.tamTabla2) + (r.bitsTP1 > 16 ? ". ⚠️ La tabla superior sola ya es enorme: en 64 bits harían falta más niveles." : "") + "</div></div>" +
+    '<div class="caja inv"><div class="et">Invertida: entradas (una por marco)</div><div class="v">' + fmtNum(r.marcos) + '</div><div class="det">RAM ' + fmtBytes(r.ram) + " / página " + fmtBytes(Math.pow(2, cfg.logPag)) + "</div>" +
+      '<div class="et" style="margin-top:6px">Tamaño (una sola para todo el sistema)</div><div class="v">' + fmtBytes(r.inv) + '</div><div class="det">no depende de los bits virtuales ni de la cantidad de procesos</div></div>';
+  var pct = Math.min(100, r.frac * 100);
+  $("barra").style.width = Math.max(pct, 0.5) + "%";
+  $("barra").style.background = "var(--" + (r.estado === "ok" ? "ok" : r.estado === "lim" ? "lim" : "sat") + ")";
+  $("estado").className = "estado " + r.estado;
+  $("estado").textContent = r.estado === "ok" ? "ok" : r.estado === "lim" ? "al límite" : "saturado";
+  $("estado-txt").textContent = r.frac >= 1 ? "Las tablas de un nivel ocupan " + (r.frac >= 1e6 ? "millones de veces" : Math.round(r.frac) + " veces") + " la RAM: imposible." :
+    "Las tablas de un nivel ocupan el " + (Math.round(r.frac * 1000) / 10).toString().replace(".", ",") + " % de la RAM.";
+}
+["bits", "pag", "ent", "ram", "proc", "trozos"].forEach(function (id) { $(id).oninput = calc; });
+calc();
+
+// divisor
+var usados = { 0: true, 1: true, 1023: true };
+function div() {
+  var b1 = +$("b1").value, b2 = +$("b2").value;
+  $("o-b1").textContent = b1; $("o-b2").textContent = b2;
+  var r = dividir(leerDir($("dir").value), b1, b2);
+  if (r.error) { $("bitsdir").innerHTML = ""; $("campos").innerHTML = ""; $("recorrido").innerHTML = '<li>' + r.error + "</li>"; $("nota-div").innerHTML = ""; return; }
+  var h = "";
+  for (var i = 0; i < 32; i++) {
+    var c = i < b1 ? "n1" : (i < b1 + b2 ? "n2" : "d");
+    h += '<div class="bit ' + c + ((i === b1 || i === b1 + b2) ? " sep" : "") + '">' + r.bin[i] + "</div>";
+  }
+  $("bitsdir").innerHTML = h;
+  $("campos").innerHTML = '<div class="campo n1">TP1 (' + b1 + " bits) = <b>" + r.tp1 + '</b></div><div class="campo n2">TP2 (' + b2 + " bits) = <b>" + r.tp2 + '</b></div><div class="campo d">desplazamiento (' + r.bd + " bits) = <b>" + r.d + "</b> (0x" + r.d.toString(16).toUpperCase() + ")</div>";
+  $("recorrido").innerHTML =
+    '<li class="n1">1. La MMU usa <b>TP1 = ' + r.tp1 + "</b> como índice en la tabla de <b>nivel superior</b>. Esa entrada cubre el trozo " + fmtBytes(r.trozo * r.tp1).replace(/^0 B$/, "0") + " a " + fmtBytes(r.trozo * (r.tp1 + 1)) + " y apunta a una tabla de 2º nivel (si P = 0 → fallo).</li>" +
+    '<li class="n2">2. Usa <b>TP2 = ' + r.tp2 + "</b> como índice en esa tabla de 2º nivel: la entrada da el <b>marco</b> (si P = 0 → fallo de página).</li>" +
+    '<li class="d">3. Física = marco ∥ desplazamiento <b>' + r.d + "</b>. El desplazamiento no se toca.</li>";
+  var v = leerDir($("dir").value);
+  $("nota-div").innerHTML = v === 0x00403004 && b1 === 10 && b2 === 10 ?
+    '<span class="marca ojo">⚠️ Errata del libro en español: dice TP2 = 2, pero los bits dan <b>TP2 = 3</b> (0x00403004 = 4M + 3·4096 + 4 = 4.206.596). El mismo párrafo después dice "extrae la entrada 3".</span>' :
+    '<span class="marca cer">🧠 Truco en hexa con 10|10|12: los 3 últimos dígitos hexa son el desplazamiento (12 bits). Para TP1 y TP2 sí hay que pasar a binario, porque 10 bits no coinciden con dígitos hexa.</span>';
+}
+Array.prototype.forEach.call(document.querySelectorAll("[data-d]"), function (b) { b.onclick = function () { $("dir").value = b.dataset.d; $("b1").value = 10; $("b2").value = 10; div(); }; });
+["dir", "b1", "b2"].forEach(function (id) { $(id).oninput = div; });
+div();
+
+function regiones() {
+  var h = "", idx = [0, 1, 2, 3, 4, 5, 6, 7, -1, 1020, 1021, 1022, 1023];
+  idx.forEach(function (i) {
+    if (i < 0) { h += '<div class="reg gap">…</div>'; return; }
+    h += '<div class="reg' + (usados[i] ? " on" : "") + '" data-r="' + i + '" title="TP1 = ' + i + '">' + i + "</div>";
+  });
+  $("regiones").innerHTML = h;
+  Array.prototype.forEach.call(document.querySelectorAll(".reg[data-r]"), function (d) {
+    d.onclick = function () { var i = +d.dataset.r; if (usados[i]) delete usados[i]; else usados[i] = true; regiones(); };
+  });
+  var n = Object.keys(usados).length;
+  $("cuenta-reg").innerHTML = "Trozos usados: <b>" + n + "</b> → tablas necesarias: 1 superior + " + n + " de 2º nivel = <b>" + (n + 1) + " tablas × 4 KB = " + ((n + 1) * 4) + " KB</b>, contra <b>4 MB</b> de la tabla de un nivel. Las " + (1024 - n) + " entradas restantes del nivel superior tienen P = 0." +
+    (usados[0] && usados[1] && usados[1023] && n === 3 ? " <i>(Es el ejemplo del libro: texto, datos y pila.)</i>" : "");
+}
+regiones();
+</script>
+</body>
+</html>

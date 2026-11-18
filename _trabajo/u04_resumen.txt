@@ -1,0 +1,604 @@
+
+===== [PDF pag 1] =====
+ 
+2.​ El descriptor aporta base + límite → dirección lineal. 
+Luego:​
+ 3. La dirección lineal se traduce mediante paginación a dirección física. 
+Si la paginación está deshabilitada → segmentación pura.​
+ Si todos los segmentos tienen base 0 y límite máximo → paginación pura. 
+Por eso: 
+todos los sistemas operativos modernos en Pentium usan paginación y simulan 
+segmentación mínima. 
+Protección en Pentium 
+Hay cuatro niveles de protección (0 a 3): 
+●​ 0: kernel, 
+●​ 1: llamadas al sistema, 
+●​ 2: bibliotecas, 
+●​ 3: usuario. 
+Los saltos entre niveles se hacen mediante compuertas de llamada, no direcciones 
+directas.​
+ Este modelo proviene directamente de MULTICS. 
+Unidad 4 SISTEMAS DE ARCHIVOS 
+Los procesos necesitan almacenar y recuperar información.​
+Guardar datos sólo en el espacio de direcciones de un proceso no alcanza, por tres 
+razones fundamentales: 
+1.​ El espacio de direcciones es limitado: muchas aplicaciones requieren almacenar 
+cantidades muy grandes de información. 
+2.​ La información se pierde al terminar el proceso: para aplicaciones como bases 
+de datos, bancos o contabilidad, esto es inaceptable. 
+3.​ Varios procesos deben acceder a la información al mismo tiempo: la 
+información no puede pertenecer a un solo proceso. 
+De estos problemas surgen tres requerimientos esenciales del almacenamiento a largo 
+plazo: 
+●​ almacenar grandes cantidades de información, 
+●​ que la información sea persistente (sobrevive a la terminación del proceso), 
+●​ permitir acceso concurrente de múltiples procesos. 
+El disco y el problema real 
+ 
+
+===== [PDF pag 2] =====
+ 
+A nivel físico, un disco puede verse como una secuencia lineal de bloques de tamaño 
+fijo, con dos operaciones básicas: 
+●​ leer el bloque k, 
+●​ escribir el bloque k. 
+Aunque con esto sería posible almacenar información, no es práctico para sistemas reales. 
+Surgen preguntas clave: 
+●​ ¿cómo se encuentra la información?, 
+●​ ¿cómo se protege de otros usuarios?, 
+●​ ¿cómo se sabe qué bloques están libres? 
+La abstracción fundamental: el archivo 
+Así como el sistema operativo creó: 
+●​ la abstracción de proceso a partir del procesador, 
+●​ la abstracción de espacio de direcciones a partir de la memoria física, 
+crea ahora la abstracción de archivo para resolver el almacenamiento a largo plazo. 
+Un archivo es una unidad lógica de información, independiente de cualquier proceso.​
+La información en los archivos es persistente: sólo desaparece si su propietario la elimina 
+explícitamente. 
+El conjunto de mecanismos que crean, nombran, protegen y administran archivos se 
+denomina sistema de archivos, y es uno de los conceptos centrales de los sistemas 
+operativos, junto con procesos y memoria virtual. 
+4.1 Archivos 
+Aquí el enfoque es desde el punto de vista del usuario: cómo se ven y cómo se usan. 
+4.1.1 Nomenclatura de archivos 
+La nomenclatura es clave: un archivo se accede siempre por su nombre. 
+Características generales: 
+●​ los nombres son cadenas de caracteres, 
+●​ pueden incluir letras, dígitos y caracteres especiales, 
+●​ muchos sistemas permiten nombres de hasta 255 caracteres. 
+La extensión suele indicar el tipo de archivo (texto, imagen, programa, etc.). 
+●​ En UNIX, las extensiones son convenciones, no reglas impuestas. 
+ 
+
+===== [PDF pag 3] =====
+ 
+●​ En Windows, las extensiones tienen significado para el sistema operativo:​
+ el sistema asocia extensiones con programas, y al hacer doble clic se ejecuta el 
+programa correspondiente. 
+Las extensiones ayudan a los programas a decidir cómo tratar un archivo, por ejemplo: 
+4.1.2 Estructura de archivos 
+Los sistemas de archivos pueden ver un archivo de distintas maneras. 
+1. Secuencia de bytes 
+El archivo es sólo una secuencia de bytes sin estructura.​
+ El sistema operativo no impone significado. 
+●​ Máxima flexibilidad. 
+●​ El significado lo define el programa. 
+●​ Es el modelo usado por UNIX y Windows. 
+2. Secuencia de registros 
+El archivo es una secuencia de registros de longitud fija, con estructura interna. 
+●​ Las operaciones leen o escriben registros completos. 
+●​ Fue común en sistemas mainframe (tarjetas perforadas, impresoras). 
+●​ Hoy no se usa en sistemas de propósito general. 
+3. Árbol de registros 
+El archivo es un árbol de registros, cada uno con una llave. 
+●​ Se accede por llave, no por posición. 
+●​ El sistema operativo decide dónde colocar los registros. 
+●​ Usado en sistemas comerciales grandes, no en UNIX/Windows. 
+ 
+ 
+
+===== [PDF pag 4] =====
+ 
+4.1.3 Tipos de archivos 
+Muchos sistemas operativos soportan varios tipos de archivos. 
+En UNIX y Windows existen: 
+●​ archivos regulares 
+●​ directorios 
+UNIX además tiene: 
+●​ archivos especiales de caracteres, para dispositivos de E/S en serie (terminales, 
+impresoras, redes), 
+●​ archivos especiales de bloques, para modelar discos. 
+En este capítulo, el foco está en los archivos regulares, que contienen información del 
+usuario. 
+Archivos ASCII y binarios 
+Los archivos regulares suelen ser de dos tipos: 
+Archivos ASCII​
+ Son archivos de texto formados por líneas. 
+●​ Cada línea termina con retorno de carro, avance de línea o ambos, según el 
+sistema. 
+●​ Las líneas no necesitan tener la misma longitud. 
+●​ Se pueden mostrar, imprimir y editar directamente. 
+●​ Facilitan la conexión entre programas, por ejemplo en canalizaciones de shell. 
+Su gran ventaja es la portabilidad y legibilidad. 
+Archivos binarios​
+ No son archivos ASCII. 
+●​ Al mostrarlos producen caracteres incomprensibles. 
+●​ Tienen una estructura interna conocida por los programas que los usan. 
+Un ejemplo típico es el archivo ejecutable: aunque es una secuencia de bytes, el sistema 
+operativo exige un formato específico para poder ejecutarlo.​
+Este formato incluye secciones como encabezado, texto, datos y tablas auxiliares. 
+Algunos sistemas operativos reconocen varios tipos de archivos binarios, otros sólo el 
+ejecutable. 
+Un sistema con archivos fuertemente tipificados puede proteger al usuario, pero también 
+limitarlo, ya que impide usos no previstos por los diseñadores del sistema. 
+4.1.4 Acceso a archivos 
+ 
+
+===== [PDF pag 5] =====
+ 
+Los primeros sistemas sólo permitían acceso secuencial: 
+●​ se lee el archivo desde el principio hasta el final, 
+●​ no se puede saltar posiciones intermedias. 
+Esto era adecuado para cintas magnéticas. 
+Con los discos aparece el acceso aleatorio: 
+●​ se puede leer cualquier parte del archivo sin leer lo anterior, 
+●​ Es esencial para bases de datos y sistemas de reservaciones. 
+Hay dos formas de indicar la posición de lectura: 
+●​ especificarla en cada operación read, 
+●​ usar una operación seek para fijar la posición actual y luego leer secuencialmente. 
+UNIX y Windows usan este segundo enfoque. 
+4.1.5 Atributos de archivos 
+Además del nombre y los datos, cada archivo tiene atributos (metadatos). 
+Estos describen: 
+●​ protección: quién puede acceder y cómo, 
+●​ propietario y creador, 
+●​ banderas que controlan el comportamiento del archivo, 
+●​ fechas de creación, acceso y modificación, 
+●​ tamaño actual (y en algunos sistemas, tamaño máximo). 
+Las banderas permiten, por ejemplo: 
+●​ marcar un archivo como sólo lectura, 
+●​ ocultarlo en los listados, 
+●​ indicar si necesita respaldo, 
+●​ eliminarlo automáticamente al terminar un proceso. 
+Los atributos de tiempo son fundamentales para tareas como decidir si un archivo fuente 
+debe recopilarse. 
+4.1.6 Operaciones de archivos 
+Los archivos existen para almacenar información y permitir que se recupere 
+posteriormente.​
+ Para eso, los sistemas operativos ofrecen un conjunto de llamadas al sistema que 
+permiten crear, usar y administrar archivos. 
+ 
+
+===== [PDF pag 6] =====
+ 
+Aunque los detalles varían entre sistemas, las operaciones fundamentales son 
+esencialmente las mismas. 
+Creación y eliminación 
+Create​
+Crea un archivo vacío, sin datos.​
+Su objetivo no es almacenar información todavía, sino anunciar la llegada del archivo y 
+establecer sus atributos iniciales (por ejemplo, protección). 
+Delete​
+Elimina un archivo que ya no se necesita.​
+Esta operación libera el espacio en disco que el archivo ocupaba.​
+Todos los sistemas operativos tienen una llamada explícita para esta función. 
+Apertura y cierre 
+Open​
+ Antes de usar un archivo, un proceso debe abrirlo.​
+ Al hacerlo, el sistema operativo: 
+●​ lleva los atributos del archivo a memoria principal, 
+●​ carga la lista de direcciones de disco del archivo. 
+Esto permite que las operaciones posteriores sean rápidas. 
+Close​
+ Cuando el archivo ya no se necesita, se cierra. 
+●​ se liberan las entradas internas usadas por el sistema, 
+●​ se fuerza la escritura del último bloque, incluso si no está completamente lleno.​
+ 
+Muchos sistemas limitan la cantidad de archivos abiertos por proceso para obligar a 
+cerrarlos correctamente. 
+Lectura y escritura 
+Read​
+ Lee datos desde el archivo. 
+●​ normalmente desde la posición actual. 
+●​ el proceso indica cuántos bytes desea, 
+●​ Los datos se colocan en un búfer provisto por el llamador. 
+Write​
+ Escribe datos en el archivo. 
+●​ normalmente en la posición actual, 
+●​ si se escribe al final del archivo, el archivo crece, 
+ 
+
+===== [PDF pag 7] =====
+ 
+●​ si se escribe en el medio, los datos existentes se sobrescriben y se pierden.​
+ 
+Append​
+ Es una forma restringida de write. 
+●​ sólo permite agregar datos al final del archivo, 
+●​ Algunos sistemas la incluyen, otros no, porque puede simularse con write. 
+Posicionamiento 
+Seek​
+ Se utiliza en archivos de acceso aleatorio. 
+●​ reposiciona el apuntador del archivo en una posición específica, 
+●​ después se puede leer o escribir secuencialmente desde allí. 
+Este mecanismo es el utilizado por UNIX y Windows. 
+Atributos y nombres 
+Get attributes​
+ Permite leer los atributos del archivo.​
+ Es esencial para programas como make, que comparan tiempos de modificación para 
+decidir qué recompilar. 
+Set attributes​
+ Permite modificar ciertos atributos después de creado el archivo. 
+●​ protección, 
+●​ banderas, 
+●​ otros metadatos permitidos por el sistema. 
+Rename​
+ Cambia el nombre de un archivo existente.​
+ No es estrictamente indispensable, pero simplifica muchas operaciones habituales del 
+usuario. 
+4.1.7 Un programa de ejemplo que utiliza llamadas al sistema de archivos 
+El programa copyfile ilustra cómo se usan las llamadas al sistema para copiar un archivo 
+en UNIX. 
+La idea general es simple: 
+1.​ abrir el archivo fuente, 
+2.​ crear el archivo destino, 
+3.​ leer bloques del archivo fuente, 
+4.​ escribirlos en el archivo destino, 
+ 
+
+===== [PDF pag 8] =====
+ 
+5.​ cerrar ambos archivos.​
+ 
+Argumentos y descriptores de archivo 
+El sistema operativo pasa a main: 
+●​ argc: cantidad de argumentos, 
+●​ argv: arreglo con los nombres. 
+Los archivos abiertos se identifican mediante descriptores de archivo, que son enteros 
+pequeños devueltos por open y creat.​
+Todas las operaciones posteriores usan estos enteros para identificar el archivo. 
+Ciclo de copia 
+El programa: 
+●​ lee bloques de 4096 bytes usando read, 
+●​ escribe exactamente la cantidad leída usando write. 
+Cuando read devuelve: 
+●​ un valor positivo: se leyeron bytes, 
+●​ 0: fin de archivo, 
+●​ negativo: error. 
+Al llegar al fin del archivo, el ciclo termina. 
+Cierre y finalización 
+Después de copiar: 
+●​ se cierran ambos archivos con close, 
+●​ El programa termina indicando éxito o error mediante el código de estado. 
+4.2 Directorios 
+Para llevar el registro de los archivos, los sistemas de archivos utilizan directorios (o 
+carpetas).​
+ En muchos sistemas, los directorios también son archivos, pero con una función especial: 
+organizar y localizar otros archivos. 
+En esta sección se analiza: 
+●​ cómo se organizan los directorios, 
+●​ cómo se nombran los archivos dentro de ellos, 
+●​ qué operaciones se pueden realizar. 
+ 
+
+===== [PDF pag 9] =====
+ 
+4.2.1 Sistemas de directorios de un solo nivel 
+La forma más simple de organización es un sistema con un solo directorio que contiene 
+todos los archivos.​
+ A este directorio a veces se lo llama directorio raíz, aunque en este caso es el único. 
+Este esquema fue común: 
+●​ en las primeras computadoras personales, 
+●​ en sistemas con un solo usuario, 
+●​ incluso en sistemas grandes, como la CDC 6600, para simplificar el software. 
+Ventajas 
+●​ extrema simpleza, 
+●​ localización rápida de archivos, ya que sólo hay un lugar donde buscar. 
+Desventajas 
+●​ no escala: con muchos archivos se vuelve imposible organizar o encontrar 
+información. 
+Por eso hoy sólo se usa en sistemas muy simples, como dispositivos incrustados 
+(cámaras, teléfonos, reproductores).  
+4.2.2 Sistemas de directorios jerárquicos 
+Un solo nivel es insuficiente para usuarios modernos que manejan miles de archivos.​
+ La solución es organizar los archivos en una jerarquía, es decir, un árbol de directorios. 
+En este esquema: 
+●​ los directorios pueden contener archivos y subdirectorios, 
+●​ cada usuario puede tener su propio directorio raíz, 
+●​ los archivos se agrupan de forma natural y lógica. 
+Este modelo permite: 
+●​ separar proyectos, 
+●​ organizar por temas, 
+●​ compartir un mismo servidor entre múltiples usuarios sin mezclar archivos. 
+Por esta razón, casi todos los sistemas de archivos modernos usan directorios 
+jerárquicos. 
+ 
+
+===== [PDF pag 10] =====
+ 
+ 
+Entradas especiales: . y .. 
+En los sistemas jerárquicos, cada directorio contiene dos entradas especiales: 
+●​ . → el directorio actual, 
+●​ .. → el directorio padre. 
+Estas entradas permiten navegar por el árbol sin escribir rutas completas. 
+Ejemplo conceptual: 
+●​ subir un nivel usando .., 
+●​ referirse al directorio actual usando . 
+Esto simplifica muchas operaciones, como copias entre directorios relacionados. 
+4.2.4 Operaciones de directorios 
+Las operaciones sobre directorios varían más entre sistemas que las de archivos, pero las 
+ideas básicas son comunes. 
+Creación y eliminación 
+Create​
+ Crea un directorio nuevo.​
+ El sistema coloca automáticamente las entradas . y ... 
+Delete​
+ Elimina un directorio, sólo si está vacío.​
+ Un directorio que contiene únicamente . y .. se considera vacío. 
+Lectura del contenido 
+ 
+
+===== [PDF pag 11] =====
+ 
+Opendir​
+ Abre un directorio para poder leer su contenido. 
+Readdir​
+ Devuelve la siguiente entrada del directorio en un formato estándar.​
+ Evita que el programador tenga que conocer la estructura interna del directorio. 
+Closedir​
+ Cierra el directorio y libera las estructuras internas. 
+Modificación de nombres y vínculos 
+Rename​
+ Permite cambiar el nombre de un directorio, de forma similar a un archivo. 
+Link (vínculo duro) - Hard Link​
+ Permite que un mismo archivo aparezca en varios directorios.​
+ Internamente: 
+●​ se incrementa el contador del nodo-i, 
+●​ no se duplican los datos. 
+Unlink​
+ Elimina una entrada de directorio. 
+●​ si es la última referencia, el archivo se elimina, 
+●​ si hay más vínculos, sólo se elimina ese nombre. 
+Un link (vínculo) es una forma de hacer que un archivo aparezca con más de un nombre o 
+desde otro lugar del sistema de archivos. 
+Es decir, un directorio puede tener una entrada que apunte a algo que está almacenado en 
+otro lugar. 
+​
+ 
+En UNIX, eliminar un archivo es en realidad hacer unlink. 
+Vínculos simbólicos 
+Un vínculo simbólico no apunta directamente al archivo, sino a un archivo pequeño que 
+contiene un nombre de ruta. 
+Características: 
+●​ pueden cruzar discos, 
+●​ pueden apuntar a archivos remotos, 
+●​ son más flexibles que los vínculos duros. 
+ 
+
+===== [PDF pag 12] =====
+ 
+Desventaja: 
+●​ son menos eficientes, porque el sistema debe resolver el nombre adicional.​
+ 
+4.3 IMPLEMENTACIÓN DE SISTEMAS DE ARCHIVOS 
+En esta sección se cambia el punto de vista del usuario al punto de vista del 
+implementador.​
+ El usuario se preocupa por nombres, operaciones y jerarquías; el implementador por 
+cómo se almacenan archivos y directorios, cómo se administra el espacio en disco y 
+cómo lograr eficiencia y confiabilidad. 
+4.3.1 Distribución del sistema de archivos 
+Los sistemas de archivos se almacenan en discos, que pueden dividirse en particiones, 
+cada una con su propio sistema de archivos. 
+●​ El sector 0 del disco es el MBR (Master Boot Record), que contiene la tabla de 
+particiones y el código de arranque. 
+●​ El BIOS ejecuta el MBR, que localiza la partición activa, lee su bloque de 
+arranque y carga el sistema operativo. 
+Dentro de una partición, la organización típica incluye: 
+●​ Bloque de arranque 
+●​ Superbloque: contiene parámetros clave del sistema de archivos (tipo, tamaño, 
+información administrativa). 
+●​ Información de bloques libres (mapa de bits o lista). 
+●​ Nodos-i (uno por archivo). 
+●​ Directorio raíz 
+●​ Archivos y subdirectorios 
+El superbloque se lee en memoria al arrancar o al montar el sistema de archivos. 
+ 
+4.3.2 Implementación de archivos 
+ 
+
+===== [PDF pag 13] =====
+ 
+El problema central es cómo registrar qué bloques de disco pertenecen a cada archivo. 
+Asignación contigua 
+Cada archivo ocupa una serie contigua de bloques. 
+Ventajas 
+●​ Implementación simple (primer bloque + cantidad de bloques). 
+●​ Excelente rendimiento de lectura: una sola búsqueda y luego lectura secuencial. 
+Desventaja clave 
+●​ Fragmentación externa. 
+●​ Es necesario conocer el tamaño final del archivo al crearlo. 
+Uso típico 
+●​ Medios de solo escritura como CD-ROM y DVD.​
+ 
+ 
+Asignación de lista enlazada 
+Cada archivo es una lista enlazada de bloques, donde cada bloque apunta al siguiente. 
+Ventajas 
+●​ No hay fragmentación externa. 
+●​ Se puede usar cualquier bloque libre. 
+Desventajas 
+●​ Acceso aleatorio muy lento (hay que recorrer la lista). 
+●​ Se pierde espacio en cada bloque por el apuntador. 
+●​ Tamaños de bloque no alineados a potencias de dos. 
+ 
+
+===== [PDF pag 14] =====
+ 
+ 
+Lista enlazada con tabla en memoria (FAT) 
+Los apuntadores se sacan de los bloques y se colocan en una tabla en memoria llamada 
+FAT. 
+Mejoras 
+●​ El bloque completo queda disponible para datos. 
+●​ El acceso aleatorio es más rápido porque la cadena está en memoria. 
+Problema grave 
+●​ La tabla FAT debe estar completa en memoria. 
+●​ No escala bien en discos grandes (consume cientos de MB).​
+ 
+ 
+Nodos-i 
+Otro método para llevar un registro de qué bloques pertenecen a cuál archivo es asociar 
+con cada archivo una estructura de datos conocida como nodo-i (nodo-índice), Esta lista los 
+atributos y las direcciones de disco de los bloques del archivo. Dado el nodo-i, entonces es 
+posible encontrar todos los bloques del archivo.  
+ 
+
+===== [PDF pag 15] =====
+ 
+Cada archivo tiene un nodo-i que contiene: 
+●​ Atributos del archivo 
+●​ Direcciones de los bloques de disco 
+El i-nodo NO guarda el nombre del archivo. 
+El nombre está en el directorio. 
+Un hard link crea otro nombre que apunta al mismo i-nodo. 
+Qué guarda el i-nodo para manejar esto 
+El i-nodo tiene un campo llamado: 
+contador de enlaces (link count) 
+El archivo solo se elimina cuando llega a 0. 
+Directorio → nombre del archivo → i-nodo → direcciones de bloques → bloques del disco → datos del archivo 
+Ventaja clave 
+●​ Sólo los nodos-i de archivos abiertos deben estar en memoria. 
+●​ La memoria requerida depende del número de archivos abiertos, no del tamaño del 
+disco. 
+Archivos grandes 
+●​ Se usan bloques indirectos que contienen más direcciones de bloques. 
+Este esquema es el utilizado por UNIX. 
+ 
+ 
+
+===== [PDF pag 16] =====
+ 
+4.3.3 Implementación de directorios 
+La función principal del directorio es asociar el nombre ASCII del archivo con la 
+información necesaria para localizar sus bloques. 
+Dos enfoques: 
+●​ Atributos en la entrada de directorio (ej. Windows). 
+●​ Entrada con nombre + número de nodo-i, atributos en el nodo-i (ej. UNIX). 
+Búsqueda en directorios grandes 
+●​ Búsqueda lineal (simple pero lenta). 
+●​ Tablas de hash (rápidas pero complejas). 
+●​ Caché de búsquedas (efectiva si pocos archivos se usan mucho). 
+4.3.4 Archivos compartidos 
+Compartir archivos convierte el sistema de archivos en un grafo acíclico dirigido (DAG). 
+Vínculo duro - Hard Link 
+●​ Varias entradas apuntan al mismo nodo-i. 
+●​ Problemas al eliminar archivos compartidos. 
+●​ El propietario original sigue siendo responsable del archivo. 
+Qué pasa al borrar un hard link 
+●​ Cada i-nodo tiene un contador de enlaces (link count). 
+●​ Cada hard link incrementa ese contador. 
+Cuando borrás un nombre (unlink): 
+1.​ Se elimina la entrada del directorio. 
+2.​ El contador del i-nodo disminuye en 1. 
+Si el contador llega a: 
+0 
+entonces: 
+●​ se elimina el i-nodo 
+●​ se liberan los bloques del archivo 
+Vínculo simbólico - Soft Link 
+●​ Es un archivo que contiene una ruta a otro archivo. 
+●​ No comparte nodo-i. 
+ 
+
+===== [PDF pag 17] =====
+ 
+●​ Más flexible (puede cruzar discos o máquinas). 
+●​ Más lento y consume más recursos. 
+Qué pasa al borrar un soft link 
+Un soft link es un archivo independiente. 
+Si borrás el soft link: 
+●​ solo se borra ese archivo link 
+●​ el archivo original no se afecta​
+ 
+Si borrás el archivo original: 
+●​ el soft link sigue existiendo 
+●​ pero queda roto (broken link) porque apunta a una ruta que ya no existe. 
+ 
+ 
+
+===== [PDF pag 18] =====
+ 
+ 
+ 
+ 
+4.3.5 Sistemas de archivos estructurados por registro (LFS) 
+ 
+
+===== [PDF pag 19] =====
+ 
+Idea central: el disco se trata como un registro secuencial. 
+●​ Las escrituras pequeñas se acumulan en memoria. 
+●​ Se escriben juntas como segmentos grandes y contiguos. 
+●​ Mejora drásticamente el rendimiento de escrituras pequeñas. 
+Incluye un hilo limpiador que: 
+●​ Elimina bloques obsoletos. 
+●​ Reescribe los bloques aún válidos. 
+●​ Mantiene el disco como un búfer circular. 
+4.4 ADMINISTRACIÓN Y OPTIMIZACIÓN DE SISTEMAS DE ARCHIVOS 
+Que un sistema de archivos funcione es sólo el primer paso. En la práctica, debe hacerlo de 
+manera eficiente, robusta y confiable, aun frente a fallas, grandes volúmenes de datos y 
+usos reales. Esta sección analiza los principales problemas de administración de disco, 
+respaldo, consistencia y rendimiento. 
+4.4.1 Administración del espacio en disco 
+Los archivos se almacenan en disco, por lo que administrar ese espacio es una cuestión 
+central. 
+En teoría, un archivo de n bytes podría almacenarse como una secuencia contigua, pero 
+esto genera problemas cuando el archivo crece, ya que habría que moverlo. Como mover 
+archivos en disco es muy costoso, casi todos los sistemas de archivos dividen los 
+archivos en bloques de tamaño fijo, que no necesitan ser contiguos. 
+Tamaño de bloque 
+Elegir el tamaño del bloque es un compromiso entre espacio y tiempo: 
+●​ Bloques grandes​
+ 
+○​ Menos búsquedas y retrasos rotacionales 
+○​ Mejor rendimiento 
+○​ Mucho desperdicio de espacio en archivos pequeños 
+●​ Bloques pequeños​
+ 
+○​ Mejor aprovechamiento del espacio 
+○​ Peor rendimiento por múltiples accesos al disco 
+Los estudios empíricos citados por Tanenbaum muestran que la mayoría de los archivos 
+son pequeños, pero la mayor parte del espacio del disco está ocupado por pocos 
+archivos grandes.​
+ Esto implica que el desperdicio de espacio en archivos pequeños no es tan grave, 
+mientras que el rendimiento sí lo es. 
+ 
+
+===== [PDF pag 20] =====
+ 
+Históricamente se eligieron tamaños entre 1 KB y 4 KB, pero con discos modernos de 
+varios terabytes, bloques más grandes (por ejemplo 64 KB) pueden ser razonables, 
+aceptando el desperdicio de espacio. 
+Registro de bloques libres 
+Una vez elegido el tamaño de bloque, el sistema debe llevar registro de qué bloques están 
+libres. 
+Los dos métodos principales son: 
+●​ Lista enlazada de bloques libres​
+ Cada bloque contiene direcciones de otros bloques libres.​
+ Es simple, pero puede generar muchas operaciones de E/S cuando se crean y 
+eliminan archivos pequeños y temporales. 
+●​ Mapa de bits​
+ Un bit por bloque indica si está libre u ocupado.​
+ Usa mucho menos espacio y facilita asignar bloques cercanos, reduciendo el 
+movimiento del brazo del disco. 
+Ambos métodos tienen ventajas y desventajas, y la elección depende del uso real del 
+sistema. Este punto ilustra un problema clásico del diseño de sistemas operativos: las 
+decisiones deben tomarse sin conocer exactamente el comportamiento futuro de los 
+usuarios. 
+ 
+Unidad 5. ENTRADA/SALIDA 
+Además de procesos, memoria y archivos, el sistema operativo controla todos los 
+dispositivos de entrada/salida.​
+ Sus responsabilidades principales son: 
+ 

@@ -1,0 +1,727 @@
+
+===== [PDF pag 1] =====
+ 
+UNIDAD 3 - ADMINISTRACIÓN DE MEMORIA 
+La memoria principal (RAM) es un recurso crítico que debe administrarse con cuidado.​
+Aunque la memoria creció muchísimo con los años, los programas crecen todavía más 
+rápido.​
+El sistema operativo crea abstracciones de memoria y las administra para: 
+●​ asignar memoria a los procesos, 
+●​ evitar interferencias, 
+●​ y usarla de forma eficiente.w 
+Las computadoras no tienen una sola memoria ideal, sino una jerarquía de memoria: 
+●​ caché: muy rápida, pequeña y volátil, 
+●​ memoria principal: más grande, velocidad media, volátil, 
+●​ disco: grande, lento y no volátil, 
+●​ Almacenamiento removible. 
+El administrador de memoria es la parte del sistema operativo que: 
+●​ lleva registro de qué memoria está en uso, 
+●​ asigna memoria a los procesos, 
+●​ la libera cuando ya no se necesita. 
+En este capítulo se estudia la memoria principal, desde esquemas simples hasta 
+sofisticados. 
+3.1 Sin abstracción de memoria 
+Modelo 
+No existe ninguna abstracción: cada programa ve directamente la memoria física. 
+Una instrucción como: 
+MOV REGISTRO1, 1000 
+accede a la dirección física 1000 de la RAM. 
+El programador ve la memoria como: 
+●​ direcciones desde 0 hasta un máximo, 
+●​ cada dirección corresponde a una celda de memoria. 
+ 
+
+===== [PDF pag 2] =====
+ 
+ 
+Consecuencia principal 
+No pueden ejecutarse dos programas al mismo tiempo en memoria. 
+Si un programa escribe en una dirección: 
+●​ puede sobrescribir datos del otro, 
+●​ ambos programas fallan. 
+Ejecución típica 
+●​ El sistema carga un solo programa desde disco a memoria. 
+●​ Lo ejecuta. 
+●​ Cuando termina, carga otro programa sobrescribiendo el anterior. 
+¿Se puede tener paralelismo? 
+De forma muy limitada: 
+●​ usando múltiples hilos dentro de un mismo proceso, ya que comparten memoria. 
+●​ no sirve para ejecutar programas independientes. 
+Multiprogramación sin abstracción 
+Dos alternativas históricas: 
+Intercambio (swapping) 
+●​ Se guarda todo el contenido de memoria en disco. 
+●​ Se carga otro programa. 
+●​ Nunca hay más de un programa en memoria a la vez. 
+Protección por hardware (IBM 360) 
+●​ Memoria dividida en bloques con llaves de protección. 
+●​ Cada proceso sólo puede acceder a bloques con su llave. 
+●​ El sistema operativo controla las llaves. 
+ 
+
+===== [PDF pag 3] =====
+ 
+Esto evita que los procesos se dañen entre sí, pero no resuelve otro problema clave. 
+Problema de reubicación 
+Los programas usan direcciones absolutas. 
+Si un programa fue escrito suponiendo que empieza en la dirección 0: 
+●​ al cargarse en otra dirección, 
+●​ los saltos (JMP) apuntan a lugares incorrectos, 
+●​ el programa falla. 
+ 
+Solución parcial: reubicación estática 
+●​ Al cargar el programa, se suma una constante a todas las direcciones. 
+●​ Requiere: 
+○​ saber qué palabras son direcciones y cuáles constantes, 
+○​ modificar el programa al cargarse, 
+○​ menor velocidad de carga. 
+No es una solución general ni elegante. 
+3.2 UNA ABSTRACCIÓN DE MEMORIA: ESPACIOS DE DIRECCIONES 
+Permitir que los procesos accedan directamente a la memoria física trae dos problemas 
+graves.​
+Primero, un programa podría modificar la memoria del sistema operativo y hacer que el 
+sistema falle.​
+Segundo, se vuelve muy difícil ejecutar varios programas al mismo tiempo sin que se 
+interfieran. 
+Por eso, el sistema operativo introduce una abstracción de memoria, del mismo modo que 
+el proceso es una abstracción de la CPU. 
+ 
+
+===== [PDF pag 4] =====
+ 
+3.2.1 La noción de espacio de direcciones 
+Para que varios programas puedan coexistir en memoria sin interferirse, hay que resolver 
+dos problemas: protección y reubicación. 
+La solución es el espacio de direcciones.​
+Un espacio de direcciones es el conjunto de direcciones que puede usar un proceso. Cada 
+proceso ve su propia memoria, independiente de los demás. Así, la dirección 28 de un 
+proceso no tiene relación con la dirección 28 de otro. 
+De esta manera: 
+●​ los procesos no pueden acceder a memoria ajena, 
+●​ cada programa se ejecuta como si fuera el único en la máquina. 
+Espacio de direcciones: 
+○ Crea un tipo de memoria abstracta para que los programas vivan ahí. 
+○ Un espacio de direcciones (address space) es el conjunto de direcciones que puede 
+utilizar un proceso para direccionar la memoria. 
+○ Cada proceso tiene su propio espacio de direcciones, independiente de los que 
+pertenecen a otros procesos 
+Registros base y límite 
+Una forma simple de implementar espacios de direcciones es usando registros base y 
+límite. 
+Cuando un proceso se ejecuta: 
+●​ el registro base indica dónde empieza el proceso en memoria física, 
+●​ el registro límite indica su tamaño. 
+Cada vez que el proceso accede a memoria, la CPU suma automáticamente la dirección 
+lógica del proceso con el valor del registro base. Además, verifica que la dirección no 
+exceda el límite.​
+ Si lo hace, se produce un error y el acceso se bloquea. 
+Así, el proceso siempre accede sólo a su región de memoria, aunque internamente se use 
+memoria física real. 
+La desventaja es que cada acceso requiere una suma y una comparación, lo que introduce 
+cierta sobrecarga. 
+3.2.2 Intercambio 
+ 
+
+===== [PDF pag 5] =====
+ 
+En la práctica, la memoria RAM no alcanza para mantener todos los procesos al mismo 
+tiempo.​
+La solución más simple es el intercambio. 
+El sistema operativo: 
+●​ carga un proceso completo en memoria, 
+●​ lo ejecuta un tiempo, 
+●​ lo guarda en disco, 
+●​ trae otro proceso. 
+Cuando un proceso vuelve a memoria, puede hacerlo en otra ubicación, por lo que necesita 
+reubicación, que puede hacerse con registros base y límite. 
+Mover procesos genera huecos en la memoria. Unir esos huecos se llama compactación, 
+pero casi no se usa porque consume mucho tiempo de CPU. 
+ 
+La memoria física puede no ser lo suficientemente grande para almacenar todos los 
+procesos: 
+○ Intercambio: 
+■ Copia programas desde la RAM al disco y trae programas del disco a la RAM. 
+■ Cuando el proceso finaliza su tiempo de ejecución, éste puede volver al disco o 
+mantenerse en la RAM. 
+○ Memoria virtual: permite que los programas se ejecuten incluso cuando solo se 
+encuentran en forma parcial en la memoria. 
+ 
+
+===== [PDF pag 6] =====
+ 
+ 
+ 
+Crecimiento de los procesos 
+Los procesos pueden crecer mientras se ejecutan, por ejemplo: 
+●​ el heap crece hacia arriba, 
+●​ la pila crece hacia abajo. 
+Si no hay espacio suficiente: 
+●​ el proceso debe moverse, 
+●​ intercambiarse, 
+●​ o suspenderse. 
+3.2.3 Administración de memoria libre 
+El sistema operativo debe llevar registro de qué partes de la memoria están libres. 
+Una opción es el mapa de bits, donde cada unidad de memoria tiene un bit que indica si 
+está libre u ocupada. Es simple, pero buscar espacios grandes es lento. 
+Otra opción es usar listas ligadas de procesos y huecos. Esto facilita fusionar huecos 
+cuando un proceso termina y permite aplicar distintos algoritmos de asignación. 
+ 
+
+===== [PDF pag 7] =====
+ 
+ 
+Algoritmos de asignación (idea general) 
+●​ Primer ajuste: usa el primer hueco suficientemente grande. Es rápido. 
+●​ Mejor ajuste: busca el hueco más pequeño posible. Produce más fragmentación. 
+●​ Peor ajuste: usa el hueco más grande. No funciona bien en la práctica. 
+●​ Ajuste rápido: mantiene listas por tamaños frecuentes. Es muy veloz, pero 
+fragmenta. 
+3.3 MEMORIA VIRTUAL 
+El crecimiento del software hace imposible que todos los programas quepan completos en 
+memoria.​
+ El intercambio tampoco es viable, porque mover procesos enteros entre memoria y disco 
+es demasiado lento. 
+La solución es la memoria virtual: permitir que los programas se ejecuten aunque sólo una 
+parte de ellos esté en memoria. 
+Esta memoria virtual nace por la necesidad de que los programas sean más grandes que la 
+memoria, por lo que, se dividen los programas en pequeñas partes (Sobrepuestos/ 
+Overlays). De esta forma ahora cuando se arranca un programa, se carga del Administrador 
+de Sobrepuestos para ejecutar el bloque 0 del programa, luego el 1, y así. La Memoria 
+Virtual conforma una parte del Disco, haciendo los intercambios desde ahí, guardando los 
+sobrepuestos. 
+Cada proceso tiene su propio espacio de direcciones, dividido en partes pequeñas. Sólo 
+las partes necesarias están en RAM; el resto permanece en disco. 
+Idea central de la memoria virtual 
+Un programa cree que toda su memoria está disponible, pero en realidad: 
+ 
+
+===== [PDF pag 8] =====
+ 
+●​ algunas partes están en memoria física, 
+●​ otras están en disco, 
+●​ El sistema operativo mueve partes automáticamente según se necesiten. 
+Esto elimina la necesidad de que el programador gestione la memoria manualmente. 
+3.3.1 Paginación 
+La técnica más usada para implementar memoria virtual es la paginación. 
+El espacio de direcciones virtuales se divide en bloques de tamaño fijo llamados páginas.​
+ La memoria física se divide en bloques del mismo tamaño llamados marcos de página. 
+Las páginas pueden estar: 
+●​ asociadas a un marco en memoria, 
+●​ o no estar en memoria (en disco). 
+Direcciones virtuales y MMU 
+Los programas generan direcciones virtuales.​
+Estas direcciones no van directamente a la memoria. 
+Primero pasan por la MMU (Unidad de Administración de Memoria), que: 
+●​ traduce la dirección virtual a una dirección física, 
+●​ o detecta que la página no está en memoria.
+ 
+Si la página no está en memoria, ocurre un fallo de página. 
+ 
+
+===== [PDF pag 9] =====
+ 
+ 
+Fallo de página 
+Cuando una página no está en memoria: 
+1.​ la CPU genera un trap al sistema operativo, 
+2.​ el sistema operativo elige un marco para liberar, 
+3.​ guarda la página vieja en disco si fue modificada, 
+4.​ trae la página necesaria desde disco, 
+5.​ reintenta la instrucción.​
+ 
+Este proceso es transparente para el programa. 
+División de la dirección virtual 
+Una dirección virtual se divide en dos partes: 
+●​ número de página, que identifica la página virtual, 
+●​ desplazamiento, que indica la posición dentro de la página.​
+ 
+El número de página se usa como índice en la tabla de páginas. 
+La asociación de direcciones virtuales a direcciones físicas se puede resumir de la siguiente 
+manera: 
+○ La dirección virtual se divide en un número de página virtual (bits de mayororden) y en un 
+desplazamiento (bits de menor orden). 
+○ Por ejemplo, con una dirección de 16 bits y un tamaño de página de 4 KB, los 4 bits 
+superiores podrían especificar una de las 16 páginas virtuales y los 12 bits inferiores 
+podrían entonces especificar el desplazamiento de bytes (0 a 4095)dentro de la página 
+seleccionada. 
+ 
+
+===== [PDF pag 10] =====
+ 
+○ Sin embargo, también es posible una división con 3, 5 u otro número de bits para la 
+página. 
+○ Las distintas divisiones implican diferentes tamaños de página. 
+3.3.2 Tablas de páginas 
+La tabla de páginas asocia cada página virtual con: 
+●​ un marco de página físico, 
+●​ o indica que la página no está presente. 
+Su función es traducir direcciones virtuales en direcciones físicas. 
+El número de página virtual se utiliza como índice en la tabla de páginas para buscar la 
+entrada para esa página virtual.​
+En la entrada en la tabla de páginas, se encuentra el número de marco de página (si lo 
+hay). El número del marco de página se adjunta al extremo de mayor orden del 
+desplazamiento, reemplazando el número de página virtual, para formar una dirección física 
+que se pueda enviar a la memoria.  
+El propósito de la tabla de páginas es asociar páginas virtuales a los marcos de página. 
+Entrada de la tabla de páginas 
+Cada entrada contiene información clave: 
+●​ número de marco de página, 
+●​ bit de presente/ausente, 
+●​ bits de protección (lectura, escritura, ejecución), 
+●​ bit de modificada, 
+●​ bit de referenciada, 
+●​ control de uso de caché. 
+Estos bits permiten al sistema operativo: 
+●​ proteger memoria, 
+●​ decidir qué página reemplazar, 
+●​ evitar escrituras innecesarias al disco. 
+ 
+ 
+
+===== [PDF pag 11] =====
+ 
+3.3.3 Aceleración de la paginación 
+En cualquier sistema con memoria virtual paginada aparecen dos problemas 
+fundamentales: 
+1.​ La traducción de direcciones virtuales a físicas debe ser muy rápida, porque 
+ocurre en cada referencia a memoria. 
+2.​ Las tablas de páginas pueden ser enormes, porque los espacios de direcciones 
+virtuales modernos son muy grandes. 
+Si la tabla de páginas estuviera sólo en memoria principal, cada acceso a memoria 
+requeriría primero acceder a la tabla de páginas y luego a la memoria real. Esto duplica las 
+referencias a memoria y reduce drásticamente el rendimiento. Por eso, este esquema puro 
+no es aceptable en la práctica. 
+Búfer de traducción adelantada (TLB) 
+Para resolver el problema de la velocidad, se introduce el TLB (Translation Lookaside 
+Buffer).​
+ El TLB es una memoria pequeña y muy rápida, ubicada dentro de la MMU, que guarda 
+un subconjunto de las entradas de la tabla de páginas que se usan con mayor 
+frecuencia. 
+Cada entrada del TLB contiene: 
+●​ número de página virtual 
+●​ número de marco de página 
+●​ bits de protección 
+●​ bit de modificada 
+●​ bit de válida​
+ 
+El funcionamiento es el siguiente: 
+●​ Cuando la CPU genera una dirección virtual, la MMU primero consulta el TLB. 
+●​ Si la página virtual está en el TLB y los permisos son correctos, se obtiene 
+directamente la dirección física sin acceder a la tabla de páginas. 
+●​ Si la página no está en el TLB, ocurre un fallo de TLB: 
+○​ Se consulta la tabla de páginas en memoria. 
+ 
+
+===== [PDF pag 12] =====
+ 
+○​ Se reemplaza una entrada del TLB por la nueva. 
+○​ Se continúa la ejecución.​
+ 
+Gracias al principio de localidad, la mayoría de las referencias a memoria se resuelven en 
+el TLB, evitando accesos costosos a la tabla de páginas. 
+Fallos suaves y fallos duros 
+Es fundamental distinguir dos tipos de fallos: 
+●​ Fallo suave: la página no está en el TLB pero sí está en memoria.​
+ Sólo se actualiza el TLB. Es rápido (nanosegundos). 
+●​ Fallo duro: la página no está en memoria.​
+ El sistema operativo debe traerla desde disco. Es extremadamente lento 
+(milisegundos). 
+Un fallo duro es varios órdenes de magnitud más lento que un fallo suave, por lo que el 
+objetivo principal del sistema es minimizar los fallos duros. 
+Administración del TLB mediante hardware y software 
+En algunas arquitecturas, el hardware maneja automáticamente el TLB.​
+ En muchas arquitecturas RISC modernas, el sistema operativo administra el TLB 
+mediante software. 
+En este último caso: 
+●​ Un fallo de TLB genera un trap al sistema operativo. 
+●​ El sistema busca la página, actualiza el TLB y reinicia la instrucción. 
+●​ Este mecanismo es viable porque los fallos de TLB son frecuentes pero baratos, y el 
+TLB suele ser suficientemente grande. 
+3.3.4 Tablas de páginas para memorias extensas 
+Aunque el TLB acelera la traducción, no resuelve el tamaño enorme de las tablas de 
+páginas. 
+Tablas de páginas multinivel 
+La paginación multinivel es un método típico en arquitecturas de 32 bits que busca no 
+mantener todas las tablas de páginas en memoria, sino solo las necesarias. 
+Para esto, divide la tabla de páginas en varios niveles.​
+ La dirección virtual se divide en índices de cada nivel y un desplazamiento. 
+Cada nivel apunta al siguiente solo si es necesario, por lo que solo se crean y cargan en 
+memoria las tablas que se utilizan. 
+ 
+
+===== [PDF pag 13] =====
+ 
+Si una tabla no está presente, se produce un fallo de página y el sistema operativo debe 
+intervenir. 
+ 
+ 
+Consiste en evitar mantener todas las tablas de páginas todo el tiempo, y en especial las 
+que no se necesitan. La entrada que se coloca en la tabla de primer nivel, lleva a la de 
+segundo nivel. Aunque el espacio de direcciones contiene muchas palabras, solo pocas 
+tablas son requeridas. Los bits de Presente/Ausente en las páginas de nivel superior obligan 
+a que se produzca un fallo de página. En este caso el SO tiene que actuar. El problema es 
+que es propensa a quedarse sin memoria gracias a la arquitectura de 64 bits 
+La idea es no mantener toda la tabla en memoria. 
+La dirección virtual se divide en: 
+●​ varios índices (TP1, TP2, …), 
+●​ un desplazamiento. 
+Cada nivel apunta al siguiente sólo si se usa. 
+Ventaja: 
+●​ sólo existen en memoria las tablas necesarias, 
+●​ Las grandes regiones no usadas no consumen memoria.​
+ 
+Es el método típico en sistemas de 32 bits. 
+ 
+
+===== [PDF pag 14] =====
+ 
+ 
+Tablas de páginas invertidas 
+Las tablas de páginas invertidas mantienen una entrada por marco físico en lugar de por 
+página virtual, reduciendo el tamaño de la tabla, pero haciendo más compleja la traducción 
+de direcciones, por lo que se utilizan TLB y tablas hash para acelerar las búsquedas. 
+ 
+​
+ 
+Hay una entrada por cada marco de página en la memoria real. Ahorran grandes cantidades 
+de espacio, aunque tienen una seria desventaja: la traducción. La solución es usar el TLB. 
+Si el TLB contiene las páginas de uso frecuente, la traducción puede ser igual de rápido que 
+con las tablas regulares. Sin embargo, ya sabemos que pasa si ocurre un fallo en el TLB. 
+Por lo que se incorpora una tabla Hash. Con todas las páginas virtuales con el mismo hash 
+encadenadas en conjunto. Si la tabla tiene tantas ranuras como páginas físicas, la cadena 
+promedio tendrá solo una entrada.  
+En sistemas de 64 bits, incluso las tablas multinivel se vuelven gigantes. 
+La solución: 
+●​ una entrada por marco físico, no por página virtual. 
+Cada entrada dice: 
+●​ qué proceso, 
+●​ qué página virtual ocupa ese marco. 
+ 
+
+===== [PDF pag 15] =====
+ 
+Ventaja: 
+●​ la tabla es pequeña. 
+Desventaja: 
+●​ traducir direcciones es más complejo. 
+Por eso: 
+●​ se usa TLB para los accesos frecuentes,​
+ 
+●​ En fallos de TLB se busca en la tabla invertida usando hash. 
+​
+ 
+Idea final para fijar 
+●​ La paginación necesita aceleración para ser usable. 
+●​ El TLB es clave para el rendimiento. 
+●​ Para memorias grandes:​
+ 
+○​ 32 bits → tablas multinivel 
+○​ 64 bits → tablas invertidas + TLB 
+3.4 Algoritmos de reemplazo de páginas 
+Cuando ocurre un fallo de página, el sistema operativo debe desalojar una página de la 
+memoria para hacer espacio a la nueva.​
+ Si la página fue modificada, debe escribirse de vuelta al disco; si no, simplemente se 
+descarta. 
+Elegir cualquier página al azar funciona, pero el rendimiento mejora mucho si se elimina 
+una página que no se usa con frecuencia, ya que eliminar una página muy usada provoca 
+que tenga que traerse de nuevo rápidamente. 
+ 
+
+===== [PDF pag 16] =====
+ 
+Este problema aparece también en memorias caché y en cachés de servidores web: 
+cuando el espacio es limitado, hay que decidir qué descartar. 
+Una decisión clave es si la página a desalojar debe pertenecer al mismo proceso o puede 
+pertenecer a otro proceso. Ambos enfoques existen. 
+3.4.1 Algoritmo óptimo 
+El algoritmo óptimo elimina la página que se va a usar más lejos en el futuro.​
+ De este modo, el siguiente fallo de página se retrasa lo máximo posible. 
+El problema es que no se puede implementar, porque el sistema operativo no conoce el 
+futuro.​
+ Sólo se usa como referencia teórica para comparar otros algoritmos. 
+3.4.2 NRU (No usadas recientemente) 
+Este algoritmo usa dos bits por página: 
+●​ R (referenciada) 
+●​ M (modificada) 
+Las páginas se clasifican en cuatro clases: 
+●​ Clase 0: no referenciada, no modificada 
+●​ Clase 1: no referenciada, modificada 
+●​ Clase 2: referenciada, no modificada​
+ 
+●​ Clase 3: referenciada, modificada 
+El algoritmo elige al azar una página de la clase con menor número disponible. 
+La idea es simple:​
+ Es mejor eliminar una página no usada recientemente, y mejor aún si no está 
+modificada. 
+Es simple, barato, pero bastante burdo. 
+3.4.3 FIFO (Primera en entrar, primera en salir) 
+FIFO elimina la página que llegó primero a memoria. 
+Es fácil de implementar, pero muy malo:​
+ una página puede haber llegado primero y seguir siendo muy usada. 
+Por eso, FIFO casi no se usa en sistemas reales. 
+3.4.4 Segunda oportunidad 
+ 
+
+===== [PDF pag 17] =====
+ 
+Es una mejora de FIFO. 
+Antes de eliminar la página más antigua, se revisa su bit R: 
+●​ Si R = 0, se elimina. 
+●​ Si R = 1, se borra R y la página se mueve al final de la lista.​
+ 
+Así, una página muy usada no se elimina de inmediato.​
+ Si todas las páginas tienen R = 1, el algoritmo degenera en FIFO, pero siempre termina. 
+ 
+3.4.5 Algoritmo del reloj 
+Es una implementación más eficiente de segunda oportunidad. 
+Las páginas se organizan en una lista circular, y una manecilla apunta a la candidata a 
+eliminar. 
+●​ Si R = 0, se elimina. 
+●​ Si R = 1, se borra R y se avanza la manecilla. 
+Hace lo mismo que en la segunda oportunidad, pero sin mover páginas en memoria, por 
+eso es más eficiente. 
+ 
+ 
+
+===== [PDF pag 18] =====
+ 
+3.4.6 LRU (Menos usadas recientemente) 
+LRU elimina la página que no se ha usado durante más tiempo. 
+Se basa en la idea de localidad:​
+ las páginas usadas recientemente probablemente se vuelvan a usar. 
+Es una excelente aproximación al algoritmo óptimo, pero difícil de implementar 
+exactamente, porque requeriría actualizar información en cada referencia a memoria. 
+3.4.7 Simulación de LRU en software 
+Como LRU exacto es caro, se usan aproximaciones: 
+NFU (No utilizadas frecuentemente) 
+Cada página tiene un contador que se incrementa según el bit R en cada pulso de reloj. 
+Problema: no olvida el pasado, páginas usadas hace mucho pueden quedar protegidas 
+para siempre. 
+Envejecimiento (aging) 
+Es una mejora de NFU: 
+●​ Los contadores se desplazan a la derecha.​
+ 
+●​ El bit R se inserta en el bit más significativo.​
+ 
+Así, las referencias antiguas pierden peso con el tiempo. 
+Es una muy buena aproximación a LRU, eficiente y realista. 
+3.4.8 Conjunto de trabajo 
+Los procesos no usan todas sus páginas al mismo tiempo, sino un conjunto pequeño 
+durante cada fase de ejecución.​
+ A este conjunto se lo llama conjunto de trabajo. 
+Si el conjunto de trabajo está en memoria, el proceso corre bien.​
+ Si no entra en memoria, aparece el thrashing: muchos fallos de página y ejecución 
+lentísima. 
+El modelo del conjunto de trabajo intenta mantener en memoria las páginas usadas en 
+los últimos τ segundos de tiempo virtual. 
+El algoritmo elimina páginas que no están en el conjunto de trabajo. 
+ 
+
+===== [PDF pag 19] =====
+ 
+Es conceptualmente muy bueno, pero costoso de implementar. 
+3.4.9 WSClock 
+WSClock combina: 
+●​ algoritmo del reloj 
+●​ información del conjunto de trabajo 
+●​ bits R y M 
+Funciona así, en esencia: 
+●​ Si R = 1, se borra y se avanza. 
+●​ Si R = 0 y la página es vieja y limpia, se elimina. 
+●​ Si es vieja pero sucia, se programa la escritura y se sigue buscando. 
+Es eficiente, realista y muy usado en la práctica. 
+ 
+ 
+
+===== [PDF pag 20] =====
+ 
+ 
+3.6.2 Fallo de página  
+Secuencia esencial: 
+1.​ El hardware hace un trap al kernel, guardando el contador del programa en la pila 
+2.​ Se inicia una rutina en código ensamblador para guardar los registros generales e 
+información volátil 
+3.​ El sistema operativo descubre que ha ocurrido un fallo de página y trata de descubrir 
+cuál página virtual se necesita. 
+4.​ Una vez que se conoce la dirección virtual que produjo el fallo, el sistema 
+comprueba si esta dirección es válida y si la protección es consistente con el acceso. 
+5.​ Si el marco de página seleccionado está sucio, la página se planifica para transferirla 
+al disco y se realiza una conmutación de contexto 
+6.​ Tan pronto como el marco de página esté limpio, el sistema operativo busca la 
+dirección de disco en donde se encuentra la página necesaria, y planifica una 
+operación de disco para llevarla a memoria.  
+7.​ Cuando la interrupción de disco indica que la página ha llegado, las tablas de 
+páginas se actualizan para reflejar su posición y el marco se marca como en estado 
+normal.  
+8.​ La instrucción fallida se respalda al estado en que tenía cuando empezó, y el 
+contador de programa se restablece para apuntar a esa instrucción.  
+9.​ El proceso fallido se planifica y el sistema operativo regresa a la rutina (en lenguaje 
+ensamblador) que lo llamó.  
+10.​Esta rutina recarga los registros y demás información de estado, regresando al 
+espacio de usuario para continuar la ejecución, como si no hubiera ocurrido el fallo. 
+​
+ trap → identificar página → validar → elegir marco → escribir si está sucia → leer página → 
+actualizar tablas → reintentar instrucción. 
+3.7 Segmentación 
+Hasta ahora, la memoria virtual era unidimensional: un solo espacio de direcciones 
+lineal de 0 a un máximo.​
+ 
+
+===== [PDF pag 21] =====
+ 
+El problema es que muchos programas trabajan con estructuras lógicas distintas (tablas, 
+pilas, código) que crecen y se reducen de forma independiente. 
+Ejemplo clásico: un compilador, que maneja texto fuente, tabla de símbolos, constantes, 
+árbol sintáctico y pila. 
+​
+ En una memoria unidimensional, estas estructuras compiten por un único espacio y 
+pueden chocar entre sí, desperdiciando memoria o complicando la gestión. 
+La segmentación resuelve esto dividiendo la memoria en múltiples espacios de 
+direcciones independientes, llamados segmentos. 
+Estos segmentos, a contrario de las páginas, varían en longitud a su gusto. Estas longitudes 
+pueden cambiar durante la ejecución de un proceso. 
+ 
+ 
+Idea central de la segmentación 
+ 
+
+===== [PDF pag 22] =====
+ 
+Un segmento es una entidad lógica, conocida por el programador (procedimiento, arreglo, 
+pila, datos). 
+Cada segmento: 
+●​ empieza en 0, 
+●​ tiene longitud variable, 
+●​ puede crecer o reducirse independientemente, 
+●​ tiene protección propia. 
+Una dirección ya no es un solo número, sino un par:​
+ (número de segmento, dirección dentro del segmento). 
+Esto elimina la necesidad de que el programador administre manualmente estructuras que 
+cambian de tamaño. 
+Ventajas clave de la segmentación 
+1.​ Crecimiento independiente​
+ Un segmento puede crecer sin afectar a los demás. No hay choques entre tablas o 
+pilas. 
+2.​ Modularidad y vinculación​
+ Si cada procedimiento está en su propio segmento, recompilar uno no cambia las 
+direcciones de los demás.​
+ Esto simplifica enormemente la vinculación de programas grandes. 
+3.​ Compartición natural​
+ Segmentos completos (por ejemplo, bibliotecas) pueden compartirse entre 
+procesos. 
+4.​ Protección semántica​
+ Cada segmento puede tener protección acorde a su contenido: 
+○​ código: sólo ejecución, 
+○​ datos: lectura/escritura, 
+○​ pila: no ejecutable.​
+ 
+5.​ Esto detecta errores de programación de forma natural. 
+La protección es natural en segmentación porque el contenido del segmento es lógico y 
+conocido.​
+En paginación, el contenido de una página es accidental. 
+ 
+
+===== [PDF pag 23] =====
+ 
+ 
+ 
+Segmentación pura: problema 
+Los segmentos no tienen tamaño fijo.​
+ Al cargarlos y desalojarlos se generan huecos en la memoria. 
+Esto produce fragmentación externa (efecto de tablero de ajedrez). 
+Solución posible: compactación, moviendo segmentos para unir huecos, pero es costosa. 
+3.7.2 Segmentación con paginación: MULTICS 
+ 
+
+===== [PDF pag 24] =====
+ 
+Cada programa posee una tabla de segmentos, con un descriptor. Esta tabla, por el 
+tamaño, se crea también como su propio segmento y se página. Contiene la información si 
+está en Memoria. El descriptor posee el tamaño del segmento. La dirección del segmento 
+en el disco no está en el descriptor, sino que en otra tabla utilizada por el manejador de 
+fallos de segmento. 
+MULTICS combina segmentación + paginación. 
+Cada segmento: 
+●​ es un espacio de direcciones lógico, 
+●​ pero internamente está paginado. 
+Esto permite: 
+●​ no tener el segmento completo en memoria, 
+●​ mantener las ventajas lógicas de la segmentación. 
+Cada proceso tiene una tabla de segmentos.​
+ Cada descriptor de segmento indica: 
+●​ tamaño, 
+●​ protección, 
+●​ si está en memoria, 
+●​ apuntador a su tabla de páginas. 
+Una dirección MULTICS tiene tres partes:​
+ segmento → página → desplazamiento. 
+El hardware usa un TLB para acelerar el acceso y evitar recorrer tablas en cada instrucción. 
+ 
+ 
+
+===== [PDF pag 25] =====
+ 
+ 
+3.7.3 Segmentación con paginación: Intel Pentium 
+El Pentium adopta una idea similar a MULTICS. 
+LDT (Tabla de Descriptores Locales) y GDT (Tabla de descriptores globales). Cada 
+programa tiene su propia LDT pero una única GDT compartida por todos los programas en 
+la computadora. Cada selector es un número de 16 bits. 
+Al momento que se carga, el descriptor obtiene la GDT o LDT y se almacena en registros. 
+Si el segmento no existe, o se paginó para sacarlo, se produce un Trap. Después el 
+hardware utiliza el límite para ver que no se salga del segmento, en caso contrario, Trap. Si 
+pasa, suma el campo Base.  
+Si se desactiva la paginación, se utiliza aun sistema de segmentación pura. En caso 
+contrario, la dirección lineal se interpreta como una virtual y se asigna usando tablas de 
+página. Cada programa tiene un directorio de páginas de 1024 entradas de 32 bits.  
+ 
+
+===== [PDF pag 26] =====
+ 
+ 
+ 
+Tiene: 
+●​ segmentación (LDT y GDT), 
+●​ paginación (dos niveles), 
+●​ TLB para acelerar traducciones. 
+ 
+Primero: 
+1.​ El selector identifica el segmento. 
+ 
+
+===== [PDF pag 27] =====
+ 
+2.​ El descriptor aporta base + límite → dirección lineal. 
+Luego:​
+ 3. La dirección lineal se traduce mediante paginación a dirección física. 
+Si la paginación está deshabilitada → segmentación pura.​
+ Si todos los segmentos tienen base 0 y límite máximo → paginación pura. 
+Por eso: 
+todos los sistemas operativos modernos en Pentium usan paginación y simulan 
+segmentación mínima. 
+Protección en Pentium 
+Hay cuatro niveles de protección (0 a 3): 
+●​ 0: kernel, 
+●​ 1: llamadas al sistema, 
+●​ 2: bibliotecas, 
+●​ 3: usuario. 
+Los saltos entre niveles se hacen mediante compuertas de llamada, no direcciones 
+directas.​
+ Este modelo proviene directamente de MULTICS. 
+Unidad 4 SISTEMAS DE ARCHIVOS 
+Los procesos necesitan almacenar y recuperar información.​
+Guardar datos sólo en el espacio de direcciones de un proceso no alcanza, por tres 
+razones fundamentales: 
+1.​ El espacio de direcciones es limitado: muchas aplicaciones requieren almacenar 
+cantidades muy grandes de información. 
+2.​ La información se pierde al terminar el proceso: para aplicaciones como bases 
+de datos, bancos o contabilidad, esto es inaceptable. 
+3.​ Varios procesos deben acceder a la información al mismo tiempo: la 
+información no puede pertenecer a un solo proceso. 
+De estos problemas surgen tres requerimientos esenciales del almacenamiento a largo 
+plazo: 
+●​ almacenar grandes cantidades de información, 
+●​ que la información sea persistente (sobrevive a la terminación del proceso), 
+●​ permitir acceso concurrente de múltiples procesos. 
+El disco y el problema real 
+ 

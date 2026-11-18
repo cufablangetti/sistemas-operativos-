@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Las tres tablas de Linux</title>
+<style>
+  :root{
+    --bg:#f4f5f8; --panel:#fff; --borde:#d6dae2; --texto:#1b1f24; --suave:#5b6572; --acento:#3d63c9;
+    --ok:#15803d; --ok-bg:#e9f8ee; --fal:#dc2626; --fal-bg:#fdecec; --lim:#b45309; --lim-bg:#fff6e0;
+    --cer:#7c3aed; --cer-bg:#f3edff; --hl:#facc15;
+    --t1:#0e7490; --t2:#c2410c; --t3:#7c3aed;
+    --pA:#3d63c9; --pB:#c2410c; --pC:#15803d; --pD:#7c3aed;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+      --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+      --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308;
+      --t1:#22d3ee; --t2:#fb923c; --t3:#a78bfa;
+      --pA:#6f8ff0; --pB:#fb923c; --pC:#4ade80; --pD:#a78bfa;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+    --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+    --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308;
+    --t1:#22d3ee; --t2:#fb923c; --t3:#a78bfa;
+    --pA:#6f8ff0; --pB:#fb923c; --pC:#4ade80; --pD:#a78bfa;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--texto); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .envoltura{max-width:1150px; margin:0 auto; padding:18px 16px 48px}
+  h1{font-size:1.35rem; margin:0 0 4px}
+  h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave); margin:0 0 8px}
+  .sub{color:var(--suave); margin:0 0 14px; font-size:.92rem}
+  .tarjeta{background:var(--panel); border:1px solid var(--borde); border-radius:12px; padding:14px 16px; margin-bottom:12px; min-width:0}
+  button,select,input{font:inherit; font-size:.86rem; padding:7px 11px; border-radius:8px; border:1px solid var(--borde); background:var(--panel); color:var(--texto); max-width:100%; min-width:0}
+  button{cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--acento)}
+  button:disabled{opacity:.4; cursor:not-allowed}
+  button.prim{background:var(--acento); color:#fff; border-color:var(--acento); font-weight:650}
+  input[type=text]{font-family:ui-monospace,Consolas,monospace; width:100%}
+  label{font-size:.82rem; color:var(--suave); display:flex; flex-direction:column; gap:3px; min-width:0; max-width:100%}
+  .pest{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px}
+  .pest button.on{background:var(--acento); color:#fff; border-color:var(--acento)}
+  .oculto{display:none}
+  .datos{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  @media (max-width:640px){ .datos{grid-template-columns:1fr} }
+  .barra{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:10px}
+  .contador{margin-left:auto; color:var(--suave); font-size:.88rem}
+  .grilla{display:grid; grid-template-columns:1.5fr 1fr; gap:12px}
+  @media (max-width:900px){ .grilla{grid-template-columns:1fr} }
+  .tablas3{display:grid; grid-template-columns:1.2fr 1fr .8fr; gap:10px}
+  @media (max-width:640px){ .tablas3{grid-template-columns:1fr} }
+  .tab{border:2px solid var(--borde); border-radius:10px; padding:8px; min-width:0}
+  .tab .tt{font-weight:700; font-size:.82rem; margin-bottom:6px}
+  .tab.t1{border-color:var(--t1)} .tab.t1 .tt{color:var(--t1)}
+  .tab.t2{border-color:var(--t2)} .tab.t2 .tt{color:var(--t2)}
+  .tab.t3{border-color:var(--t3)} .tab.t3 .tt{color:var(--t3)}
+  .proc{margin-bottom:8px}
+  .proc .pn{font-weight:700; font-size:.82rem}
+  .fila{font:12.5px/1.5 ui-monospace,Consolas,monospace; border:1px solid var(--borde); border-radius:6px; padding:3px 6px; margin:3px 0}
+  .fila.cambio{outline:3px solid var(--hl); outline-offset:1px}
+  .fila .pos{font-weight:800}
+  .vacio{color:var(--suave); font-size:.82rem; font-style:italic}
+  .archivo{display:flex; gap:2px; flex-wrap:wrap; margin-top:6px}
+  .archivo span{display:inline-block; width:24px; height:28px; border-radius:4px; text-align:center; font:700 .8rem/28px ui-monospace,Consolas,monospace; color:#fff; background:var(--suave)}
+  .archivo span.vac{background:transparent; border:1px dashed var(--borde); color:var(--suave)}
+  .archivo span.lei{outline:3px solid var(--hl); outline-offset:-3px}
+  .codigo{font:13px/1.5 ui-monospace,Consolas,monospace; margin:8px 0 0; padding:0; list-style:none}
+  .codigo li{padding:2px 6px; border-radius:6px}
+  .codigo li.ahora{background:var(--hl); color:#000}
+  .codigo li.hecho{color:var(--suave)}
+  .actor{display:inline-block; padding:2px 10px; border-radius:99px; font-weight:800; font-size:.8rem; color:#fff; background:var(--acento)}
+  .porque{border:1px solid var(--borde); border-left:5px solid var(--acento); border-radius:10px; padding:12px 14px; margin-top:10px}
+  .porque .tit{font-weight:700; margin:0 0 4px}
+  .marca{display:block; margin-top:8px; border-radius:8px; padding:7px 10px; font-size:.88rem}
+  .marca.ojo{background:var(--fal-bg); border:1px solid var(--fal)}
+  .marca.cer{background:var(--cer-bg); border:1px solid var(--cer)}
+  .estado{margin-top:10px; padding:8px 12px; border-radius:8px; font-weight:600}
+  .estado.ok{background:var(--ok-bg); border:1px solid var(--ok)}
+  .estado.mal{background:var(--fal-bg); border:1px solid var(--fal)}
+  .paneles{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px}
+  @media (max-width:760px){ .paneles{grid-template-columns:1fr} }
+  .paneles ul{margin:6px 0 0; padding-left:20px; font-size:.88rem}
+  .mas{color:var(--ok)} .menos{color:var(--fal)}
+  .campos{display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:6px; margin-top:10px}
+  @media (max-width:760px){ .campos{grid-template-columns:1fr 1fr} }
+  .campo{border:2px solid var(--borde); border-radius:10px; padding:6px 8px; min-width:0}
+  .campo .v{font:700 .85rem ui-monospace,Consolas,monospace; word-break:break-all}
+  .campo .n{font-size:.72rem; color:var(--suave); text-transform:uppercase}
+  .campo .e{font-size:.82rem}
+  table{border-collapse:collapse; font-size:.86rem; width:100%}
+  td,th{border-bottom:1px solid var(--borde); padding:5px 8px; text-align:left; vertical-align:top}
+  th{font-size:.72rem; color:var(--suave); text-transform:uppercase}
+  td code{white-space:nowrap}
+  .tablas{overflow-x:auto}
+  .ideas li{margin-bottom:5px}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <h1>Linux: las tres tablas de un read y /etc/fstab</h1>
+  <p class="sub">Un <code>read(fd, búfer, n)</code> parte de un número chico y tiene que llegar al nodo-i y a la <b>posición</b> en el archivo. ¿Dónde se guarda esa posición? El libro prueba tres diseños y solo uno funciona (fig. 10-34). Elegí el escenario y el diseño, y avanzá paso a paso. Tanenbaum 10.6.3, págs. 789–793.</p>
+
+  <div class="pest">
+    <button id="t1" class="on">1 · Las tres tablas</button>
+    <button id="t2">2 · /etc/fstab y comandos</button>
+  </div>
+
+  <section id="s1">
+    <div class="tarjeta">
+      <div class="datos">
+        <label>Escenario
+          <select id="esc"></select>
+        </label>
+        <label>¿Dónde se guarda la posición en el archivo?
+          <select id="dis">
+            <option value="ofd">En la tabla de descripción de archivos abiertos (Linux real)</option>
+            <option value="fd">En la tabla de descriptores de cada proceso (diseño 2)</option>
+            <option value="inodo">En el nodo-i (diseño 1)</option>
+          </select>
+        </label>
+      </div>
+      <div class="barra">
+        <button class="prim" id="sig">Siguiente paso ▶</button>
+        <button id="fin">Ir al final</button>
+        <button id="rei">Reiniciar</button>
+        <span class="contador" id="cont"></span>
+      </div>
+    </div>
+    <div class="grilla">
+      <div class="tarjeta">
+        <div class="tablas3">
+          <div class="tab t1"><div class="tt">① Descriptores de archivo<br><small>una tabla POR PROCESO</small></div><div id="vFd"></div></div>
+          <div class="tab t2"><div class="tt">② Descripción de archivos abiertos<br><small>compartida · aquí va la posición</small></div><div id="vOfd"></div></div>
+          <div class="tab t3"><div class="tt">③ Nodos-i<br><small>uno por archivo abierto</small></div><div id="vIn"></div></div>
+        </div>
+        <h2 style="margin-top:12px">Contenido del archivo x (color = quién escribió cada byte)</h2>
+        <div class="archivo" id="vArch"></div>
+        <div id="vEstado"></div>
+      </div>
+      <div class="tarjeta">
+        <h2>Lo que se ejecuta</h2>
+        <span class="actor" id="actor">—</span>
+        <ol class="codigo" id="cod"></ol>
+        <div class="porque" id="pq"></div>
+      </div>
+    </div>
+    <div class="tarjeta">
+      <h2>Los tres diseños</h2>
+      <div class="paneles">
+        <div><b>Diseño 1: posición en el nodo-i</b>
+          <ul>
+            <li class="mas">+ padre e hijo comparten la posición</li>
+            <li class="menos">− dos procesos <b>no relacionados</b> que abren el mismo archivo también la comparten: uno le «corre» la lectura al otro</li>
+          </ul></div>
+        <div><b>Diseño 2: posición en el descriptor</b>
+          <ul>
+            <li class="mas">+ cada proceso no relacionado tiene la suya</li>
+            <li class="menos">− con <code>(p1; p2) &gt; x</code>, p2 hereda una <b>copia</b> de la posición del shell (0) y <b>pisa</b> lo que escribió p1</li>
+          </ul></div>
+        <div><b>Linux: tabla intermedia</b>
+          <ul>
+            <li class="mas">+ <code>fork</code>: el hijo copia el descriptor, que apunta a la <b>misma</b> descripción → posición compartida</li>
+            <li class="mas">+ <code>open</code> independiente → descripción <b>nueva</b> → posición propia</li>
+          </ul></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="s2" class="oculto">
+    <div class="tarjeta">
+      <h2>Explicador de una línea de /etc/fstab</h2>
+      <div class="datos">
+        <label>Línea
+          <input type="text" id="fsLinea">
+        </label>
+        <label>Ejemplos
+          <select id="fsEsc"></select>
+        </label>
+      </div>
+      <div class="campos" id="fsCampos"></div>
+      <div id="fsEstado"></div>
+      <span class="marca ojo">⚠️ <b>fstab no muestra lo que está montado ahora</b>: dice lo que se monta <b>automáticamente al arrancar</b>. Lo montado ahora se ve con <code>cat /proc/mounts</code>, <code>mount</code> o <code>findmnt</code>.</span>
+    </div>
+    <div class="tarjeta">
+      <h2>Comandos de la cátedra</h2>
+      <div class="tablas"><table>
+        <tr><th>Comando</th><th>Qué hace</th></tr>
+        <tr><td><code>cat /proc/mounts</code></td><td>lo que el kernel tiene montado ahora: dispositivo, punto de montaje, tipo, opciones (rw/ro). Es un archivo de /proc: se genera al leerlo.</td></tr>
+        <tr><td><code>mount</code> · <code>findmnt</code></td><td>lo mismo, más legible; findmnt en árbol (TARGET, SOURCE, FSTYPE, OPTIONS)</td></tr>
+        <tr><td><code>lsblk -f</code></td><td>discos y particiones: NAME, FSTYPE, FSVER, LABEL, UUID, FSAVAIL, FSUSE%, MOUNTPOINTS</td></tr>
+        <tr><td><code>dd if=/dev/zero of=mi_imagen.img bs=1M count=100</code></td><td>un archivo de 100 MB lleno de ceros (todavía no es un FS)</td></tr>
+        <tr><td><code>mkfs.ext4 mi_imagen.img</code></td><td>crea un sistema de archivos ext4 adentro</td></tr>
+        <tr><td><code>sudo mount -o loop mi_imagen.img /mnt/mi_imagen</code></td><td>lo monta; <code>loop</code> hace que un archivo se vea como dispositivo de bloques</td></tr>
+        <tr><td><code>df -h | grep mi_imagen</code></td><td>espacio total, usado y libre</td></tr>
+        <tr><td><code>sudo umount /mnt/mi_imagen</code></td><td>desmonta (antes hace sync: 🔗 tema 8)</td></tr>
+        <tr><td><code>sudo mount -a</code></td><td>monta todo lo de fstab que falte: prueba la configuración</td></tr>
+        <tr><td><code>ln orig duro</code> · <code>ln -s orig simb</code></td><td>vínculo duro (mismo nodo-i, contador +1) · simbólico (archivo con una ruta) — 🔗 tema 5</td></tr>
+      </table></div>
+    </div>
+  </section>
+
+  <div class="tarjeta">
+    <h2>Ideas clave</h2>
+    <ul class="ideas">
+      <li>🧠 <b>Orden de las tablas:</b> descriptores (por proceso) → descripción de archivo abierto (<b>posición</b> + modo, compartida tras <code>fork</code>) → nodo-i (uno por archivo abierto) → bloques.</li>
+      <li>⚠️ <b>fork comparte la posición; open no.</b> Dos <code>open</code> del mismo archivo, aunque sea en el mismo proceso, dan dos descripciones con posiciones distintas.</li>
+      <li>🧠 <b>lseek</b> es la única llamada del FS que <b>nunca</b> mueve el brazo del disco: solo cambia un número en la tabla ②.</li>
+      <li>⚠️ <b>fstab, 6 columnas:</b> dispositivo/UUID · punto de montaje · tipo · opciones · <b>dump</b> · <b>pass</b> (orden de fsck: 1 la raíz, 2 las demás, 0 no se revisa).</li>
+    </ul>
+  </div>
+</div>
+
+<script id="motor">
+// ---------- motor puro ----------
+const ESCENARIOS = {
+  shell: {nombre:"Shell: (p1; p2) > x — escritura en secuencia", inicial:"",
+    ops:[
+      {op:"open", p:"shell", fd:1, modo:"w", txt:"el shell redirige la salida: open(\"x\") en el fd 1"},
+      {op:"fork", p:"shell", hijo:"p1", txt:"fork() → p1"},
+      {op:"write", p:"p1", fd:1, n:6, txt:"p1: write(1, …, 6)"},
+      {op:"exit", p:"p1", txt:"p1 termina"},
+      {op:"fork", p:"shell", hijo:"p2", txt:"fork() → p2"},
+      {op:"write", p:"p2", fd:1, n:4, txt:"p2: write(1, …, 4)"},
+      {op:"exit", p:"p2", txt:"p2 termina"}
+    ],
+    esperado:{tipo:"contenido", valor:"p1 p1 p1 p1 p1 p1 p2 p2 p2 p2", txt:"p2 escribe a continuación de p1: 10 bytes."}},
+  noRel: {nombre:"Dos procesos no relacionados leen el mismo archivo", inicial:"ABCDEFGHIJ",
+    ops:[
+      {op:"open", p:"A", modo:"r", txt:"A: fd = open(\"x\")"},
+      {op:"open", p:"B", modo:"r", txt:"B: fd = open(\"x\")"},
+      {op:"read", p:"A", fd:3, n:4, txt:"A: read(3, …, 4)"},
+      {op:"read", p:"B", fd:3, n:4, txt:"B: read(3, …, 4)"}
+    ],
+    esperado:{tipo:"lecturas", valor:["ABCD","ABCD"], txt:"Cada uno lee el archivo desde el principio: los dos leen ABCD."}},
+  forkLee: {nombre:"Padre e hijo leen después de un fork", inicial:"ABCDEFGHIJ",
+    ops:[
+      {op:"open", p:"padre", modo:"r", txt:"padre: fd = open(\"x\")"},
+      {op:"fork", p:"padre", hijo:"hijo", txt:"fork() → hijo"},
+      {op:"read", p:"padre", fd:3, n:3, txt:"padre: read(3, …, 3)"},
+      {op:"read", p:"hijo", fd:3, n:3, txt:"hijo: read(3, …, 3)"}
+    ],
+    esperado:{tipo:"lecturas", valor:["ABC","DEF"], txt:"Comparten la posición: el padre lee ABC y el hijo sigue con DEF."}},
+  dosOpen: {nombre:"Un proceso abre dos veces el mismo archivo", inicial:"ABCDEFGHIJ",
+    ops:[
+      {op:"open", p:"A", modo:"r", txt:"A: fd1 = open(\"x\")"},
+      {op:"open", p:"A", modo:"r", txt:"A: fd2 = open(\"x\")"},
+      {op:"read", p:"A", fd:3, n:5, txt:"A: read(3, …, 5)"},
+      {op:"lseek", p:"A", fd:4, pos:7, txt:"A: lseek(4, 7, SEEK_SET)"},
+      {op:"read", p:"A", fd:4, n:2, txt:"A: read(4, …, 2)"}
+    ],
+    esperado:{tipo:"lecturas", valor:["ABCDE","HI"], txt:"Dos open = dos descripciones con posición propia: fd 3 lee ABCDE y fd 4, tras el lseek a 7, lee HI."}}
+};
+
+function estadoInicial(inicial){
+  const cont = inicial.split("").map(c => ({c, quien:"inicial"}));
+  return {procs:{}, ofd:{}, inodos:{}, sigOfd:1, contenido:cont, lecturas:[], cambio:null, ultimaLectura:null};
+}
+function clonar(e){ return JSON.parse(JSON.stringify(e)); }
+function menorFdLibre(fds){ let n = 3; while(fds[n] !== undefined) n++; return n; }
+function proc(e, p){ if(!e.procs[p]) e.procs[p] = {fds:{}}; return e.procs[p]; }
+
+function getPos(e, dis, p, fd){
+  const ent = e.procs[p].fds[fd];
+  if(dis === "fd") return ent.pos;
+  if(dis === "inodo") return e.inodos[e.ofd[ent.ofd].inodo].pos;
+  return e.ofd[ent.ofd].pos;
+}
+function setPos(e, dis, p, fd, v){
+  const ent = e.procs[p].fds[fd];
+  if(dis === "fd") ent.pos = v;
+  else if(dis === "inodo") e.inodos[e.ofd[ent.ofd].inodo].pos = v;
+  else e.ofd[ent.ofd].pos = v;
+}
+
+function aplicar(e0, op, dis){
+  const e = clonar(e0); e.cambio = null; e.ultimaLectura = null;
+  if(op.op === "open"){
+    const pr = proc(e, op.p);
+    const fd = op.fd !== undefined ? op.fd : menorFdLibre(pr.fds);
+    const id = e.sigOfd++;
+    e.ofd[id] = {inodo:"x", pos:0, modo:op.modo, refs:1};
+    if(!e.inodos.x) e.inodos.x = {refs:0, pos:0};
+    e.inodos.x.refs++;
+    pr.fds[fd] = {ofd:id, pos:0};
+    e.cambio = {p:op.p, fd, ofd:id};
+    e.res = {fd};
+  } else if(op.op === "fork"){
+    const pa = e.procs[op.p];
+    e.procs[op.hijo] = {fds:clonar(pa.fds)};
+    for(const fd in pa.fds) e.ofd[pa.fds[fd].ofd].refs++;
+    e.cambio = {p:op.hijo};
+  } else if(op.op === "write"){
+    const pos = getPos(e, dis, op.p, op.fd);
+    for(let i = 0; i < op.n; i++){
+      const k = pos + i, celda = {c:op.p, quien:op.p};
+      if(k < e.contenido.length) e.contenido[k] = celda; else e.contenido.push(celda);
+    }
+    setPos(e, dis, op.p, op.fd, pos + op.n);
+    e.cambio = {p:op.p, fd:op.fd, ofd:e.procs[op.p].fds[op.fd].ofd};
+    e.res = {desde:pos, hasta:pos + op.n};
+  } else if(op.op === "read"){
+    const pos = getPos(e, dis, op.p, op.fd);
+    const hasta = Math.min(pos + op.n, e.contenido.length);
+    const s = e.contenido.slice(pos, hasta).map(x => x.c).join("");
+    setPos(e, dis, op.p, op.fd, hasta);
+    e.lecturas.push(s);
+    e.ultimaLectura = {desde:pos, hasta, s};
+    e.cambio = {p:op.p, fd:op.fd, ofd:e.procs[op.p].fds[op.fd].ofd};
+    e.res = {desde:pos, hasta, s};
+  } else if(op.op === "lseek"){
+    setPos(e, dis, op.p, op.fd, op.pos);
+    e.cambio = {p:op.p, fd:op.fd, ofd:e.procs[op.p].fds[op.fd].ofd};
+  } else if(op.op === "exit"){
+    const pr = e.procs[op.p];
+    for(const fd in pr.fds){
+      const id = pr.fds[fd].ofd;
+      if(--e.ofd[id].refs === 0){
+        const ino = e.ofd[id].inodo;
+        delete e.ofd[id];
+        if(--e.inodos[ino].refs === 0) delete e.inodos[ino];
+      }
+    }
+    delete e.procs[op.p];
+  }
+  return e;
+}
+function simular(nombre, dis){
+  const s = ESCENARIOS[nombre];
+  const estados = [estadoInicial(s.inicial)];
+  for(const op of s.ops) estados.push(aplicar(estados[estados.length - 1], op, dis));
+  const fin = estados[estados.length - 1];
+  let ok;
+  if(s.esperado.tipo === "contenido") ok = fin.contenido.map(x => x.c).join(" ") === s.esperado.valor;
+  else ok = JSON.stringify(fin.lecturas) === JSON.stringify(s.esperado.valor);
+  return {estados, ok, fin};
+}
+
+// fstab
+const FSTAB_EJ = {
+  catedra:{nombre:"Ejemplo de la cátedra (/home)", linea:"UUID=xxxx-xxxx /home ext4 defaults 0 2"},
+  raiz:{nombre:"La raíz", linea:"UUID=1234-abcd / ext4 errors=remount-ro 0 1"},
+  imagen:{nombre:"La imagen de la práctica (loop)", linea:"/home/alumno/mi_imagen.img /mnt/mi_imagen ext4 loop 0 0"},
+  swap:{nombre:"Área de intercambio", linea:"UUID=9f8e-7d6c none swap sw 0 0"},
+  usb:{nombre:"Pendrive que no se monta solo", linea:"/dev/sdb1 /mnt/usb vfat noauto,user 0 0"}
+};
+function explicarFstab(linea){
+  const c = String(linea).trim().split(/\s+/);
+  if(c.length !== 6 || !c[0]) return {ok:false, error:`Tiene ${c[0] ? c.length : 0} campo(s); fstab necesita exactamente 6.`};
+  const [dev, mnt, tipo, opc, dump, pass] = c;
+  const ex = [];
+  ex.push(dev.startsWith("UUID=") ? "Se identifica por su <b>UUID</b>: no cambia aunque se reordenen los discos." : dev.startsWith("/dev/") ? "Un dispositivo por nombre: puede cambiar si se agregan discos." : "Una ruta a un <b>archivo</b> (imagen de disco).");
+  ex.push(tipo === "swap" ? "<b>No se monta en un directorio</b>: es área de intercambio (🔗 U3)." : `Aparece en el árbol en <b>${mnt}</b>.`);
+  ex.push({ext4:"El sistema común de Linux (con bitácora).", ext3:"ext2 + bitácora.", ext2:"Sin bitácora.", vfat:"FAT: pendrives y particiones EFI.", ntfs:"Windows.", swap:"Intercambio.", exfat:"Discos extraíbles.", xfs:"Otro sistema de Linux.", btrfs:"Otro sistema de Linux."}[tipo] || "Tipo de sistema de archivos.");
+  const o = opc.split(",");
+  const dic = {defaults:"opciones normales (rw, auto…)", ro:"solo lectura", rw:"lectura y escritura", noauto:"<b>no</b> se monta al arrancar (solo a mano)", loop:"un archivo como dispositivo de bloques", user:"un usuario común lo puede montar", sw:"swap activa", "errors=remount-ro":"si hay errores, se vuelve a montar de solo lectura"};
+  ex.push(o.map(x => `<code>${x}</code>: ${dic[x] || "opción"}`).join("<br>"));
+  ex.push(dump === "0" ? "<b>No</b> lo respalda <code>dump</code>." : "Lo incluye <code>dump</code> en el respaldo (🔗 tema 8).");
+  ex.push(pass === "0" ? "<b>fsck no lo revisa</b> al arrancar." : pass === "1" ? "fsck lo revisa <b>primero</b> (se usa para la raíz)." : `fsck lo revisa <b>después de la raíz</b> (orden ${pass}).`);
+  const avisos = [];
+  if(pass === "1" && mnt !== "/") avisos.push("pass = 1 se reserva para la raíz; las demás van con 2.");
+  if(mnt === "/" && pass !== "1") avisos.push("la raíz debería tener pass = 1.");
+  if(tipo === "swap" && pass !== "0") avisos.push("la swap no se revisa con fsck: pass debería ser 0.");
+  return {ok:true, campos:[dev, mnt, tipo, opc, dump, pass], ex, avisos};
+}
+if(typeof module !== "undefined") module.exports = {ESCENARIOS, simular, aplicar, estadoInicial, explicarFstab, FSTAB_EJ};
+</script>
+
+<script>
+const $ = id => document.getElementById(id);
+for(const k of [1,2]) $("t" + k).onclick = () => { for(const j of [1,2]){ $("t" + j).classList.toggle("on", j === k); $("s" + j).classList.toggle("oculto", j !== k); } };
+const COLORES = {shell:"var(--suave)", p1:"var(--pA)", p2:"var(--pB)", A:"var(--pA)", B:"var(--pB)", padre:"var(--pA)", hijo:"var(--pC)", inicial:"var(--suave)"};
+let SIM = null, I = 0;
+for(const [k, e] of Object.entries(ESCENARIOS)) $("esc").add(new Option(e.nombre, k));
+$("esc").onchange = $("dis").onchange = () => { SIM = simular($("esc").value, $("dis").value); I = 0; dib(); };
+$("sig").onclick = () => { if(I < SIM.estados.length - 1){ I++; dib(); } };
+$("fin").onclick = () => { I = SIM.estados.length - 1; dib(); };
+$("rei").onclick = () => { I = 0; dib(); };
+
+function dib(){
+  const s = ESCENARIOS[$("esc").value], dis = $("dis").value, e = SIM.estados[I], ch = e.cambio || {};
+  const op = I > 0 ? s.ops[I - 1] : null;
+  // tabla 1
+  const ps = Object.keys(e.procs);
+  $("vFd").innerHTML = ps.length ? ps.map(p => {
+    const fds = e.procs[p].fds;
+    return `<div class="proc"><span class="pn" style="color:${COLORES[p] || "inherit"}">${p}</span>` +
+      `<div class="fila">0, 1, 2: estándar${fds[1] ? " (1 redirigido)" : ""}</div>` +
+      Object.keys(fds).map(fd => `<div class="fila ${ch.p === p && (ch.fd == fd || ch.fd === undefined) ? "cambio" : ""}">fd ${fd} → desc. ${fds[fd].ofd}${dis === "fd" ? ` · <span class="pos">pos ${fds[fd].pos}</span>` : ""}</div>`).join("") + "</div>";
+  }).join("") : `<span class="vacio">sin procesos todavía</span>`;
+  // tabla 2
+  const os = Object.keys(e.ofd);
+  $("vOfd").innerHTML = os.length ? os.map(id => {
+    const o = e.ofd[id];
+    return `<div class="fila ${ch.ofd == id ? "cambio" : ""}">desc. ${id} · ${o.modo === "w" ? "escritura" : "lectura"}${dis === "ofd" ? ` · <span class="pos">pos ${o.pos}</span>` : ""}<br>→ nodo-i de ${o.inodo} · usada por ${o.refs}</div>`;
+  }).join("") : `<span class="vacio">vacía</span>`;
+  // tabla 3
+  const is = Object.keys(e.inodos);
+  $("vIn").innerHTML = is.length ? is.map(n => `<div class="fila">nodo-i de ${n}<br>tamaño ${e.contenido.length} B · abierto por ${e.inodos[n].refs}${dis === "inodo" ? `<br><span class="pos">pos ${e.inodos[n].pos}</span>` : ""}</div>`).join("") : `<span class="vacio">vacía</span>`;
+  // archivo
+  const lei = e.ultimaLectura;
+  const celdas = e.contenido.map((x, k) => `<span class="${lei && k >= lei.desde && k < lei.hasta ? "lei" : ""}" style="background:${COLORES[x.quien] || "var(--suave)"}" title="byte ${k}">${x.quien === "inicial" ? x.c : x.quien.slice(-1)}</span>`);
+  while(celdas.length < 10) celdas.push(`<span class="vac">·</span>`);
+  $("vArch").innerHTML = celdas.join("");
+  // código
+  $("cod").innerHTML = s.ops.map((o, k) => `<li class="${k === I - 1 ? "ahora" : k < I - 1 ? "hecho" : ""}">${k + 1}. ${o.txt}</li>`).join("");
+  $("actor").textContent = op ? op.p : "—";
+  $("actor").style.background = op ? (COLORES[op.p] || "var(--acento)") : "var(--suave)";
+  $("cont").textContent = `Paso ${I} de ${s.ops.length}`;
+  $("sig").disabled = $("fin").disabled = I >= s.ops.length;
+  // por qué
+  let tit = "", txt = "", marca = "";
+  const lugar = {ofd:"la descripción de archivo abierto", fd:"el descriptor del proceso", inodo:"el nodo-i"}[dis];
+  if(!op){
+    tit = "Situación inicial";
+    txt = s.inicial ? `El archivo x tiene ${s.inicial.length} bytes: ${s.inicial}.` : "El archivo x está vacío.";
+    txt += ` En este diseño la posición vive en <b>${lugar}</b>.`;
+  } else if(op.op === "open"){
+    tit = `${op.p}: open → fd ${e.res.fd}`;
+    txt = `Se crea una descripción de archivo abierto <b>nueva</b>, con la posición en 0, y el nodo-i entra en la tabla ③ (o suma una referencia si ya estaba). ${op.fd === undefined ? "open devuelve el <b>descriptor libre más chico</b> (0, 1 y 2 ya están ocupados)." : "Es una redirección: el shell la pone en el fd 1 (salida estándar)."}`;
+    if(I > 1 && s.ops.slice(0, I - 1).some(x => x.op === "open")) marca = `<span class="marca cer">🧠 Otro <b>open</b> del mismo archivo = otra descripción: posición propia${dis === "inodo" ? ", salvo en este diseño, que la guarda en el nodo-i compartido" : ""}.</span>`;
+  } else if(op.op === "fork"){
+    tit = `fork: ${op.hijo} copia la tabla de descriptores de ${op.p}`;
+    txt = dis === "fd"
+      ? `La tabla ① se copia <b>con la posición adentro</b>: ${op.hijo} arranca con una copia del número que tenía ${op.p} en ese momento, y lo que haga después no se ve en ${op.p}.`
+      : `La tabla ① se copia, pero cada fd sigue apuntando a la <b>misma</b> descripción ② (su contador sube). Lo que avance uno lo ve el otro.`;
+  } else if(op.op === "write"){
+    tit = `${op.p}: write de ${op.n} B desde la posición ${e.res.desde}`;
+    txt = `Se escriben los bytes ${e.res.desde} a ${e.res.hasta - 1} y la posición en ${lugar} queda en ${e.res.hasta}.`;
+    if(dis === "fd" && op.p === "p2") marca = `<span class="marca ojo">⚠️ p2 heredó una <b>copia</b> de la posición del shell, que seguía en 0 (p1 avanzó la suya, no la del shell). Por eso <b>pisa</b> lo que escribió p1.</span>`;
+  } else if(op.op === "read"){
+    tit = `${op.p}: read de ${op.n} B desde la posición ${e.res.desde} → «${e.res.s}»`;
+    txt = `La posición en ${lugar} queda en ${e.res.hasta}.`;
+    if(dis === "inodo" && s === ESCENARIOS.noRel && op.p === "B") marca = `<span class="marca ojo">⚠️ B no tiene nada que ver con A, pero la posición está en el <b>nodo-i compartido</b>: A se la «corrió» y B lee desde el byte 4.</span>`;
+    if(dis === "fd" && s === ESCENARIOS.forkLee && op.p === "hijo") marca = `<span class="marca ojo">⚠️ El hijo tiene su <b>copia</b> de la posición (0): vuelve a leer ABC en vez de seguir.</span>`;
+  } else if(op.op === "lseek"){
+    tit = `${op.p}: lseek del fd ${op.fd} a ${op.pos}`;
+    txt = "Solo cambia un número en memoria.";
+    marca = `<span class="marca cer">🧠 lseek <b>nunca</b> mueve el brazo del disco, aunque se llame «seek».</span>`;
+  } else if(op.op === "exit"){
+    tit = `${op.p} termina: se cierran sus descriptores`;
+    txt = "Cada descripción baja su contador; si llega a 0 se borra, y el nodo-i sale de la tabla ③ cuando nadie más lo tiene abierto.";
+  }
+  $("pq").innerHTML = `<p class="tit">${tit}</p>${txt}${marca}`;
+  // estado final
+  if(I === s.ops.length){
+    const obt = s.esperado.tipo === "contenido" ? `${SIM.fin.contenido.length} B` : SIM.fin.lecturas.map(x => `«${x}»`).join(" y ");
+    $("vEstado").innerHTML = SIM.ok
+      ? `<div class="estado ok">✔ Funciona: ${s.esperado.txt}</div>`
+      : `<div class="estado mal">✘ Falla. Se esperaba: ${s.esperado.txt} Se obtuvo: ${obt}.</div>`;
+  } else $("vEstado").innerHTML = "";
+}
+$("esc").value = "shell"; $("esc").onchange();
+
+// fstab
+for(const [k, e] of Object.entries(FSTAB_EJ)) $("fsEsc").add(new Option(e.nombre, k));
+$("fsEsc").onchange = () => { $("fsLinea").value = FSTAB_EJ[$("fsEsc").value].linea; dibFs(); };
+$("fsLinea").oninput = dibFs;
+const NOMBRES = ["1 · dispositivo / UUID", "2 · punto de montaje", "3 · tipo", "4 · opciones", "5 · dump", "6 · pass (fsck)"];
+function dibFs(){
+  const r = explicarFstab($("fsLinea").value);
+  if(!r.ok){ $("fsCampos").innerHTML = ""; $("fsEstado").innerHTML = `<div class="estado mal">${r.error}</div>`; return; }
+  $("fsCampos").innerHTML = r.campos.map((v, i) => `<div class="campo"><div class="n">${NOMBRES[i]}</div><div class="v">${v}</div><div class="e">${r.ex[i]}</div></div>`).join("");
+  $("fsEstado").innerHTML = r.avisos.length ? `<div class="estado mal">Ojo: ${r.avisos.join(" ")}</div>` : `<div class="estado ok">Línea válida.</div>`;
+}
+$("fsEsc").value = "catedra"; $("fsEsc").onchange();
+</script>
+</body>
+</html>

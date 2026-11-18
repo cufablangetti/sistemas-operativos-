@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reemplazo de páginas</title>
+<style>
+  :root{
+    --bg:#f4f5f8; --panel:#fff; --borde:#d6dae2; --texto:#1b1f24; --suave:#5b6572; --acento:#3d63c9;
+    --ok:#15803d; --ok-bg:#e9f8ee; --fal:#dc2626; --fal-bg:#fdecec; --vic:#c2410c; --vic-bg:#fff0e8;
+    --ins:#2563eb; --ins-bg:#e8f0ff; --cer:#7c3aed; --cer-bg:#f3edff; --hl:#facc15;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+      --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --vic:#fb923c; --vic-bg:#2c1b12;
+      --ins:#60a5fa; --ins-bg:#15233d; --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+    --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --vic:#fb923c; --vic-bg:#2c1b12;
+    --ins:#60a5fa; --ins-bg:#15233d; --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--texto); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .envoltura{max-width:1150px; margin:0 auto; padding:18px 16px 48px}
+  h1{font-size:1.35rem; margin:0 0 4px}
+  h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave); margin:0 0 6px}
+  .sub{color:var(--suave); margin:0 0 14px; font-size:.92rem}
+  .tarjeta{background:var(--panel); border:1px solid var(--borde); border-radius:12px; padding:14px 16px; margin-bottom:12px}
+  .pestanas{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px}
+  .pestanas button{font-weight:650}
+  .pestanas button.act{background:var(--acento); color:#fff; border-color:var(--acento)}
+  button{font:inherit; font-size:.9rem; padding:7px 12px; border-radius:8px; border:1px solid var(--borde); background:var(--panel); color:var(--texto); cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--acento)}
+  button:disabled{opacity:.45; cursor:not-allowed}
+  button.prim{background:var(--acento); color:#fff; border-color:var(--acento); font-weight:650}
+  .ejemplos{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px}
+  .ejemplos button{font-size:.8rem; padding:4px 9px}
+  label{font-size:.83rem; font-weight:650; display:block; margin-bottom:3px}
+  .ayuda{font-size:.76rem; color:var(--suave); margin-top:2px}
+  input,select,textarea{width:100%; font:inherit; padding:6px 9px; border-radius:8px; border:1px solid var(--borde); background:var(--bg); color:var(--texto)}
+  textarea{font-family:ui-monospace,Consolas,monospace; font-size:.85rem; min-height:130px; resize:vertical}
+  input[type=checkbox]{width:auto}
+  .datos{display:grid; grid-template-columns:2fr 1fr 1.3fr; gap:12px; align-items:start}
+  .datos2{display:grid; grid-template-columns:1.6fr 1fr 1fr; gap:12px; align-items:start}
+  @media (max-width:820px){ .datos,.datos2{grid-template-columns:1fr} }
+  .barra{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:10px 0 2px}
+  .contador{margin-left:auto; color:var(--suave); font-size:.88rem}
+  @media (max-width:820px){ .contador{margin-left:0} }
+  .error{color:var(--fal); font-weight:650; margin-top:6px}
+  .grilla{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  @media (max-width:880px){ .grilla{grid-template-columns:1fr} }
+  .codigo{font:13px/1.5 ui-monospace,Consolas,monospace; margin:0; padding:0; list-style:none}
+  .codigo li{display:flex; gap:8px; padding:2px 6px; border-radius:6px; white-space:pre-wrap}
+  .codigo .nl{color:var(--suave); flex:0 0 18px; text-align:right}
+  .codigo li.ahora{background:var(--hl); color:#000}
+  .codigo li.ahora .nl{color:#000}
+  .quien{font-size:.78rem; color:var(--suave); margin-top:8px}
+  .porque{border:1px solid var(--borde); border-left:5px solid var(--acento); border-radius:10px; padding:12px 14px}
+  .porque .tit{font-weight:700; font-size:1.02rem; margin:0 0 4px}
+  .marca{display:block; margin-top:8px; border-radius:8px; padding:7px 10px; font-size:.88rem}
+  .marca.ojo{background:var(--fal-bg); border:1px solid var(--fal)}
+  .marca.cer{background:var(--cer-bg); border:1px solid var(--cer)}
+  .tw{overflow-x:auto}
+  table{border-collapse:collapse; font-size:.88rem}
+  th,td{border:1px solid var(--borde); padding:4px 7px; text-align:center}
+  th{background:var(--bg); font-size:.78rem}
+  table.cad td{min-width:36px; height:34px; font:700 .92rem ui-monospace,Consolas,monospace; position:relative}
+  table.cad td small{font:600 .62rem system-ui,sans-serif; position:absolute; right:2px; bottom:1px; color:var(--suave)}
+  table.cad th.ref{font:700 .92rem ui-monospace,Consolas,monospace; cursor:pointer}
+  table.cad th.ref.ahora{background:var(--hl); color:#000}
+  td.nueva{background:var(--fal-bg); color:var(--fal)}
+  td.hit{background:var(--ok-bg); color:var(--ok)}
+  td.ins{background:var(--ins-bg); outline:2px solid var(--ins); outline-offset:-2px}
+  td.vic{background:var(--vic-bg); outline:2px solid var(--vic); outline-offset:-2px}
+  td.fut{color:transparent}
+  td.fF{color:var(--fal); font-size:.8rem}
+  .mano{color:var(--ins); font-weight:900}
+  .stats{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
+  .st{flex:1 1 130px; border-radius:9px; padding:7px 10px; border:1px solid var(--borde)}
+  .st b{display:block; font-size:1.25rem}
+  .st.fal{background:var(--fal-bg); color:var(--fal)} .st.ok{background:var(--ok-bg); color:var(--ok)}
+  .cola{display:flex; flex-wrap:wrap; gap:6px; align-items:center; font:700 .92rem ui-monospace,Consolas,monospace; margin-top:4px}
+  .cola .c{border:1.5px solid var(--borde); border-radius:7px; padding:3px 8px; background:var(--bg)}
+  .cola .c.ins{border-color:var(--ins); background:var(--ins-bg)}
+  .cola .c.vic{border-color:var(--vic); background:var(--vic-bg)}
+  .cola .c.nueva{border-color:var(--fal); background:var(--fal-bg)}
+  .cola .fl{color:var(--suave); font-weight:400}
+  .cola-et{font-size:.78rem; color:var(--suave); margin-top:8px}
+  .comp table{width:100%}
+  .comp td.mejor{background:var(--ok-bg); color:var(--ok); font-weight:800}
+  tr.hl td{background:var(--hl); color:#000}
+  tr.vic td{background:var(--vic-bg)}
+  tr.ins td{background:var(--ins-bg)}
+  td.cambio{font-weight:800; outline:2px solid var(--cer); outline-offset:-2px}
+  .tabla-ex table{width:100%}
+  .oculto{display:none}
+  .ideas li{margin:5px 0}
+  code{font-family:ui-monospace,Consolas,monospace}
+  .bits{font:700 1rem ui-monospace,Consolas,monospace; letter-spacing:.04em}
+  .bits .p{color:var(--ins)} .bits .d{color:var(--ok)} .bits .m{color:var(--vic)}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <h1>Algoritmos de reemplazo de páginas</h1>
+  <p class="sub">Cuando hay un fallo de página y no quedan marcos libres, ¿a quién se saca? Elegí el algoritmo y avanzá con <b>Siguiente paso</b>:
+    se resalta la línea del algoritmo que se aplica, la página que se <b style="color:var(--ins)">inspecciona</b> y la <b style="color:var(--vic)">víctima</b>.
+    En la segunda pestaña está el <b>ejercicio de examen</b> de la cátedra: segunda oportunidad sobre una tabla de páginas que hay que modificar. (Tanenbaum, cap. 3.4.1–3.4.6, págs. 201–207)</p>
+
+  <div class="pestanas" id="pestanas">
+    <button data-p="cad" class="act">🔁 Cadena de referencias</button>
+    <button data-p="ex">📝 Examen: segunda oportunidad con tabla</button>
+    <button data-p="nru">🔢 Clases de NRU</button>
+  </div>
+
+  <!-- ============== CADENA ============== -->
+  <section id="p-cad">
+    <div class="tarjeta">
+      <div class="datos">
+        <div>
+          <label for="cadena">Cadena de referencias (números de página)</label>
+          <input id="cadena" value="7 0 1 2 0 3 0 4 2 3 0 3 2">
+          <div class="ejemplos" id="ej-cad"></div>
+        </div>
+        <div>
+          <label for="nmar">Marcos</label>
+          <select id="nmar"><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option></select>
+        </div>
+        <div>
+          <label for="algo">Algoritmo</label>
+          <select id="algo">
+            <option value="FIFO">FIFO</option>
+            <option value="OPT">Óptimo</option>
+            <option value="SO">Segunda oportunidad</option>
+            <option value="RELOJ">Reloj</option>
+            <option value="LRU">LRU</option>
+          </select>
+          <button class="prim" id="cargar" style="margin-top:8px; width:100%">Cargar y empezar</button>
+        </div>
+      </div>
+      <div class="error" id="err-cad"></div>
+      <div class="barra">
+        <button id="ant">◀ Anterior</button>
+        <button class="prim" id="sig">Siguiente paso ▶</button>
+        <button id="sigref">Siguiente referencia ⏭</button>
+        <button id="fin">Ir al final</button>
+        <button id="reini">Reiniciar</button>
+        <span class="contador" id="contador"></span>
+      </div>
+    </div>
+
+    <div class="tarjeta">
+      <h2>Marcos en el tiempo (clic en una referencia para saltar)</h2>
+      <div class="tw" id="grilla"></div>
+      <div id="estructura"></div>
+      <div class="stats" id="stats"></div>
+    </div>
+
+    <div class="grilla">
+      <div class="tarjeta">
+        <h2>Algoritmo</h2>
+        <ol class="codigo" id="codigo"></ol>
+        <div class="quien">Lo ejecuta el <b>SO</b> dentro del manejador de fallos de página. El bit R lo pone el <b>hardware</b> en cada referencia.</div>
+      </div>
+      <div class="tarjeta">
+        <h2>Por qué</h2>
+        <div class="porque" id="porque"></div>
+      </div>
+    </div>
+
+    <div class="tarjeta comp">
+      <h2>Comparación con la misma cadena</h2>
+      <div class="tw" id="comparacion"></div>
+    </div>
+  </section>
+
+  <!-- ============== EXAMEN ============== -->
+  <section id="p-ex" class="oculto">
+    <div class="tarjeta">
+      <div class="datos2">
+        <div>
+          <label for="tablaex">Tabla de páginas: <code>página llegada R M P marco</code></label>
+          <textarea id="tablaex" spellcheck="false"></textarea>
+          <div class="ayuda">Para una página ausente poné <code>-</code> en la llegada y en el marco, y P = 0.</div>
+          <div class="ejemplos" id="ej-ex"></div>
+        </div>
+        <div>
+          <label for="dirv">Dirección virtual</label>
+          <input id="dirv" value="0x24C5">
+          <div class="ayuda">Hexa (0x… o …H), binario (0b… o con espacios) o decimal.</div>
+          <label for="tampag" style="margin-top:8px">Tamaño de página</label>
+          <select id="tampag"><option value="512">512 B</option><option value="1024" selected>1 KB</option><option value="2048">2 KB</option><option value="4096">4 KB</option></select>
+          <label for="bitsv" style="margin-top:8px">Bits de la dirección virtual</label>
+          <select id="bitsv"><option>16</option><option>20</option><option>24</option><option>32</option></select>
+        </div>
+        <div>
+          <label for="tnow">Instante del acceso</label>
+          <input id="tnow" type="number" value="150">
+          <label style="margin-top:10px; display:flex; gap:6px; align-items:center"><input type="checkbox" id="escr"> La instrucción escribe (M = 1)</label>
+          <button class="prim" id="cargar-ex" style="margin-top:10px; width:100%">Resolver paso a paso</button>
+        </div>
+      </div>
+      <div class="error" id="err-ex"></div>
+      <div class="barra">
+        <button id="ant-ex">◀ Anterior</button>
+        <button class="prim" id="sig-ex">Siguiente paso ▶</button>
+        <button id="fin-ex">Ir al final</button>
+        <button id="reini-ex">Reiniciar</button>
+        <span class="contador" id="contador-ex"></span>
+      </div>
+    </div>
+    <div class="grilla">
+      <div class="tarjeta">
+        <h2>Tabla de páginas (los cambios se marcan en violeta)</h2>
+        <div class="tw tabla-ex" id="tabla-ex"></div>
+        <div class="cola-et">Cola de las páginas presentes, de la <b>más vieja</b> a la <b>más nueva</b>:</div>
+        <div class="cola" id="cola-ex"></div>
+        <div class="cola-et">Notación de la cátedra, de la <b>más nueva</b> (izquierda) a la <b>más vieja</b> (derecha):</div>
+        <div class="cola" id="cola-cat"></div>
+      </div>
+      <div class="tarjeta">
+        <h2>Paso a paso</h2>
+        <ol class="codigo" id="codigo-ex"></ol>
+        <div class="porque" id="porque-ex" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== NRU ============== -->
+  <section id="p-nru" class="oculto">
+    <div class="tarjeta">
+      <label for="tablanru">Páginas presentes: <code>página R M</code></label>
+      <textarea id="tablanru" spellcheck="false">A 1 1
+B 0 1
+C 1 0
+D 1 1
+E 0 1</textarea>
+      <div class="ayuda">Cambiá los bits y mirá en qué clase cae cada página. NRU saca <b>una al azar de la clase más baja que no esté vacía</b>.</div>
+      <div class="error" id="err-nru"></div>
+      <div class="tw" id="res-nru" style="margin-top:10px"></div>
+    </div>
+  </section>
+
+  <div class="tarjeta">
+    <h2>Ideas clave y frases de examen</h2>
+    <ul class="ideas">
+      <li><b>Óptimo:</b> saca la página que se va a usar <i>más tarde</i>. Es imposible de implementar porque el SO no conoce el futuro, igual que SJF. Sirve como <b>referencia</b> para comparar los demás.</li>
+      <li><b>FIFO</b> saca la que llegó primero, aunque se use todo el tiempo. Por eso casi no se usa puro. <b>Segunda oportunidad</b> es FIFO mirando el bit R: con R = 1 la página se salva una vez.</li>
+      <li>⚠️ En segunda oportunidad, la página salvada <b>va al final con R = 0 y su llegada pasa a ser el instante actual</b>. Si todas tienen R = 1, degenera en FIFO, pero <b>siempre termina</b>.</li>
+      <li><b>Reloj</b> = segunda oportunidad <b>sin mover páginas</b>: una lista circular y una manecilla. Saca <i>las mismas víctimas</i>, pero es más eficiente.</li>
+      <li>🧠 En el examen solo compiten las páginas <b>presentes</b> (P = 1). Si la víctima tiene M = 1, se escribe al disco. La dirección física se arma con el <b>marco</b>, no con el número de página.</li>
+    </ul>
+  </div>
+</div>
+
+<script id="motor">
+// ===================== MOTOR (sin DOM) =====================
+var CODIGO = {
+  FIFO: ["si la página está en un marco → acierto (no cambia nada)", "fallo: si hay un marco libre → cargarla ahí, al final de la cola", "si no: víctima = la PRIMERA de la cola (la que llegó hace más)", "la nueva ocupa ese marco y va al FINAL de la cola"],
+  OPT: ["si la página está en un marco → acierto", "fallo: si hay un marco libre → cargarla ahí", "si no: víctima = la que se vuelve a usar MÁS TARDE (o nunca)", "la nueva ocupa el marco de la víctima"],
+  LRU: ["si está en un marco → acierto: anotar su último uso = ahora", "fallo: si hay un marco libre → cargarla ahí", "si no: víctima = la de ÚLTIMO USO más viejo", "la nueva ocupa el marco de la víctima"],
+  SO: ["si está en un marco → acierto: R = 1 (NO se mueve en la cola)", "fallo: si hay un marco libre → entra al final con R = 1", "mirar la PRIMERA de la cola (la más vieja)", "   si R = 1 → R = 0, pasa al FINAL (llegada = ahora); volver a 3", "   si R = 0 → es la VÍCTIMA", "la nueva ocupa ese marco, al final de la cola, con R = 1"],
+  RELOJ: ["si está en un marco → acierto: R = 1 (la manecilla no se mueve)", "fallo: si hay un marco libre → cargarla ahí con R = 1", "mirar la página a la que apunta la MANECILLA", "   si R = 1 → R = 0 y avanzar la manecilla; volver a 3", "   si R = 0 → es la VÍCTIMA", "la nueva ocupa ese marco con R = 1 y la manecilla avanza"]
+};
+var NOMBRE = { FIFO: "FIFO", OPT: "Óptimo", LRU: "LRU", SO: "Segunda oportunidad", RELOJ: "Reloj" };
+
+function parsearCadena(txt) {
+  var t = String(txt).split(/[\s,;]+/).filter(Boolean), out = [];
+  for (var i = 0; i < t.length; i++) {
+    if (!/^\d+$/.test(t[i])) throw new Error("«" + t[i] + "» no es un número de página.");
+    out.push(parseInt(t[i], 10));
+  }
+  if (!out.length) throw new Error("Escribí al menos una referencia.");
+  if (out.length > 40) throw new Error("Usá como máximo 40 referencias.");
+  return out;
+}
+
+function simularCadena(txt, n, algo) {
+  var refs = parsearCadena(txt);
+  var marcos = [], R = [];
+  for (var k = 0; k < n; k++) { marcos.push(null); R.push(0); }
+  var cola = [], ultimo = {}, llegada = {}, mano = 0, fallos = 0;
+  var pasos = [], columnas = [];
+  var usaR = algo === "SO" || algo === "RELOJ";
+  function snap(i, linea, tit, texto, ex) {
+    ex = ex || {};
+    pasos.push({ ref: i, linea: linea, tit: tit, texto: texto, ojo: ex.ojo || "", cer: ex.cer || "",
+      marcos: marcos.slice(), R: R.slice(), cola: cola.slice(), mano: mano, fallos: fallos, nCols: columnas.length,
+      hl: ex.hl === undefined ? -1 : ex.hl, vic: ex.vic === undefined ? -1 : ex.vic, ins: ex.ins === undefined ? -1 : ex.ins, hit: !!ex.hit });
+  }
+  function cerrar(i, fallo, slot, victima) {
+    columnas.push({ marcos: marcos.slice(), R: R.slice(), fallo: fallo, slot: slot, victima: victima, mano: mano });
+  }
+  for (var i = 0; i < refs.length; i++) {
+    var p = refs[i], t = i + 1;
+    var s = marcos.indexOf(p);
+    if (s >= 0) {
+      ultimo[p] = t;
+      if (usaR) R[s] = 1;
+      snap(i, 1, "Referencia a " + p + ": acierto", "La página " + p + " ya está en el marco " + s + ". No hay fallo." +
+        (usaR ? " El hardware pone R = 1." + (algo === "SO" ? " Ojo: no cambia su lugar en la cola." : " La manecilla no se mueve.") :
+          algo === "LRU" ? " Su último uso pasa a ser t = " + t + "." : " FIFO no registra los usos: el orden de la cola no cambia."), { hl: s, hit: true });
+      cerrar(i, false, s, null);
+      continue;
+    }
+    fallos++;
+    var libre = marcos.indexOf(null);
+    if (libre >= 0) {
+      marcos[libre] = p; R[libre] = 1; cola.push(p); llegada[p] = t; ultimo[p] = t;
+      snap(i, 2, "Referencia a " + p + ": fallo con marco libre", "La página " + p + " no está en memoria, pero el marco " + libre + " está libre: se carga ahí. Este fallo no tiene víctima (es un fallo \"obligatorio\" de la carga inicial).", { hl: libre });
+      cerrar(i, true, libre, null);
+      continue;
+    }
+    var v, sv;
+    if (algo === "FIFO") {
+      v = cola[0]; sv = marcos.indexOf(v);
+      snap(i, 3, "Referencia a " + p + ": fallo, hay que desalojar", "Los marcos están llenos. FIFO mira solo el orden de llegada: la primera de la cola es la página " + v + " (llegó en t = " + llegada[v] + "). Es la víctima, aunque se haya usado hace poco.", { vic: sv,
+        ojo: "FIFO no mira si la página se usa: puede sacar una de uso frecuente." });
+      cola.shift(); marcos[sv] = p; cola.push(p); llegada[p] = t; ultimo[p] = t;
+      snap(i, 4, "Entra la página " + p, "La página " + p + " ocupa el marco " + sv + " y queda al final de la cola.", { hl: sv });
+    } else if (algo === "OPT") {
+      var prox = marcos.map(function (q) { for (var j = i + 1; j < refs.length; j++) if (refs[j] === q) return j + 1; return Infinity; });
+      sv = 0; for (var k2 = 1; k2 < n; k2++) if (prox[k2] > prox[sv]) sv = k2;
+      v = marcos[sv];
+      var lista = marcos.map(function (q, k3) { return q + " → " + (prox[k3] === Infinity ? "nunca" : "t = " + prox[k3]); }).join("; ");
+      snap(i, 3, "Referencia a " + p + ": fallo, hay que desalojar", "El óptimo mira el FUTURO: cuándo se vuelve a usar cada página. " + lista + ". La víctima es la página " + v + ", la que se usa más tarde.", { vic: sv,
+        cer: "Esto es imposible en un SO real: no conoce las referencias futuras. Por eso el óptimo solo sirve para comparar." });
+      cola.splice(cola.indexOf(v), 1); marcos[sv] = p; cola.push(p); llegada[p] = t; ultimo[p] = t;
+      snap(i, 4, "Entra la página " + p, "La página " + p + " ocupa el marco " + sv + ".", { hl: sv });
+    } else if (algo === "LRU") {
+      sv = 0; for (var k4 = 1; k4 < n; k4++) if (ultimo[marcos[k4]] < ultimo[marcos[sv]]) sv = k4;
+      v = marcos[sv];
+      var lista2 = marcos.map(function (q) { return q + " → t = " + ultimo[q]; }).join("; ");
+      snap(i, 3, "Referencia a " + p + ": fallo, hay que desalojar", "LRU mira el PASADO: cuándo se usó por última vez cada página. " + lista2 + ". La víctima es la página " + v + ", la que lleva más tiempo sin usarse.", { vic: sv,
+        cer: "LRU es la mejor aproximación al óptimo, pero es caro: hay que registrar cada referencia. En el tema 7b vemos cómo se aproxima." });
+      cola.splice(cola.indexOf(v), 1); marcos[sv] = p; cola.push(p); llegada[p] = t; ultimo[p] = t;
+      snap(i, 4, "Entra la página " + p, "La página " + p + " ocupa el marco " + sv + " con último uso t = " + t + ".", { hl: sv });
+    } else if (algo === "SO") {
+      var vueltas = 0;
+      while (true) {
+        var f = cola[0], sf = marcos.indexOf(f);
+        snap(i, 3, "Referencia a " + p + ": fallo, se mira la primera de la cola", "La más vieja de la cola es la página " + f + " (llegó en t = " + llegada[f] + "), con R = " + R[sf] + ".", { ins: sf });
+        if (R[sf]) {
+          R[sf] = 0; cola.push(cola.shift()); llegada[f] = t; vueltas++;
+          snap(i, 4, "La página " + f + " se salva", "Como tiene R = 1, se usó hace poco. Se le pone R = 0 y pasa al final de la cola, como si acabara de llegar (llegada = " + t + "). Se sigue con la próxima.", { ins: sf,
+            ojo: vueltas === n ? "Todas tenían R = 1: dio la vuelta completa y ahora se comporta como FIFO. Igual siempre termina." : "" });
+        } else {
+          snap(i, 5, "Víctima: la página " + f, "La página " + f + " es vieja y tiene R = 0: no se usó desde la última vez que se la miró. Es la víctima.", { vic: sf });
+          v = f; sv = sf; cola.shift(); marcos[sv] = p; R[sv] = 1; cola.push(p); llegada[p] = t; ultimo[p] = t;
+          snap(i, 6, "Entra la página " + p, "La página " + p + " ocupa el marco " + sv + ", con R = 1, al final de la cola.", { hl: sv });
+          break;
+        }
+      }
+    } else if (algo === "RELOJ") {
+      var vueltas2 = 0;
+      while (true) {
+        var q = marcos[mano];
+        snap(i, 3, "Referencia a " + p + ": fallo, se mira la manecilla", "La manecilla apunta al marco " + mano + " (página " + q + "), con R = " + R[mano] + ".", { ins: mano });
+        if (R[mano]) {
+          R[mano] = 0; var antes = mano; mano = (mano + 1) % n; vueltas2++;
+          snap(i, 4, "La página " + q + " se salva", "Tiene R = 1: se pone R = 0 y la manecilla avanza al marco " + mano + ". La página no se mueve: eso es lo que ahorra el reloj respecto de la segunda oportunidad.", { ins: antes,
+            ojo: vueltas2 === n ? "Dio una vuelta completa: todas tenían R = 1." : "" });
+        } else {
+          snap(i, 5, "Víctima: la página " + q, "R = 0: la página " + q + " del marco " + mano + " es la víctima.", { vic: mano });
+          v = q; sv = mano; marcos[sv] = p; R[sv] = 1; mano = (mano + 1) % n; cola.splice(cola.indexOf(v), 1); cola.push(p); llegada[p] = t; ultimo[p] = t;
+          snap(i, 6, "Entra la página " + p, "La página " + p + " ocupa el marco " + sv + " con R = 1, y la manecilla avanza al marco " + mano + ".", { hl: sv });
+          break;
+        }
+      }
+    }
+    cerrar(i, true, sv, v);
+  }
+  return { refs: refs, n: n, algo: algo, pasos: pasos, columnas: columnas, fallos: fallos };
+}
+
+function contarFallos(txt, n, algo) { return simularCadena(txt, n, algo).fallos; }
+
+// ----- ejercicio de examen: segunda oportunidad sobre tabla -----
+function leerDireccion(txt) {
+  var t = String(txt).trim();
+  var s = t.replace(/[\s_]/g, "");
+  if (/^0x[0-9a-f]+$/i.test(s)) return parseInt(s.slice(2), 16);
+  if (/^[0-9a-f]+h$/i.test(s)) return parseInt(s.slice(0, -1), 16);
+  if (/^0b[01]+$/i.test(s)) return parseInt(s.slice(2), 2);
+  if (/^[01]{8,}$/.test(s) && /\s/.test(t)) return parseInt(s, 2);
+  if (/^\d+$/.test(s)) return parseInt(s, 10);
+  return NaN;
+}
+function parsearTablaEx(txt) {
+  var filas = [], vistos = {};
+  String(txt).split(/\n/).forEach(function (l, i) {
+    l = l.replace(/#.*/, "").trim(); if (!l) return;
+    var c = l.split(/[\s,;|]+/).filter(Boolean);
+    if (c.length < 6) throw new Error("Línea " + (i + 1) + ": faltan columnas (página llegada R M P marco).");
+    var num = function (x) { return /^[-—x]$/i.test(x) ? null : parseInt(x, 10); };
+    var f = { pag: parseInt(c[0], 10), llegada: num(c[1]), R: parseInt(c[2], 10), M: parseInt(c[3], 10), P: parseInt(c[4], 10), marco: num(c[5]) };
+    if (isNaN(f.pag)) throw new Error("Línea " + (i + 1) + ": página inválida.");
+    if (vistos[f.pag]) throw new Error("La página " + f.pag + " está repetida.");
+    if (f.P === 1 && (f.marco === null || isNaN(f.marco) || f.llegada === null || isNaN(f.llegada))) throw new Error("La página " + f.pag + " está presente: necesita llegada y marco.");
+    vistos[f.pag] = true; filas.push(f);
+  });
+  if (!filas.length) throw new Error("La tabla está vacía.");
+  return filas;
+}
+function bin(v, n) { var s = v.toString(2); while (s.length < n) s = "0" + s; return s; }
+function hex(v) { return "0x" + v.toString(16).toUpperCase(); }
+
+function resolverExamen(cfg) {
+  var filas = parsearTablaEx(cfg.tabla);
+  var v = leerDireccion(cfg.dir);
+  if (isNaN(v)) throw new Error("No entiendo la dirección «" + cfg.dir + "».");
+  var bitsD = Math.round(Math.log2(cfg.tamPag)), bitsV = cfg.bitsV;
+  if (v >= Math.pow(2, bitsV)) throw new Error("La dirección no entra en " + bitsV + " bits.");
+  var pag = Math.floor(v / cfg.tamPag), des = v % cfg.tamPag, t = cfg.t;
+  var pasos = [], cambios = {};
+  function fila(p) { for (var i = 0; i < filas.length; i++) if (filas[i].pag === p) return filas[i]; return null; }
+  // orden real de la cola: seq (las que reciben segunda oportunidad o entran se van al final en ese orden)
+  var seq = 0;
+  filas.filter(function (f) { return f.P === 1; }).sort(function (a, b) { return a.llegada - b.llegada || a.pag - b.pag; }).forEach(function (f) { f.seq = ++seq; });
+  function cola() { return filas.filter(function (f) { return f.P === 1; }).sort(function (a, b) { return a.seq - b.seq; }).map(function (f) { return { pag: f.pag, R: f.R }; }); }
+  function marcar(p, campo) { cambios[p + ":" + campo] = true; }
+  function snap(linea, tit, texto, ex) {
+    ex = ex || {};
+    pasos.push({ linea: linea, tit: tit, texto: texto, ojo: ex.ojo || "", cer: ex.cer || "", filas: JSON.parse(JSON.stringify(filas)), cola: ex.cola || cola(), cambios: JSON.parse(JSON.stringify(cambios)),
+      hl: ex.hl === undefined ? null : ex.hl, vic: ex.vic === undefined ? null : ex.vic, ins: ex.ins === undefined ? null : ex.ins, nueva: ex.nueva === undefined ? null : ex.nueva });
+  }
+  var b = bin(v, bitsV);
+  snap(1, "1. Número de página", "La dirección " + cfg.dir + " en binario (" + bitsV + " bits) es " + b.slice(0, bitsV - bitsD) + " | " + b.slice(bitsV - bitsD) + ". Con páginas de " + cfg.tamPag + " B, el desplazamiento son los " + bitsD + " bits de la derecha. " +
+    "Página = " + b.slice(0, bitsV - bitsD) + " = " + pag + "; desplazamiento = " + des + ".", { bits: true });
+  pasos[pasos.length - 1].bin = b; pasos[pasos.length - 1].bitsD = bitsD;
+  var f = fila(pag);
+  if (!f) { filas.push({ pag: pag, llegada: null, R: 0, M: 0, P: 0, marco: null }); f = fila(pag); filas.sort(function (a, b2) { return a.pag - b2.pag; }); }
+  var resultado = { pagina: pag, desplazamiento: des, fallo: false, victima: null, escrituraDisco: false };
+  if (f.P === 1) {
+    f.R = 1; marcar(pag, "R"); if (cfg.escribe) { f.M = 1; marcar(pag, "M"); }
+    snap(2, "2. ¿Está presente? Sí", "La página " + pag + " tiene P = 1, en el marco " + f.marco + ": no hay fallo de página. Solo se actualiza R = 1" + (cfg.escribe ? " y M = 1, porque escribe." : "."), { hl: pag });
+    var fis = f.marco * cfg.tamPag + des;
+    resultado.marco = f.marco; resultado.fisica = fis;
+    snap(7, "Dirección física", "Marco " + f.marco + " seguido del desplazamiento: " + bin(f.marco, 1) + " | " + bin(des, bitsD) + " = " + hex(fis) + " (" + fis + " en decimal).", { hl: pag });
+  } else {
+    resultado.fallo = true;
+    snap(2, "2. ¿Está presente? No → fallo de página", "La página " + pag + " tiene P = 0: hay fallo de página. Se aplica segunda oportunidad.", { hl: pag,
+      cer: "Si quedara un marco libre, se usaría ese y no habría víctima. En los ejercicios de la cátedra, la memoria siempre está llena." });
+    snap(3, "3. Cola de páginas presentes", "Se toman SOLO las páginas con P = 1 y se ordenan por llegada, de la más vieja a la más nueva: " + cola().map(function (c) { return c.pag + " (" + fila(c.pag).llegada + ", R = " + c.R + ")"; }).join(", ") + ".", { ojo: "Las páginas ausentes no compiten: no tienen marco." });
+    var guard = 0, vic;
+    while (guard++ < 100) {
+      var c0 = cola()[0], fc = fila(c0.pag);
+      if (fc.R === 1) {
+        var colaAntes = cola();
+        fc.R = 0; fc.llegada = t; fc.seq = ++seq; marcar(fc.pag, "R"); marcar(fc.pag, "llegada");
+        snap(4, "4. La página " + fc.pag + " tiene R = 1 → segunda oportunidad", "Se le pone R = 0 y su llegada pasa a ser " + t + ": va al final de la cola, como si acabara de llegar. Se sigue con la próxima más vieja.", { ins: fc.pag,
+          ojo: "Error típico: olvidarse de cambiar la llegada en la tabla." });
+      } else { vic = fc; break; }
+    }
+    snap(5, "5. La página " + vic.pag + " tiene R = 0 → es la víctima", "Es la más vieja de la cola y no se usó recientemente. " + (vic.M ? "Tiene M = 1: está sucia, así que hay que escribirla al disco antes de reusar su marco " + vic.marco + "." : "Tiene M = 0: está limpia, se descarta sin escribir al disco."), { vic: vic.pag });
+    var marcoV = vic.marco;
+    resultado.victima = vic.pag; resultado.escrituraDisco = vic.M === 1;
+    vic.P = 0; vic.marco = null; vic.llegada = null; vic.R = 0; vic.M = 0;
+    ["P", "marco", "llegada", "R", "M"].forEach(function (c) { marcar(vic.pag, c); });
+    f.P = 1; f.marco = marcoV; f.llegada = t; f.seq = ++seq; f.R = 1; f.M = cfg.escribe ? 1 : 0;
+    ["P", "marco", "llegada", "R", "M"].forEach(function (c) { marcar(pag, c); });
+    snap(6, "6. La página " + pag + " entra en el marco " + marcoV, "En la tabla: la víctima " + vic.pag + " queda con P = 0 y sin marco" + (resultado.escrituraDisco ? " (escrita al disco)" : "") + ". La página " + pag + " queda con P = 1, marco " + marcoV + ", llegada " + t + ", R = 1 (se acaba de usar) y M = " + f.M + ".", { nueva: pag, vic: vic.pag });
+    var fis2 = marcoV * cfg.tamPag + des;
+    resultado.marco = marcoV; resultado.fisica = fis2;
+    snap(7, "7. Dirección física", "Marco " + marcoV + " seguido del desplazamiento: " + bin(marcoV, 1) + " | " + bin(des, bitsD) + " = " + hex(fis2) + ". Comprobación: " + marcoV + " × " + cfg.tamPag + " + " + des + " = " + fis2 + ".", { nueva: pag,
+      ojo: "Error típico: armar la física con el número de PÁGINA (" + pag + ") en vez del MARCO (" + marcoV + ")." });
+  }
+  resultado.colaFinal = cola().map(function (c) { return c.pag; });
+  resultado.filas = filas;
+  return { pasos: pasos, resultado: resultado };
+}
+
+// ----- NRU -----
+function clasesNRU(txt) {
+  var filas = [];
+  String(txt).split(/\n/).forEach(function (l, i) {
+    l = l.trim(); if (!l) return;
+    var c = l.split(/[\s,;]+/);
+    if (c.length < 3 || !/^[01]$/.test(c[1]) || !/^[01]$/.test(c[2])) throw new Error("Línea " + (i + 1) + ": usá «página R M» con R y M en 0 o 1.");
+    var R = +c[1], M = +c[2];
+    filas.push({ pag: c[0], R: R, M: M, clase: 2 * R + M });
+  });
+  if (!filas.length) throw new Error("Escribí al menos una página.");
+  var min = Math.min.apply(null, filas.map(function (f) { return f.clase; }));
+  return { filas: filas, claseMin: min, candidatas: filas.filter(function (f) { return f.clase === min; }).map(function (f) { return f.pag; }) };
+}
+
+if (typeof module !== "undefined") module.exports = { simularCadena: simularCadena, contarFallos: contarFallos, resolverExamen: resolverExamen, clasesNRU: clasesNRU, leerDireccion: leerDireccion };
+</script>
+
+<script>
+var $ = function (id) { return document.getElementById(id); };
+Array.prototype.forEach.call(document.querySelectorAll("#pestanas button"), function (b) {
+  b.onclick = function () {
+    Array.prototype.forEach.call(document.querySelectorAll("#pestanas button"), function (x) { x.classList.toggle("act", x === b); });
+    ["cad", "ex", "nru"].forEach(function (p) { $("p-" + p).classList.toggle("oculto", p !== b.dataset.p); });
+  };
+});
+function marcas(p) { return (p.ojo ? '<span class="marca ojo">⚠️ ' + p.ojo + "</span>" : "") + (p.cer ? '<span class="marca cer">🧠 ' + p.cer + "</span>" : ""); }
+
+// ---------- cadena ----------
+var EJC = [
+  ["Clase (3 marcos)", "7 0 1 2 0 3 0 4 2 3 0 3 2", 3],
+  ["Muchas con R = 1", "1 2 3 1 2 3 4 1 5", 3],
+  ["Ciclo que castiga a LRU", "1 2 3 4 1 2 3 4 1 2", 3],
+  ["Localidad (4 marcos)", "1 2 1 3 1 2 4 1 5 1 2 6 1 2", 4]
+];
+var sim = null, cur = 0;
+$("ej-cad").innerHTML = EJC.map(function (e, i) { return '<button data-i="' + i + '">' + e[0] + "</button>"; }).join("");
+Array.prototype.forEach.call(document.querySelectorAll("#ej-cad button"), function (b) {
+  b.onclick = function () { var e = EJC[+b.dataset.i]; $("cadena").value = e[1]; $("nmar").value = String(e[2]); cargar(); };
+});
+function cargar() {
+  $("err-cad").textContent = "";
+  try { sim = simularCadena($("cadena").value, +$("nmar").value, $("algo").value); cur = 0; dibujar(); comparar(); }
+  catch (e) { $("err-cad").textContent = "⚠ " + e.message; }
+}
+function comparar() {
+  var algos = ["OPT", "FIFO", "SO", "RELOJ", "LRU"], res = {};
+  algos.forEach(function (a) { res[a] = contarFallos($("cadena").value, +$("nmar").value, a); });
+  var min = Math.min.apply(null, algos.filter(function (a) { return a !== "OPT"; }).map(function (a) { return res[a]; }));
+  var h = "<table><tr><th>Algoritmo</th>" + algos.map(function (a) { return "<th>" + NOMBRE[a] + "</th>"; }).join("") + "</tr><tr><td><b>Fallos</b></td>" +
+    algos.map(function (a) { return '<td class="' + (a !== "OPT" && res[a] === min ? "mejor" : "") + '">' + res[a] + "</td>"; }).join("") + "</tr></table>" +
+    '<div class="ayuda">En verde, el mejor de los realizables. El óptimo es el piso: ninguno puede tener menos fallos que él. Segunda oportunidad y reloj siempre dan lo mismo.</div>';
+  $("comparacion").innerHTML = h;
+}
+function dibujar() {
+  if (!sim) return;
+  var p = sim.pasos[cur], n = sim.n, cols = sim.columnas;
+  var usaR = sim.algo === "SO" || sim.algo === "RELOJ";
+  var h = '<table class="cad"><tr><th>t</th>';
+  sim.refs.forEach(function (r, i) { h += '<th class="ref' + (i === p.ref ? " ahora" : "") + '" data-i="' + i + '">' + r + "</th>"; });
+  h += "</tr>";
+  for (var m = 0; m < n; m++) {
+    h += "<th>Marco " + m + (sim.algo === "RELOJ" && p.mano === m ? ' <span class="mano" title="manecilla">◀</span>' : "") + "</th>";
+    for (var i = 0; i < sim.refs.length; i++) {
+      var val, Rb, cls = "";
+      if (i < p.nCols && i !== p.ref) { var c = cols[i]; val = c.marcos[m]; Rb = c.R[m]; if (c.slot === m) cls = c.fallo ? "nueva" : "hit"; }
+      else if (i === p.ref) { val = p.marcos[m]; Rb = p.R[m];
+        if (p.vic === m) cls = "vic"; else if (p.ins === m) cls = "ins"; else if (p.hl === m) cls = p.hit ? "hit" : "nueva"; }
+      else { val = null; cls = "fut"; }
+      h += '<td class="' + cls + '">' + (val === null || val === undefined ? "" : val + (usaR ? "<small>R" + Rb + "</small>" : "")) + "</td>";
+    }
+    h += "</tr>";
+  }
+  h += "<tr><th>Fallo</th>";
+  for (var j = 0; j < sim.refs.length; j++) {
+    var cc = cols[j];
+    var mostrar = j < p.nCols || (j === p.ref && cur === ultimoPaso(j));
+    h += '<td class="fF">' + (mostrar && cc && cc.fallo ? "F" + (cc.victima !== null && cc.victima !== undefined ? "<small>sale " + cc.victima + "</small>" : "") : "") + "</td>";
+  }
+  h += "</tr></table>";
+  $("grilla").innerHTML = h;
+  Array.prototype.forEach.call(document.querySelectorAll("th.ref"), function (th) { th.onclick = function () { cur = ultimoPaso(+th.dataset.i); dibujar(); }; });
+  // estructura
+  var e = "";
+  if (sim.algo === "FIFO" || sim.algo === "SO") {
+    e = '<div class="cola-et">Cola FIFO, de la más vieja (sale primero) a la más nueva:</div><div class="cola">' + p.cola.map(function (q, k) {
+      var s = p.marcos.indexOf(q), cl = s === p.vic ? "vic" : s === p.ins ? "ins" : "";
+      return (k ? '<span class="fl">→</span>' : "") + '<span class="c ' + cl + '">' + q + (sim.algo === "SO" ? " (R" + p.R[s] + ")" : "") + "</span>";
+    }).join("") + "</div>";
+  } else if (sim.algo === "RELOJ") {
+    e = '<div class="cola-et">Lista circular: la <span class="mano">◀</span> marca la manecilla (apunta a la página más vieja).</div>';
+  }
+  $("estructura").innerHTML = e;
+  $("stats").innerHTML = '<div class="st fal">Fallos de página<b>' + p.fallos + '</b></div><div class="st ok">Aciertos<b>' + (p.ref + 1 - p.fallos) + "</b></div>";
+  $("codigo").innerHTML = CODIGO[sim.algo].map(function (l, k) { return '<li class="' + (k + 1 === p.linea ? "ahora" : "") + '"><span class="nl">' + (k + 1) + "</span><span>" + l + "</span></li>"; }).join("");
+  $("porque").innerHTML = '<div class="tit">' + p.tit + "</div><div>" + p.texto + "</div>" + marcas(p);
+  $("contador").textContent = NOMBRE[sim.algo] + " · paso " + (cur + 1) + " de " + sim.pasos.length + " · referencia " + (p.ref + 1) + " de " + sim.refs.length;
+  $("ant").disabled = cur === 0; $("sig").disabled = $("fin").disabled = cur === sim.pasos.length - 1; $("sigref").disabled = p.ref === sim.refs.length - 1;
+}
+function ultimoPaso(i) { var u = 0; for (var k = 0; k < sim.pasos.length; k++) if (sim.pasos[k].ref === i) u = k; return u; }
+function primerPaso(i) { for (var k = 0; k < sim.pasos.length; k++) if (sim.pasos[k].ref === i) return k; return 0; }
+$("cargar").onclick = cargar; $("algo").onchange = cargar; $("nmar").onchange = cargar;
+$("sig").onclick = function () { if (sim && cur < sim.pasos.length - 1) { cur++; dibujar(); } };
+$("ant").onclick = function () { if (sim && cur > 0) { cur--; dibujar(); } };
+$("fin").onclick = function () { if (sim) { cur = sim.pasos.length - 1; dibujar(); } };
+$("reini").onclick = function () { if (sim) { cur = 0; dibujar(); } };
+$("sigref").onclick = function () { if (sim) { var r = sim.pasos[cur].ref; if (r < sim.refs.length - 1) { cur = primerPaso(r + 1); dibujar(); } } };
+
+// ---------- examen ----------
+var EJX = [
+  ["Clase: 0x24C5, 1 KB, t = 150", "3 120 1 0 1 8\n7 45 1 1 1 2\n9 - 0 0 0 -\n12 80 0 1 1 14\n21 30 1 0 1 5", "0x24C5", 1024, 16, 150, false],
+  ["Cátedra: 27(1) → 7(0)", "3 30 1 0 1 4\n7 20 0 1 1 9\n21 40 1 0 1 1\n23 - 0 0 0 -\n27 10 1 0 1 6", "0x5C20", 1024, 16, 50, false],
+  ["Todas con R = 1 (degenera en FIFO)", "1 10 1 0 1 3\n2 20 1 1 1 0\n4 30 1 0 1 2\n6 - 0 0 0 -", "0x3207", 2048, 16, 40, true],
+  ["Sin fallo (página presente)", "3 120 1 0 1 8\n7 45 1 1 1 2\n12 80 0 1 1 14", "0x3010", 1024, 16, 150, true]
+];
+$("ej-ex").innerHTML = EJX.map(function (e, i) { return '<button data-i="' + i + '">' + e[0] + "</button>"; }).join("");
+Array.prototype.forEach.call(document.querySelectorAll("#ej-ex button"), function (b) {
+  b.onclick = function () { var e = EJX[+b.dataset.i]; $("tablaex").value = e[1]; $("dirv").value = e[2]; $("tampag").value = String(e[3]); $("bitsv").value = String(e[4]); $("tnow").value = e[5]; $("escr").checked = e[6]; cargarEx(); };
+});
+var LINEAS_EX = ["calcular el número de página (cortar los bits del desplazamiento)", "¿P = 1? → no hay fallo: R = 1 y dirección física", "fallo: cola de las páginas PRESENTES ordenadas por llegada", "la más vieja con R = 1 → R = 0, llegada = ahora, al final", "la primera con R = 0 → VÍCTIMA (si M = 1 → al disco)", "la nueva entra en el marco de la víctima: P=1, R=1, llegada=ahora", "dirección física = marco ∥ desplazamiento"];
+var ex = null, curx = 0;
+function cargarEx() {
+  $("err-ex").textContent = "";
+  try { ex = resolverExamen({ tabla: $("tablaex").value, dir: $("dirv").value, tamPag: +$("tampag").value, bitsV: +$("bitsv").value, t: +$("tnow").value, escribe: $("escr").checked }); curx = 0; dibujarEx(); }
+  catch (e) { $("err-ex").textContent = "⚠ " + e.message; }
+}
+function dibujarEx() {
+  var p = ex.pasos[curx];
+  var cols = [["pag", "Página"], ["llegada", "Llegada"], ["R", "R"], ["M", "M"], ["P", "P"], ["marco", "Marco"]];
+  var h = "<table><tr>" + cols.map(function (c) { return "<th>" + c[1] + "</th>"; }).join("") + "</tr>";
+  p.filas.forEach(function (f) {
+    var cl = f.pag === p.vic ? "vic" : f.pag === p.ins ? "ins" : (f.pag === p.hl || f.pag === p.nueva) ? "hl" : "";
+    h += '<tr class="' + cl + '">' + cols.map(function (c) {
+      var v = f[c[0]]; return '<td class="' + (p.cambios[f.pag + ":" + c[0]] ? "cambio" : "") + '">' + (v === null ? "—" : v) + "</td>";
+    }).join("") + "</tr>";
+  });
+  $("tabla-ex").innerHTML = h + "</table>";
+  var cc = function (arr) {
+    return arr.map(function (c, k) { var cl = c.pag === p.vic ? "vic" : c.pag === p.ins ? "ins" : c.pag === p.nueva ? "nueva" : ""; return (k ? '<span class="fl">→</span>' : "") + '<span class="c ' + cl + '">' + c.pag + " (" + c.R + ")</span>"; }).join("");
+  };
+  $("cola-ex").innerHTML = p.cola.length ? cc(p.cola) : "—";
+  $("cola-cat").innerHTML = p.cola.length ? cc(p.cola.slice().reverse()) : "—";
+  $("codigo-ex").innerHTML = LINEAS_EX.map(function (l, k) { return '<li class="' + (k + 1 === p.linea ? "ahora" : "") + '"><span class="nl">' + (k + 1) + "</span><span>" + l + "</span></li>"; }).join("");
+  var extra = "";
+  if (p.bin) { var b = p.bin, d = p.bitsD; extra = '<div class="bits" style="margin:6px 0"><span class="p">' + b.slice(0, b.length - d) + '</span> | <span class="d">' + b.slice(b.length - d) + "</span></div>"; }
+  $("porque-ex").innerHTML = '<div class="tit">' + p.tit + "</div>" + extra + "<div>" + p.texto + "</div>" + marcas(p);
+  $("contador-ex").textContent = "Paso " + (curx + 1) + " de " + ex.pasos.length;
+  $("ant-ex").disabled = curx === 0; $("sig-ex").disabled = $("fin-ex").disabled = curx === ex.pasos.length - 1;
+}
+$("cargar-ex").onclick = cargarEx;
+$("sig-ex").onclick = function () { if (ex && curx < ex.pasos.length - 1) { curx++; dibujarEx(); } };
+$("ant-ex").onclick = function () { if (ex && curx > 0) { curx--; dibujarEx(); } };
+$("fin-ex").onclick = function () { if (ex) { curx = ex.pasos.length - 1; dibujarEx(); } };
+$("reini-ex").onclick = function () { if (ex) { curx = 0; dibujarEx(); } };
+
+// ---------- NRU ----------
+var NOMBRES_CLASE = ["0: no referenciada, no modificada", "1: no referenciada, modificada", "2: referenciada, no modificada", "3: referenciada, modificada"];
+function nru() {
+  $("err-nru").textContent = "";
+  try {
+    var r = clasesNRU($("tablanru").value);
+    var h = "<table><tr><th>Página</th><th>R</th><th>M</th><th>Clase (2R + M)</th></tr>";
+    r.filas.forEach(function (f) { h += '<tr class="' + (f.clase === r.claseMin ? "vic" : "") + '"><td><b>' + f.pag + "</b></td><td>" + f.R + "</td><td>" + f.M + "</td><td>" + NOMBRES_CLASE[f.clase] + "</td></tr>"; });
+    h += "</table>";
+    h += '<div class="porque" style="margin-top:10px"><div class="tit">NRU saca una al azar entre: ' + r.candidatas.join(", ") + "</div>Es la clase más baja que no está vacía (clase " + r.claseMin + ")." +
+      (r.filas.some(function (f) { return f.clase === 1; }) ? '<span class="marca cer">🧠 La clase 1 (R = 0, M = 1) parece imposible, pero aparece cuando la interrupción de reloj borra R de una página de clase 3. El reloj borra R, nunca M, porque M hace falta para saber si hay que escribirla al disco.</span>' : "") +
+      '<span class="marca ojo">⚠️ NRU prefiere sacar una página <b>modificada que no se usó</b> en el último pulso (clase 1) antes que una <b>limpia de uso frecuente</b> (clase 2).</span></div>';
+    $("res-nru").innerHTML = h;
+  } catch (e) { $("err-nru").textContent = "⚠ " + e.message; }
+}
+$("tablanru").oninput = nru;
+
+cargar(); EJX[0] && document.querySelector("#ej-ex button").click(); nru();
+</script>
+</body>
+</html>

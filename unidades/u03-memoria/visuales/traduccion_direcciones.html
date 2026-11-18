@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Traducción de direcciones</title>
+<style>
+  :root{
+    --bg:#f4f5f8; --panel:#fff; --borde:#d6dae2; --texto:#1b1f24; --suave:#5b6572; --acento:#3d63c9;
+    --pag:#2563eb; --pag-bg:#e8f0ff; --des:#15803d; --des-bg:#e9f8ee; --mar:#c2410c; --mar-bg:#fff0e8;
+    --hl:#facc15; --mal:#dc2626; --mal-bg:#fdecec; --cer:#7c3aed; --cer-bg:#f3edff;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+      --pag:#60a5fa; --pag-bg:#15233d; --des:#4ade80; --des-bg:#13291b; --mar:#fb923c; --mar-bg:#2c1b12;
+      --hl:#eab308; --mal:#f87171; --mal-bg:#2d1515; --cer:#a78bfa; --cer-bg:#221a38;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+    --pag:#60a5fa; --pag-bg:#15233d; --des:#4ade80; --des-bg:#13291b; --mar:#fb923c; --mar-bg:#2c1b12;
+    --hl:#eab308; --mal:#f87171; --mal-bg:#2d1515; --cer:#a78bfa; --cer-bg:#221a38;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--texto); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .envoltura{max-width:1100px; margin:0 auto; padding:18px 16px 48px}
+  h1{font-size:1.35rem; margin:0 0 4px}
+  .sub{color:var(--suave); margin:0 0 14px; font-size:.92rem}
+  .tarjeta{background:var(--panel); border:1px solid var(--borde); border-radius:12px; padding:14px 16px; margin-bottom:12px}
+  .datos{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; align-items:end}
+  @media (max-width:760px){ .datos{grid-template-columns:1fr 1fr} }
+  label{font-size:.83rem; font-weight:650; display:block; margin-bottom:3px}
+  input,select{width:100%; font:inherit; padding:6px 9px; border-radius:8px; border:1px solid var(--borde); background:var(--bg); color:var(--texto)}
+  .barra{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:12px 0 4px}
+  button{font:inherit; font-size:.9rem; padding:7px 12px; border-radius:8px; border:1px solid var(--borde); background:var(--panel); color:var(--texto); cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--acento)}
+  button:disabled{opacity:.45; cursor:not-allowed}
+  button.prim{background:var(--acento); color:#fff; border-color:var(--acento); font-weight:650}
+  .contador{margin-left:auto; color:var(--suave); font-size:.88rem}
+  .grilla{display:grid; grid-template-columns:1fr 300px; gap:14px}
+  @media (max-width:820px){ .grilla{grid-template-columns:1fr} .contador{margin-left:0} }
+  h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave); margin:0 0 6px}
+  .bits{display:flex; flex-wrap:wrap; gap:2px; margin:4px 0 2px}
+  .bit{width:26px; height:34px; display:grid; place-items:center; font:700 15px ui-monospace,Consolas,monospace; border-radius:5px; border:1.5px solid var(--borde); background:var(--bg); transition:all .25s}
+  .bit.p{background:var(--pag-bg); border-color:var(--pag); color:var(--pag)}
+  .bit.d{background:var(--des-bg); border-color:var(--des); color:var(--des)}
+  .bit.m{background:var(--mar-bg); border-color:var(--mar); color:var(--mar)}
+  .bit.sep{margin-left:10px}
+  .rot{display:flex; gap:12px; font-size:.8rem; font-weight:650; margin-bottom:10px; flex-wrap:wrap}
+  .rot .p{color:var(--pag)} .rot .d{color:var(--des)} .rot .m{color:var(--mar)}
+  .fila{margin-bottom:12px}
+  .fila .et{font-size:.78rem; color:var(--suave)}
+  .grande{font:700 1.15rem ui-monospace,Consolas,monospace}
+  table{border-collapse:collapse; width:100%; font-size:.88rem}
+  th,td{border:1px solid var(--borde); padding:4px 6px; text-align:center}
+  th{background:var(--bg)}
+  td input{width:56px; padding:2px 4px; text-align:center}
+  td input[type=checkbox]{width:auto}
+  tr.hl td{background:var(--hl); color:#000}
+  tr.hl td input{color:#000}
+  .pasos{list-style:none; padding:0; margin:0}
+  .pasos li{padding:5px 8px; border-radius:7px; font-size:.86rem; margin-bottom:2px; display:flex; gap:8px}
+  .pasos li .n{flex:0 0 22px; height:22px; border-radius:50%; border:1.5px solid var(--acento); color:var(--acento); display:grid; place-items:center; font-weight:700; font-size:.75rem}
+  .pasos li.ahora{background:var(--hl); color:#000}
+  .pasos li.ahora .n{border-color:#000; color:#000}
+  .pasos li.hecho{opacity:.6}
+  .porque{border:1px solid var(--borde); border-left:5px solid var(--acento); border-radius:10px; padding:12px 14px; margin-top:10px}
+  .marca{display:block; margin-top:8px; border-radius:8px; padding:7px 10px; font-size:.9rem}
+  .marca.ojo{background:var(--mal-bg); border:1px solid var(--mal)}
+  .marca.cer{background:var(--cer-bg); border:1px solid var(--cer)}
+  .ejemplos{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px}
+  .ejemplos button{font-size:.8rem; padding:4px 9px}
+  .tw{max-height:420px; overflow:auto}
+  ul{margin:6px 0 0; padding-left:20px} li{margin:4px 0}
+  code{font-family:ui-monospace,Consolas,monospace}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <h1>Traducción de dirección virtual a física</h1>
+  <p class="sub">Escribí una dirección (en hexa con <code>0x</code>, en binario con <code>0b</code> o en decimal), elegí el tamaño de página y
+    avanzá con <b>Siguiente paso</b>: el simulador la pasa a binario, la corta en <b style="color:var(--pag)">página</b> y
+    <b style="color:var(--des)">desplazamiento</b>, busca la página en la tabla (podés editar los marcos y el bit de presente) y arma la dirección física con el
+    <b style="color:var(--mar)">marco</b>. Es el ejercicio típico de la cátedra. (Tanenbaum, cap. 3.3.1–3.3.2, págs. 189–194)</p>
+
+  <div class="tarjeta">
+    <div class="datos">
+      <div><label for="dir">Dirección virtual</label><input id="dir" value="0x2C3A"></div>
+      <div><label for="bitsv">Bits de la dirección virtual</label>
+        <select id="bitsv"><option>16</option><option>20</option><option>24</option><option>32</option></select></div>
+      <div><label for="tam">Tamaño de página</label>
+        <select id="tam"><option value="512">512 bytes</option><option value="1024" selected>1 KB</option><option value="2048">2 KB</option><option value="4096">4 KB</option><option value="8192">8 KB</option></select></div>
+      <div><label for="fmt">Mostrar resultado en</label>
+        <select id="fmt"><option value="hex">Hexadecimal</option><option value="dec">Decimal</option></select></div>
+    </div>
+    <div class="ejemplos">
+      <span style="font-size:.82rem;color:var(--suave);align-self:center">Ejemplos:</span>
+      <button data-ej="clase">Clase: 0x2C3A, 1 KB</button>
+      <button data-ej="libro">Libro fig. 3-10: 8196, 4 KB</button>
+      <button data-ej="fallo">Libro: 32780 (fallo)</button>
+      <button data-ej="practica">Práctica: 0x6047, 2 KB</button>
+      <button data-ej="examen">Examen: 0101 0101 0010 1001, 1 KB</button>
+    </div>
+    <div class="barra">
+      <button id="ant">◀ Anterior</button>
+      <button id="sig" class="prim">Siguiente paso ▶</button>
+      <button id="rei">↺ Reiniciar</button>
+      <span class="contador" id="cont"></span>
+    </div>
+  </div>
+
+  <div class="grilla">
+    <div class="tarjeta">
+      <div class="rot"><span class="p">■ número de página</span><span class="d">■ desplazamiento</span><span class="m">■ número de marco</span></div>
+      <div class="fila"><div class="et">Dirección virtual</div><div class="grande" id="v-num"></div><div class="bits" id="v-bits"></div></div>
+      <div class="fila"><div class="et" id="corte-et"></div><div id="corte"></div></div>
+      <div class="fila"><div class="et">Dirección física</div><div class="bits" id="f-bits"></div><div class="grande" id="f-num"></div></div>
+      <ol class="pasos" id="pasos"></ol>
+      <div class="porque" id="porque"></div>
+    </div>
+    <div class="tarjeta">
+      <h2>Tabla de páginas (editable)</h2>
+      <div class="tw"><table id="tabla"></table></div>
+      <p style="font-size:.78rem;color:var(--suave);margin:6px 0 0">Cambiá el marco o destildá «P» para provocar un fallo de página.</p>
+    </div>
+  </div>
+
+  <div class="tarjeta">
+    <h2>Ideas clave y frases de examen</h2>
+    <ul>
+      <li>🧠 <b>Se reemplaza el número de página por el número de marco; el desplazamiento no se toca.</b></li>
+      <li>Bits de desplazamiento = log₂(tamaño de página): <b>1 KB → 10, 2 KB → 11, 4 KB → 12</b>. El resto, a la izquierda, es el número de página.</li>
+      <li>⚠️ Cortá desde la <b>derecha</b>: el desplazamiento son los bits de menor orden. Error típico: contar los bits de página desde la izquierda con el tamaño equivocado.</li>
+      <li>⚠️ Si el bit de presente/ausente es 0 hay <b>fallo de página</b>: no hay dirección física hasta que el SO traiga la página (y, si lo piden, se aplica el algoritmo de reemplazo).</li>
+      <li>Comprobación rápida: física = marco × tamaño de página + desplazamiento.</li>
+    </ul>
+  </div>
+</div>
+
+<script id="motor">
+// ====================================================================
+// MOTOR — traducción por corte de bits
+// ====================================================================
+function leerDireccion(txt){
+  const t = txt.trim().replace(/[\s_]/g, "").toLowerCase();
+  if (/^0x[0-9a-f]+$/.test(t)) return parseInt(t.slice(2), 16);
+  if (/^0b[01]+$/.test(t)) return parseInt(t.slice(2), 2);
+  if (/^[01]{9,}$/.test(t)) return parseInt(t, 2);           // binario largo sin prefijo (como en los exámenes)
+  if (/^\d+$/.test(t)) return parseInt(t, 10);
+  if (/^[0-9a-f]+h$/.test(t)) return parseInt(t.slice(0, -1), 16); // 6047H
+  throw new Error("No entiendo la dirección «" + txt + "»");
+}
+const log2 = n => Math.round(Math.log2(n));
+function traducir(dir, bitsV, tamPag, tabla){
+  const bd = log2(tamPag), bp = bitsV - bd;
+  if (dir >= 2 ** bitsV) return {error: `La dirección no entra en ${bitsV} bits.`};
+  const pagina = Math.floor(dir / tamPag), desp = dir % tamPag;
+  const e = tabla[pagina];
+  const res = {bd, bp, pagina, desp, bin: dir.toString(2).padStart(bitsV, "0")};
+  if (!e || !e.p) return Object.assign(res, {fallo: true});
+  const marco = e.marco, fisica = marco * tamPag + desp;
+  return Object.assign(res, {fallo: false, marco, fisica});
+}
+if (typeof module !== "undefined") module.exports = {leerDireccion, traducir};
+</script>
+
+<script>
+const $ = id => document.getElementById(id);
+// tabla por defecto: la fig. 3-9 del libro en las primeras 16 páginas, y las del ejemplo de clase/práctica
+let tabla = {};
+function tablaLibro(){ tabla = {}; [[0,2],[1,1],[2,6],[3,0],[4,4],[5,3],[9,5],[11,7]].forEach(([p,m]) => tabla[p] = {marco: m, p: true}); [6,7,8,10,12,13,14,15].forEach(p => tabla[p] = {marco: 0, p: false}); }
+function tablaClase(){ tabla = {}; [[3,8],[7,2],[11,5],[12,17],[23,4]].forEach(([p,m]) => tabla[p] = {marco: m, p: true}); [0,1,2,9,21].forEach(p => tabla[p] = {marco: 0, p: false}); }
+tablaClase();
+const EJ = {
+  clase: ["0x2C3A", 16, 1024, tablaClase], libro: ["8196", 16, 4096, tablaLibro], fallo: ["32780", 16, 4096, tablaLibro],
+  practica: ["0x6047", 16, 2048, tablaClase], examen: ["0101 0101 0010 1001", 16, 1024, tablaClase]
+};
+let k = 0, r = null;
+const PASOS = ["Pasar la dirección a binario", "Separar página y desplazamiento", "Buscar la página en la tabla", "Armar la dirección física"];
+const hex = (n, bits) => "0x" + n.toString(16).toUpperCase().padStart(Math.ceil(bits / 4), "0");
+function fmt(n, bits){ return $("fmt").value === "hex" ? `${hex(n, bits)} (= ${n})` : `${n} (= ${hex(n, bits)})`; }
+
+function recalcular(){
+  const bitsV = +$("bitsv").value, tam = +$("tam").value;
+  try {
+    const dir = leerDireccion($("dir").value);
+    r = traducir(dir, bitsV, tam, tabla); r.dir = dir; r.bitsV = bitsV; r.tam = tam;
+  } catch (e) { r = {error: e.message}; }
+  pintarTabla(); pintar();
+}
+function bitsHTML(bin, clases, sepEn){
+  return bin.split("").map((b, i) => `<span class="bit ${clases[i] || ""}${sepEn.includes(i) ? " sep" : ""}">${b}</span>`).join("");
+}
+function pintar(){
+  if (r.error){ $("porque").innerHTML = "⚠️ " + r.error; ["v-bits","corte","f-bits","f-num","v-num"].forEach(i => $(i).innerHTML = ""); return; }
+  const {bin, bp, bd, bitsV} = r;
+  $("v-num").textContent = k >= 1 ? fmt(r.dir, bitsV) : $("dir").value;
+  const clases = bin.split("").map((_, i) => k >= 2 ? (i < bp ? "p" : "d") : "");
+  // agrupamos de a 4 desde la derecha para leer hexa
+  const grupos = []; for (let i = bitsV % 4; i < bitsV; i += 4) if (i) grupos.push(i);
+  $("v-bits").innerHTML = k >= 1 ? bitsHTML(bin, clases, k >= 2 ? [bp] : grupos) : "";
+  $("corte-et").textContent = k >= 2 ? `Corte: ${bp} bits de página | ${bd} bits de desplazamiento (log₂ ${r.tam} = ${bd})` : "";
+  $("corte").innerHTML = k >= 2 ? `<span class="grande" style="color:var(--pag)">página ${r.pagina}</span> &nbsp; <span class="grande" style="color:var(--des)">desplazamiento ${r.desp}</span>` : "";
+  if (k >= 4 && !r.fallo){
+    const mb = r.marco.toString(2).padStart(Math.max(1, bitsV - bd), "0");
+    const fb = mb + bin.slice(bp);
+    $("f-bits").innerHTML = bitsHTML(fb, fb.split("").map((_, i) => i < mb.length ? "m" : "d"), [mb.length]);
+    $("f-num").textContent = fmt(r.fisica, fb.length);
+  } else { $("f-bits").innerHTML = ""; $("f-num").textContent = ""; }
+  pintarTabla();
+  $("pasos").innerHTML = PASOS.map((t, i) => `<li class="${i < k - 1 ? "hecho" : i === k - 1 ? "ahora" : ""}"><span class="n">${i + 1}</span>${t}</li>`).join("");
+  const exp = [
+    "Situación inicial. Apretá «Siguiente paso».",
+    `En binario de ${bitsV} bits: <b>${bin.replace(/(.{4})(?=.)/g, "$1 ")}</b>. Si está en hexa, cada dígito son 4 bits.`,
+    `Con páginas de ${r.tam} bytes el desplazamiento ocupa <b>log₂ ${r.tam} = ${bd} bits</b>, contados desde la <b>derecha</b>. Los ${bp} bits que quedan a la izquierda son el número de página: <b>${bin.slice(0, bp)} = ${r.pagina}</b>. Desplazamiento: <b>${bin.slice(bp)} = ${r.desp}</b>.`,
+    r.fallo ? `La página ${r.pagina} tiene el bit de presente/ausente en 0 (o no está en la tabla): <b>fallo de página</b>. La MMU hace que la CPU genere un trap al sistema operativo.`
+            : `La entrada ${r.pagina} de la tabla dice: presente, <b>marco ${r.marco}</b>.`,
+    r.fallo ? "No hay dirección física todavía: el SO tiene que elegir un marco (algoritmo de reemplazo), traer la página del disco, actualizar la tabla y reintentar la instrucción."
+            : `Se reemplaza la página por el marco y el desplazamiento se copia tal cual. Comprobación: ${r.marco} × ${r.tam} + ${r.desp} = <b>${r.fisica}</b>.`
+  ][k];
+  const marca = k === 2 ? `<span class="marca cer">🧠 El tamaño de página es potencia de 2, así que no hay que dividir: alcanza con cortar los bits.</span>` :
+                k >= 3 && r.fallo ? `<span class="marca ojo">⚠️ Fallo de página: el proceso queda BLOQUEADO mientras se lee el disco y el planificador le da la CPU a otro (U2).</span>` :
+                k === 4 ? `<span class="marca cer">🧠 Página → marco; el desplazamiento no se toca.</span>` : "";
+  $("porque").innerHTML = exp + marca;
+  $("cont").textContent = k === 0 ? "Inicio" : `Paso ${k} de 4`;
+  $("sig").disabled = k >= 4 || (r.fallo && k >= 4); $("ant").disabled = k === 0;
+}
+function pintarTabla(){
+  const tam = +$("tam").value, bitsV = +$("bitsv").value, npag = 2 ** (bitsV - log2(tam));
+  const filas = Object.keys(tabla).map(Number).filter(p => p < npag).sort((a, b) => a - b);
+  $("tabla").innerHTML = "<tr><th>Página</th><th>P</th><th>Marco</th></tr>" + filas.map(p =>
+    `<tr class="${r && !r.error && k >= 3 && r.pagina === p ? "hl" : ""}"><td>${p}</td><td><input type="checkbox" data-p="${p}" ${tabla[p].p ? "checked" : ""}></td>` +
+    `<td><input type="number" min="0" data-m="${p}" value="${tabla[p].marco}" ${tabla[p].p ? "" : "disabled"}></td></tr>`).join("") +
+    `<tr><td colspan="3"><button id="agregar" style="font-size:.8rem;padding:3px 8px">+ agregar la página ${r && !r.error ? r.pagina : ""}</button></td></tr>`;
+  document.querySelectorAll("#tabla input[type=checkbox]").forEach(c => c.onchange = () => { tabla[+c.dataset.p].p = c.checked; recalcular(); });
+  document.querySelectorAll("#tabla input[type=number]").forEach(c => c.oninput = () => { if (c.value !== ""){ tabla[+c.dataset.m].marco = +c.value; recalcularSinTabla(); } });
+  const ag = $("agregar"); if (ag) ag.onclick = () => { if (r && !r.error && !tabla[r.pagina]) { tabla[r.pagina] = {marco: 0, p: true}; recalcular(); } };
+}
+function recalcularSinTabla(){ const bitsV = +$("bitsv").value, tam = +$("tam").value; try { const dir = leerDireccion($("dir").value); r = traducir(dir, bitsV, tam, tabla); r.dir = dir; r.bitsV = bitsV; r.tam = tam; } catch (e) { r = {error: e.message}; } pintar(); }
+$("sig").onclick = () => { if (k < 4){ k++; pintar(); } };
+$("ant").onclick = () => { if (k > 0){ k--; pintar(); } };
+$("rei").onclick = () => { k = 0; pintar(); };
+["dir", "bitsv", "tam"].forEach(i => $(i).addEventListener("input", () => { k = 0; recalcular(); }));
+$("fmt").onchange = pintar;
+document.querySelectorAll("[data-ej]").forEach(b => b.onclick = () => {
+  const [d, bv, t, f] = EJ[b.dataset.ej]; f(); $("dir").value = d; $("bitsv").value = bv; $("tam").value = t; k = 0; recalcular();
+});
+document.addEventListener("keydown", e => { if (e.target.tagName === "INPUT") return; if (e.key === "ArrowRight") $("sig").click(); if (e.key === "ArrowLeft") $("ant").click(); });
+recalcular();
+</script>
+</body>
+</html>

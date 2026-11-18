@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulador del TLB</title>
+<style>
+  :root{
+    --bg:#f4f5f8; --panel:#fff; --borde:#d6dae2; --texto:#1b1f24; --suave:#5b6572; --acento:#3d63c9;
+    --ok:#15803d; --ok-bg:#e9f8ee; --sua:#a16207; --sua-bg:#fef6dc; --dur:#dc2626; --dur-bg:#fdecec;
+    --pro:#7c3aed; --pro-bg:#f3edff; --mmu:#2563eb; --mmu-bg:#e8f0ff; --so:#c2410c; --so-bg:#fff0e8; --hl:#facc15;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+      --ok:#4ade80; --ok-bg:#13291b; --sua:#facc15; --sua-bg:#2b2410; --dur:#f87171; --dur-bg:#2d1515;
+      --pro:#a78bfa; --pro-bg:#221a38; --mmu:#60a5fa; --mmu-bg:#15233d; --so:#fb923c; --so-bg:#2c1b12; --hl:#eab308;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+    --ok:#4ade80; --ok-bg:#13291b; --sua:#facc15; --sua-bg:#2b2410; --dur:#f87171; --dur-bg:#2d1515;
+    --pro:#a78bfa; --pro-bg:#221a38; --mmu:#60a5fa; --mmu-bg:#15233d; --so:#fb923c; --so-bg:#2c1b12; --hl:#eab308;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--texto); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .envoltura{max-width:1150px; margin:0 auto; padding:18px 16px 48px}
+  h1{font-size:1.35rem; margin:0 0 4px}
+  .sub{color:var(--suave); margin:0 0 14px; font-size:.92rem}
+  .tarjeta{background:var(--panel); border:1px solid var(--borde); border-radius:12px; padding:14px 16px; margin-bottom:12px}
+  .datos{display:grid; grid-template-columns:2fr 1.4fr 1fr; gap:12px}
+  @media (max-width:820px){ .datos{grid-template-columns:1fr} }
+  label{font-size:.83rem; font-weight:650; display:block; margin-bottom:3px}
+  .ayuda{font-size:.76rem; color:var(--suave); margin-top:2px}
+  input,select,textarea{width:100%; font:inherit; padding:6px 9px; border-radius:8px; border:1px solid var(--borde); background:var(--bg); color:var(--texto)}
+  textarea{font-family:ui-monospace,Consolas,monospace; font-size:.85rem; min-height:132px; resize:vertical}
+  .mini{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+  .barra{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:10px 0 4px}
+  button{font:inherit; font-size:.9rem; padding:7px 12px; border-radius:8px; border:1px solid var(--borde); background:var(--panel); color:var(--texto); cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--acento)}
+  button:disabled{opacity:.45; cursor:not-allowed}
+  button.prim{background:var(--acento); color:#fff; border-color:var(--acento); font-weight:650}
+  .ejemplos{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px}
+  .ejemplos button{font-size:.8rem; padding:4px 9px}
+  .contador{margin-left:auto; color:var(--suave); font-size:.88rem}
+  @media (max-width:820px){ .contador{margin-left:0} }
+  .error{color:var(--dur); font-weight:650; margin-top:6px}
+  h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave); margin:0 0 6px}
+  .refs{display:flex; flex-wrap:wrap; gap:5px}
+  .chip{min-width:44px; padding:3px 7px; border-radius:7px; border:1.5px solid var(--borde); font:700 .85rem ui-monospace,Consolas,monospace; text-align:center; cursor:pointer; background:var(--bg)}
+  .chip small{display:block; font:600 .62rem system-ui,sans-serif; opacity:.85}
+  .chip.ahora{outline:3px solid var(--hl); outline-offset:1px}
+  .chip.acierto{background:var(--ok-bg); border-color:var(--ok); color:var(--ok)}
+  .chip.suave{background:var(--sua-bg); border-color:var(--sua); color:var(--sua)}
+  .chip.duro{background:var(--dur-bg); border-color:var(--dur); color:var(--dur)}
+  .chip.proteccion{background:var(--pro-bg); border-color:var(--pro); color:var(--pro)}
+  .grilla{display:grid; grid-template-columns:1.15fr 1fr; gap:12px}
+  @media (max-width:880px){ .grilla{grid-template-columns:1fr} }
+  .codigo{font:13px/1.45 ui-monospace,Consolas,monospace; margin:0; padding:0; list-style:none}
+  .codigo li{display:flex; gap:8px; padding:2px 6px; border-radius:6px; white-space:pre-wrap}
+  .codigo .nl{color:var(--suave); flex:0 0 20px; text-align:right}
+  .codigo .ac{flex:0 0 54px; font-size:.7rem; font-weight:700; border-radius:5px; text-align:center; align-self:flex-start; margin-top:1px}
+  .ac.MMU{background:var(--mmu-bg); color:var(--mmu)} .ac.SO{background:var(--so-bg); color:var(--so)}
+  .codigo li.ahora{background:var(--hl); color:#000}
+  .codigo li.ahora .nl{color:#000}
+  .porque{border:1px solid var(--borde); border-left:5px solid var(--acento); border-radius:10px; padding:12px 14px}
+  .porque .quien{font-weight:700; font-size:.82rem}
+  .porque .tit{font-weight:700; font-size:1.02rem; margin:2px 0 4px}
+  .marca{display:block; margin-top:8px; border-radius:8px; padding:7px 10px; font-size:.88rem}
+  .marca.ojo{background:var(--dur-bg); border:1px solid var(--dur)}
+  .marca.cer{background:var(--pro-bg); border:1px solid var(--pro)}
+  .memorias{display:grid; grid-template-columns:1.1fr 1.2fr 1fr; gap:12px}
+  @media (max-width:880px){ .memorias{grid-template-columns:1fr} }
+  .tw{overflow-x:auto}
+  table{border-collapse:collapse; width:100%; font-size:.86rem}
+  th,td{border:1px solid var(--borde); padding:4px 6px; text-align:center}
+  th{background:var(--bg); font-size:.78rem}
+  td.mono{font-family:ui-monospace,Consolas,monospace; font-weight:700}
+  tr.hl td{background:var(--hl); color:#000}
+  tr.vic td{background:var(--dur-bg)}
+  tr.vacia td{color:var(--suave); font-style:italic}
+  .sucio{color:var(--dur); font-weight:800}
+  .marcos{display:grid; grid-template-columns:repeat(auto-fill,minmax(72px,1fr)); gap:6px}
+  .marco{border:1.5px solid var(--borde); border-radius:8px; padding:5px; text-align:center; font-size:.78rem; background:var(--bg)}
+  .marco b{display:block; font:700 1rem ui-monospace,Consolas,monospace}
+  .marco.libre{opacity:.55; border-style:dashed}
+  .marco.hl{border-color:var(--hl); box-shadow:0 0 0 3px var(--hl)}
+  .stats{display:flex; flex-wrap:wrap; gap:8px}
+  .st{flex:1 1 120px; border-radius:9px; padding:7px 10px; border:1px solid var(--borde)}
+  .st b{display:block; font-size:1.3rem}
+  .st.ok{background:var(--ok-bg); color:var(--ok)} .st.sua{background:var(--sua-bg); color:var(--sua)}
+  .st.dur{background:var(--dur-bg); color:var(--dur)} .st.pro{background:var(--pro-bg); color:var(--pro)}
+  .disco{font-size:.84rem; margin-top:8px; color:var(--suave)}
+  .ideas li{margin:5px 0}
+  code{font-family:ui-monospace,Consolas,monospace}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <h1>Simulador del TLB: aciertos, fallos suaves y fallos duros</h1>
+  <p class="sub">Escribí una secuencia de <b>páginas referenciadas</b>. Agregá una <code>w</code> si el acceso es una escritura, por ejemplo <code>129w</code>.
+    Avanzá con <b>Siguiente paso</b>. A la izquierda se resalta la línea que se ejecuta y quién la ejecuta:
+    <b style="color:var(--mmu)">MMU</b> (hardware) o <b style="color:var(--so)">SO</b> (software). Abajo ves cómo cambian el TLB, la tabla de páginas y los marcos de la RAM.
+    Fijate en el bit <b>M</b>: al escribir, se marca <i>solo en el TLB</i>, y vuelve a la tabla recién cuando esa entrada sale del TLB. (Tanenbaum, cap. 3.3.2–3.3.3, págs. 193–198)</p>
+
+  <div class="tarjeta">
+    <div class="datos">
+      <div>
+        <label for="refs">Referencias (página, con <code>w</code> si escribe)</label>
+        <input id="refs">
+        <div class="ayuda">Separalas con espacios. Una página que no esté en la tabla se agrega como ausente y con permiso RW.</div>
+        <div class="ejemplos" id="ejemplos"></div>
+      </div>
+      <div>
+        <label for="tabla">Tabla de páginas inicial: <code>página marco permisos</code></label>
+        <textarea id="tabla" spellcheck="false"></textarea>
+        <div class="ayuda">Poné <code>-</code> como marco si la página está ausente (P = 0). El orden de las páginas presentes es el orden en que llegaron a la RAM (para el FIFO).</div>
+      </div>
+      <div>
+        <div class="mini">
+          <div><label for="tamtlb">Entradas del TLB</label>
+            <select id="tamtlb"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option><option>8</option></select></div>
+          <div><label for="nmarcos">Marcos de RAM</label><input id="nmarcos" type="number" min="1" max="16" value="6"></div>
+        </div>
+        <div style="margin-top:8px"><label for="pol">Reemplazo en el TLB</label>
+          <select id="pol"><option value="FIFO">FIFO (la que entró primero)</option><option value="LRU">LRU (la menos usada recién)</option></select></div>
+        <div class="ayuda">Cuando hace falta un marco, la víctima de la RAM se elige por FIFO. Los algoritmos de reemplazo de páginas se ven en el tema 7.</div>
+        <button class="prim" id="cargar" style="margin-top:10px; width:100%">Cargar y empezar</button>
+      </div>
+    </div>
+    <div class="error" id="error"></div>
+  </div>
+
+  <div class="tarjeta">
+    <h2>Secuencia (clic en una referencia para saltar a ella)</h2>
+    <div class="refs" id="chips"></div>
+    <div class="barra">
+      <button id="ant">◀ Anterior</button>
+      <button class="prim" id="sig">Siguiente paso ▶</button>
+      <button id="sigref">Siguiente referencia ⏭</button>
+      <button id="fin">Ir al final</button>
+      <button id="reini">Reiniciar</button>
+      <span class="contador" id="contador"></span>
+    </div>
+  </div>
+
+  <div class="grilla">
+    <div class="tarjeta">
+      <h2>Qué hace el hardware y qué hace el SO</h2>
+      <ol class="codigo" id="codigo"></ol>
+    </div>
+    <div class="tarjeta">
+      <h2>Por qué</h2>
+      <div class="porque" id="porque"></div>
+      <div style="margin-top:12px"><h2>Resultado</h2><div class="stats" id="stats"></div><div class="disco" id="disco"></div></div>
+    </div>
+  </div>
+
+  <div class="memorias">
+    <div class="tarjeta"><h2>TLB (dentro de la MMU)</h2><div class="tw" id="tlb"></div></div>
+    <div class="tarjeta"><h2>Tabla de páginas (en RAM)</h2><div class="tw" id="tp"></div></div>
+    <div class="tarjeta"><h2>Marcos de la RAM</h2><div class="marcos" id="ram"></div></div>
+  </div>
+
+  <div class="tarjeta">
+    <h2>Ideas clave y frases de examen</h2>
+    <ul class="ideas">
+      <li><b>Acierto en el TLB:</b> la traducción sale del TLB sin leer la tabla de páginas, así que no hay acceso extra a memoria.</li>
+      <li><b>Fallo suave</b> = la página está en RAM pero no en el TLB: se recarga el TLB, sin disco, en nanosegundos. <b>Fallo duro</b> = la página no está en RAM: hay que ir al disco y tarda milisegundos, ≈ un millón de veces más.</li>
+      <li>⚠️ <b>Desalojar una entrada del TLB no es desalojar la página de la RAM.</b> Cuando sale del TLB, su bit M se copia <i>a la tabla de páginas</i>, no al disco. Al disco se escribe solo cuando la <i>página</i> sale de la RAM y está sucia.</li>
+      <li>⚠️ La dirección de disco de la página <b>no está en la tabla de páginas</b>: la guarda el SO en sus propias tablas.</li>
+      <li>🧠 Con un TLB por software (SPARC, MIPS, HP PA), las líneas 6 a 14 las hace el SO, y la MMU queda más simple.</li>
+    </ul>
+  </div>
+</div>
+
+<script id="motor">
+// ===== Motor (sin DOM): se verifica con Node =====
+var LINEAS = [
+  null,
+  ["MMU", "buscar la página p en el TLB (todas las entradas a la vez)"],
+  ["MMU", "si ACIERTO:"],
+  ["MMU", "   si el acceso viola la protección → fallo de protección"],
+  ["MMU", "   si escribe → M = 1 en la entrada del TLB"],
+  ["MMU", "   física = marco ∥ desplazamiento   ✔"],
+  ["MMU", "si no → FALLO DE TLB"],
+  ["MMU", "   leer la entrada p de la tabla de páginas (en RAM)"],
+  ["SO",  "   si P = 0 → FALLO DURO: trap al SO"],
+  ["SO",  "      elegir marco: uno libre, o una víctima (FIFO)"],
+  ["SO",  "      si la víctima está en el TLB: copiar su M e invalidarla"],
+  ["SO",  "      si víctima.M = 1 → escribirla al disco"],
+  ["SO",  "      leer p del disco al marco; P = 1"],
+  ["MMU", "   elegir entrada del TLB a desalojar; su M → tabla"],
+  ["MMU", "   cargar la entrada de p en el TLB"],
+  ["MMU", "   reintentar la instrucción → ahora es acierto"]
+];
+
+function parsearTabla(txt) {
+  var pags = {}, orden = [], usados = {};
+  var lineas = String(txt).split(/\n/);
+  for (var i = 0; i < lineas.length; i++) {
+    var l = lineas[i].replace(/#.*/, "").trim();
+    if (!l) continue;
+    var t = l.split(/[\s,;:→]+/).filter(Boolean);
+    var p = parseInt(t[0], 10);
+    if (isNaN(p) || p < 0) throw new Error("Línea " + (i + 1) + " de la tabla: «" + l + "» no empieza con un número de página.");
+    if (pags[p]) throw new Error("La página " + p + " aparece dos veces en la tabla.");
+    var m = (t[1] === undefined || /^[-xX]$/.test(t[1])) ? null : parseInt(t[1], 10);
+    if (t[1] !== undefined && m === null && !/^[-xX]$/.test(t[1])) throw new Error("Línea " + (i + 1) + ": marco inválido.");
+    if (m !== null && isNaN(m)) throw new Error("Línea " + (i + 1) + ": marco inválido.");
+    var prot = (t[2] || "RW").toUpperCase().replace(/[^RWX]/g, "") || "RW";
+    if (m !== null) {
+      if (usados[m] !== undefined) throw new Error("El marco " + m + " está asignado a dos páginas (" + usados[m] + " y " + p + ").");
+      usados[m] = p; orden.push(p);
+    }
+    pags[p] = { P: m === null ? 0 : 1, marco: m, M: 0, prot: prot };
+  }
+  return { pags: pags, orden: orden };
+}
+
+function parsearRefs(txt) {
+  var out = [];
+  var t = String(txt).split(/[\s,;]+/).filter(Boolean);
+  for (var i = 0; i < t.length; i++) {
+    var mm = /^(\d+)([wWeErRlL]?)$/.exec(t[i]);
+    if (!mm) throw new Error("Referencia «" + t[i] + "» inválida: usá un número, con w si es escritura (ej. 129w).");
+    out.push({ pag: parseInt(mm[1], 10), esc: /[wWeE]/.test(mm[2]) });
+  }
+  if (!out.length) throw new Error("Escribí al menos una referencia.");
+  return out;
+}
+
+function clonar(o) { return JSON.parse(JSON.stringify(o)); }
+
+function simular(cfg) {
+  var tab = parsearTabla(cfg.tabla);
+  var refs = parsearRefs(cfg.refs);
+  var tam = cfg.tamTLB, nM = cfg.marcos, pol = cfg.politica || "FIFO";
+  var pags = tab.pags, ram = tab.orden.slice();
+  for (var k in pags) if (pags[k].marco !== null && pags[k].marco >= nM)
+    throw new Error("La página " + k + " está en el marco " + pags[k].marco + ", pero solo hay marcos 0 a " + (nM - 1) + ".");
+  for (var r = 0; r < refs.length; r++) if (!pags[refs[r].pag]) pags[refs[r].pag] = { P: 0, marco: null, M: 0, prot: "RW", agregada: true };
+  var libres = [];
+  for (var f = 0; f < nM; f++) { var usado = false; for (var q in pags) if (pags[q].marco === f) usado = true; if (!usado) libres.push(f); }
+  var tlb = []; for (var s = 0; s < tam; s++) tlb.push(null);
+  var st = { aciertos: 0, suaves: 0, duros: 0, proteccion: 0, escrituras: 0, lecturas: 0 };
+  var resultados = [];
+  var pasos = [];
+  var t = 0;
+
+  function paso(i, linea, tit, texto, extra) {
+    extra = extra || {};
+    pasos.push({
+      ref: i, linea: linea, actor: LINEAS[linea][0], tit: tit, texto: texto,
+      ojo: extra.ojo || "", cer: extra.cer || "",
+      hlTLB: extra.hlTLB === undefined ? -1 : extra.hlTLB, vicTLB: extra.vicTLB === undefined ? -1 : extra.vicTLB,
+      hlPag: extra.hlPag === undefined ? null : extra.hlPag, vicPag: extra.vicPag === undefined ? null : extra.vicPag,
+      hlMarco: extra.hlMarco === undefined ? null : extra.hlMarco,
+      estado: { tlb: clonar(tlb), pags: clonar(pags), libres: libres.slice(), ram: ram.slice(), st: clonar(st), resultados: resultados.slice() }
+    });
+  }
+
+  function accesoConAcierto(i, ref, idx, reintento) {
+    var e = tlb[idx];
+    if (ref.esc && e.prot.indexOf("W") < 0) {
+      st.proteccion++;
+      if (!reintento) resultados[i] = "proteccion"; else resultados[i] = resultados[i] + "+proteccion";
+      paso(i, 3, "Fallo de protección", "La página " + ref.pag + " tiene permisos " + e.prot + " (no se puede escribir) y la instrucción intenta escribir. La MMU no traduce: genera un trap al SO, que por lo general termina el proceso (segmentation fault).",
+        { hlTLB: idx, ojo: "No es un fallo de página: la página está en RAM. El problema son los permisos (bits de protección)." });
+      return;
+    }
+    if (ref.esc) {
+      e.M = 1;
+      paso(i, 4, "Escritura: M = 1 en el TLB", "La instrucción escribe, así que el hardware pone M = 1 en la entrada del TLB. La tabla de páginas en RAM todavía tiene el valor viejo: se actualiza recién cuando esta entrada salga del TLB.", { hlTLB: idx, hlPag: ref.pag,
+        cer: "Por eso en la tabla puede figurar M = 0 aunque la página ya esté sucia." });
+    }
+    paso(i, 5, reintento ? "Traducción completa" : "¡Acierto en el TLB!", "Página " + ref.pag + " → marco " + e.marco + ". La dirección física es el marco " + e.marco + " seguido del desplazamiento, que no cambia." +
+      (reintento ? "" : " No hizo falta leer la tabla de páginas: no hubo un acceso extra a memoria."), { hlTLB: idx, hlMarco: e.marco });
+  }
+
+  for (var i = 0; i < refs.length; i++) {
+    var ref = refs[i], p = ref.pag;
+    t++;
+    paso(i, 1, "Referencia a la página " + p + (ref.esc ? " (escritura)" : " (lectura)"), "La MMU compara el número de página " + p + " con las " + tam + " entradas del TLB al mismo tiempo, en paralelo (por eso se llama memoria asociativa).", { hlPag: null });
+    var idx = -1;
+    for (var j = 0; j < tam; j++) if (tlb[j] && tlb[j].pag === p) idx = j;
+    if (idx >= 0) {
+      tlb[idx].uso = t;
+      st.aciertos++; resultados[i] = "acierto";
+      paso(i, 2, "Acierto", "La página " + p + " está en la entrada " + idx + " del TLB, con marco " + tlb[idx].marco + ". Ahora se controlan los permisos.", { hlTLB: idx });
+      accesoConAcierto(i, ref, idx, false);
+      continue;
+    }
+    paso(i, 6, "Fallo de TLB", "Ninguna entrada del TLB tiene la página " + p + ". Todavía no sabemos si es un fallo suave o duro: depende de si la página está en RAM.", {});
+    var e = pags[p];
+    paso(i, 7, "Se lee la tabla de páginas", "La MMU va a la tabla de páginas en RAM y lee la entrada " + p + ": P = " + e.P + (e.P ? ", marco " + e.marco + "." : ", la página no está en memoria."), { hlPag: p });
+    var duro = false;
+    if (!e.P) {
+      duro = true; st.duros++; resultados[i] = "duro";
+      paso(i, 8, "FALLO DE PÁGINA (fallo duro)", "P = 0: la página " + p + " no está en RAM. La MMU genera un trap y toma el control el SO. El proceso se bloquea hasta que llegue la página del disco (y mientras, la CPU se le da a otro).", { hlPag: p,
+        ojo: "Fallo duro = hay que ir al disco: milisegundos, ≈ un millón de veces más lento que un fallo suave." });
+      var marco;
+      if (libres.length) {
+        marco = libres.shift();
+        paso(i, 9, "Hay un marco libre", "El SO toma el marco libre " + marco + ". No hay que desalojar a nadie.", { hlMarco: marco, hlPag: p });
+      } else {
+        var v = ram.shift(); var pv = pags[v]; marco = pv.marco;
+        paso(i, 9, "No hay marcos libres: víctima " + v, "Todos los marcos están ocupados. El SO elige como víctima la página " + v + " (marco " + marco + "), que es la que llegó primero a la RAM (FIFO).", { vicPag: v, hlMarco: marco });
+        var ti = -1; for (var j2 = 0; j2 < tam; j2++) if (tlb[j2] && tlb[j2].pag === v) ti = j2;
+        if (ti >= 0) {
+          var mt = tlb[ti].M;
+          pv.M = pv.M | mt;
+          paso(i, 10, "La víctima estaba en el TLB", "La página " + v + " tenía la entrada " + ti + " del TLB con M = " + mt + ". El SO copia ese M a la tabla y la invalida, porque si no, la MMU seguiría traduciendo " + v + " a un marco que ya no es suyo.", { vicTLB: ti, vicPag: v,
+            cer: "Si no la invalidara, el proceso leería datos de otra página: un error grave." });
+          tlb[ti] = null;
+        } else {
+          paso(i, 10, "La víctima no estaba en el TLB", "La página " + v + " no está en el TLB: no hay nada que invalidar. Su M es el de la tabla: " + pv.M + ".", { vicPag: v });
+        }
+        if (pv.M) {
+          st.escrituras++;
+          paso(i, 11, "Víctima sucia → se escribe al disco", "M = 1: la página " + v + " se modificó en RAM y la copia del disco está vieja. El SO la escribe al disco antes de reusar el marco " + marco + ".", { vicPag: v, hlMarco: marco,
+            ojo: "Esta es la escritura al disco que provoca el bit M: ocurre cuando la página sale de la RAM, no cuando sale del TLB." });
+        } else {
+          paso(i, 11, "Víctima limpia → se descarta", "M = 0: la copia del disco de la página " + v + " sigue siendo válida. El marco se reusa sin escribir nada.", { vicPag: v, hlMarco: marco });
+        }
+        pv.P = 0; pv.marco = null; pv.M = 0;
+      }
+      e.P = 1; e.marco = marco; e.M = 0; ram.push(p); st.lecturas++;
+      paso(i, 12, "Se trae la página del disco", "El SO lee la página " + p + " del disco al marco " + marco + " (milisegundos), actualiza la tabla (P = 1, marco " + marco + ") y el proceso vuelve a listo. Cuando vuelve a ejecutarse, sigue la MMU.", { hlPag: p, hlMarco: marco,
+        cer: "La dirección de disco de la página la busca el SO en sus propias tablas: no está en la tabla de páginas." });
+    } else {
+      st.suaves++; resultados[i] = "suave";
+    }
+    var slot = -1;
+    for (var j3 = 0; j3 < tam; j3++) if (!tlb[j3]) { slot = j3; break; }
+    if (slot < 0) {
+      slot = 0;
+      for (var j4 = 1; j4 < tam; j4++) {
+        var crit = pol === "LRU" ? "uso" : "carga";
+        if (tlb[j4][crit] < tlb[slot][crit]) slot = j4;
+      }
+      var sale = tlb[slot];
+      var mAntes = pags[sale.pag].M;
+      pags[sale.pag].M = pags[sale.pag].M | sale.M;
+      paso(i, 13, "TLB lleno: sale la página " + sale.pag, "Se desaloja la entrada " + slot + " (página " + sale.pag + "), por ser la " + (pol === "LRU" ? "usada hace más tiempo (LRU)" : "que entró primero (FIFO)") + ". Su M = " + sale.M + " se copia a la tabla de páginas" +
+        (sale.M && !mAntes ? ": recién ahora la tabla se entera de que esa página está sucia." : ".") + " La página " + sale.pag + " sigue en RAM.", { vicTLB: slot, hlPag: sale.pag,
+        ojo: "Salir del TLB ≠ salir de la RAM: acá no se escribe nada al disco." });
+    } else {
+      paso(i, 13, "Hay una entrada libre en el TLB", "La entrada " + slot + " del TLB está libre, así que no hay que desalojar ninguna.", { hlTLB: slot });
+    }
+    tlb[slot] = { pag: p, marco: e.marco, M: e.M, prot: e.prot, carga: t, uso: t };
+    paso(i, 14, duro ? "Se carga el TLB" : "FALLO SUAVE: se recarga el TLB", "La entrada de la página " + p + " (marco " + e.marco + ", permisos " + e.prot + ") se copia de la tabla al TLB." +
+      (duro ? "" : " No hubo disco: la página ya estaba en RAM. Cuesta unas 10–20 instrucciones, nanosegundos."), { hlTLB: slot, hlPag: p });
+    paso(i, 15, "Se reintenta la instrucción", "La instrucción se vuelve a ejecutar desde el principio, y esta vez la MMU encuentra la página " + p + " en el TLB.", { hlTLB: slot });
+    accesoConAcierto(i, ref, slot, true);
+  }
+  return { pasos: pasos, refs: refs, stats: st, resultados: resultados, LINEAS: LINEAS };
+}
+
+if (typeof module !== "undefined") module.exports = { simular: simular, parsearTabla: parsearTabla, parsearRefs: parsearRefs };
+</script>
+
+<script>
+var EJEMPLOS = {
+  clase: { nombre: "Ejemplo de clase", refs: "19 129w 19 140 20 129 130w 19 860w 21 129 19w", tam: 4, marcos: 6, pol: "FIFO",
+    tabla: "129 2 RW\n19 5 RX\n20 1 RX\n140 3 RW\n860 0 RW\n130 - RW\n21 - RX\n861 - RW" },
+  libro: { nombre: "Ciclo del libro (fig. 3-12)", refs: "19 129 140 860 20 130 21 861 19 129w 140 860w 20 130w 21 861 19 129 20 21", tam: 8, marcos: 8, pol: "FIFO",
+    tabla: "19 0 RX\n20 1 RX\n21 2 RX\n129 3 RW\n130 4 RW\n140 5 RW\n860 6 RW\n861 7 RW" },
+  chico: { nombre: "TLB chico (2 entradas)", refs: "1 2 3 1 2 3 1 2 3", tam: 2, marcos: 4, pol: "FIFO",
+    tabla: "1 0 RW\n2 1 RW\n3 2 RW" },
+  sucio: { nombre: "Página sucia desalojada", refs: "7w 8 9 10 7", tam: 2, marcos: 3, pol: "FIFO",
+    tabla: "7 0 RW\n8 1 RW\n9 2 RW\n10 - RW" }
+};
+var sim = null, cur = 0;
+var $ = function (id) { return document.getElementById(id); };
+
+function cargarEjemplo(k) {
+  var e = EJEMPLOS[k];
+  $("refs").value = e.refs; $("tabla").value = e.tabla; $("tamtlb").value = String(e.tam); $("nmarcos").value = e.marcos; $("pol").value = e.pol;
+  cargar();
+}
+function cargar() {
+  $("error").textContent = "";
+  try {
+    sim = simular({ refs: $("refs").value, tabla: $("tabla").value, tamTLB: parseInt($("tamtlb").value, 10), marcos: parseInt($("nmarcos").value, 10), politica: $("pol").value });
+    cur = 0; dibujar();
+  } catch (err) { $("error").textContent = "⚠ " + err.message; }
+}
+var NOMBRES = { acierto: "acierto", suave: "f. suave", duro: "f. duro", proteccion: "protec." };
+function dibujar() {
+  if (!sim) return;
+  var p = sim.pasos[cur], est = p.estado;
+  // chips
+  var h = "";
+  sim.refs.forEach(function (r, i) {
+    var res = (i < p.ref || (i === p.ref && cur === ultimoPasoDe(i))) ? sim.resultados[i] : "";
+    var clase = res ? res.split("+")[0] : "";
+    h +='<div class="chip ' + clase + (i === p.ref ? " ahora" : "") + '" data-i="' + i + '">' + r.pag + (r.esc ? "w" : "") +
+      "<small>" + (clase ? NOMBRES[clase] + (res.indexOf("+") >= 0 ? " + prot." : "") : "&nbsp;") + "</small></div>";
+  });
+  $("chips").innerHTML = h;
+  Array.prototype.forEach.call(document.querySelectorAll(".chip"), function (c) {
+    c.onclick = function () { cur = primerPasoDe(+c.dataset.i); dibujar(); };
+  });
+  // código
+  var c = "";
+  for (var l = 1; l < sim.LINEAS.length; l++) {
+    var L = sim.LINEAS[l];
+    c += '<li class="' + (l === p.linea ? "ahora" : "") + '"><span class="nl">' + l + '</span><span class="ac ' + L[0] + '">' + L[0] + "</span><span>" + L[1] + "</span></li>";
+  }
+  $("codigo").innerHTML = c;
+  // por qué
+  $("porque").innerHTML = '<div class="quien" style="color:var(--' + (p.actor === "SO" ? "so" : "mmu") + ')">Línea ' + p.linea + " · lo ejecuta: " + (p.actor === "SO" ? "el SO (software)" : "la MMU (hardware)") + "</div>" +
+    '<div class="tit">' + p.tit + "</div><div>" + p.texto + "</div>" +
+    (p.ojo ? '<span class="marca ojo">⚠️ ' + p.ojo + "</span>" : "") + (p.cer ? '<span class="marca cer">🧠 ' + p.cer + "</span>" : "");
+  // stats
+  var s = est.st, tot = s.aciertos + s.suaves + s.duros;
+  $("stats").innerHTML = '<div class="st ok">Aciertos TLB<b>' + s.aciertos + '</b></div><div class="st sua">Fallos suaves<b>' + s.suaves + '</b></div><div class="st dur">Fallos duros<b>' + s.duros + '</b></div><div class="st pro">Protección<b>' + s.proteccion + "</b></div>";
+  $("disco").innerHTML = "Disco: " + s.lecturas + " lectura(s) de página y " + s.escrituras + " escritura(s) de páginas sucias." +
+    (tot ? " Tasa de aciertos del TLB: <b>" + Math.round(100 * s.aciertos / tot) + " %</b>." : "");
+  // TLB
+  var t = '<table><tr><th>#</th><th>Válida</th><th>Pág. virtual</th><th>M</th><th>Prot.</th><th>Marco</th></tr>';
+  est.tlb.forEach(function (e, i) {
+    var cl = i === p.vicTLB ? "vic" : (i === p.hlTLB ? "hl" : (e ? "" : "vacia"));
+    t += e ? '<tr class="' + cl + '"><td>' + i + "</td><td>1</td><td class=mono>" + e.pag + "</td><td" + (e.M ? ' class="sucio"' : "") + ">" + e.M + "</td><td>" + e.prot + "</td><td class=mono>" + e.marco + "</td></tr>"
+      : '<tr class="' + cl + '"><td>' + i + '</td><td>0</td><td colspan="4">libre</td></tr>';
+  });
+  $("tlb").innerHTML = t + "</table>";
+  // tabla de páginas
+  var claves = Object.keys(est.pags).map(Number).sort(function (a, b) { return a - b; });
+  var tp = '<table><tr><th>Página</th><th>P</th><th>Marco</th><th>M</th><th>Prot.</th></tr>';
+  claves.forEach(function (k) {
+    var e = est.pags[k];
+    var cl = k === p.vicPag ? "vic" : (k === p.hlPag ? "hl" : "");
+    tp += '<tr class="' + cl + '"><td class=mono>' + k + "</td><td>" + e.P + "</td><td class=mono>" + (e.P ? e.marco : "—") + "</td><td" + (e.M ? ' class="sucio"' : "") + ">" + e.M + "</td><td>" + e.prot + "</td></tr>";
+  });
+  $("tp").innerHTML = tp + "</table>";
+  // RAM
+  var nM = parseInt($("nmarcos").value, 10), r = "";
+  var dueno = {}; claves.forEach(function (k) { if (est.pags[k].P) dueno[est.pags[k].marco] = k; });
+  for (var m = 0; m < nM; m++) {
+    var d = dueno[m];
+    r += '<div class="marco' + (d === undefined ? " libre" : "") + (m === p.hlMarco ? " hl" : "") + '">marco ' + m + "<b>" + (d === undefined ? "libre" : "pág " + d) + "</b>" +
+      (d !== undefined ? "llegó " + (est.ram.indexOf(d) + 1) + "º" : "&nbsp;") + "</div>";
+  }
+  $("ram").innerHTML = r;
+  $("contador").textContent = "Paso " + (cur + 1) + " de " + sim.pasos.length + " · referencia " + (p.ref + 1) + " de " + sim.refs.length;
+  $("ant").disabled = cur === 0; $("sig").disabled = $("fin").disabled = cur === sim.pasos.length - 1;
+  $("sigref").disabled = p.ref === sim.refs.length - 1;
+}
+function primerPasoDe(i) { for (var k = 0; k < sim.pasos.length; k++) if (sim.pasos[k].ref === i) return k; return 0; }
+function ultimoPasoDe(i) { var u = 0; for (var k = 0; k < sim.pasos.length; k++) if (sim.pasos[k].ref === i) u = k; return u; }
+
+$("cargar").onclick = cargar;
+$("sig").onclick = function () { if (sim && cur < sim.pasos.length - 1) { cur++; dibujar(); } };
+$("ant").onclick = function () { if (sim && cur > 0) { cur--; dibujar(); } };
+$("fin").onclick = function () { if (sim) { cur = sim.pasos.length - 1; dibujar(); } };
+$("reini").onclick = function () { if (sim) { cur = 0; dibujar(); } };
+$("sigref").onclick = function () { if (sim) { var r = sim.pasos[cur].ref; if (r < sim.refs.length - 1) { cur = primerPasoDe(r + 1); dibujar(); } } };
+document.addEventListener("keydown", function (ev) {
+  if (/INPUT|TEXTAREA|SELECT/.test(ev.target.tagName)) return;
+  if (ev.key === "ArrowRight") $("sig").click(); else if (ev.key === "ArrowLeft") $("ant").click();
+});
+var ej = "";
+Object.keys(EJEMPLOS).forEach(function (k) { ej += '<button data-k="' + k + '">' + EJEMPLOS[k].nombre + "</button>"; });
+$("ejemplos").innerHTML = ej;
+Array.prototype.forEach.call(document.querySelectorAll("#ejemplos button"), function (b) { b.onclick = function () { cargarEjemplo(b.dataset.k); }; });
+cargarEjemplo("clase");
+</script>
+</body>
+</html>

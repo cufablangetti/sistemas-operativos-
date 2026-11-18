@@ -90,6 +90,13 @@ Verificado en los 11 inicios de capítulo del Tanenbaum (ver `inventario.md`). E
 
 **Recorte sugerido:** impresas 175–254 → **PDF 205–284**, más 93–95 → **PDF 123–125**.
 
+**Notas al preparar la U3 (2026-11-09):**
+- Recorte hecho: PDF 53–56, 123–125, 205–284, 791–792, **795–797** y 909–924 (108 págs.).
+- **Sistema compañero:** no está en 3.2.3; está en el caso de estudio de Linux, **10.4.3, págs. 765–767** ("algoritmo de colegas", fig. 10-17).
+- **Particiones fijas:** esta edición no las desarrolla como tema propio (lo más cercano: llaves de la IBM 360 y registros base/límite).
+- **free, calloc, realloc:** no están en el material; el libro nombra solo `malloc` (10.4.2) y las llamadas `brk`, `mmap`, `munmap`.
+- **Erratas de la edición en español:** en 3.3.4 el ejemplo 0x00403004 dice TP2 = 2, pero es **TP2 = 3**; en la fig. 3-18 la página 2 tiene valores mal tras los pulsos 3 y 4 (correcto: 00010000 y 10001000).
+
 **Lo que más cae (EXA/PAR/PRA):** traducción de dirección virtual a física en binario/hexa con marcos de 1 KB y 4 KB; **reemplazo por segunda oportunidad** con tabla de páginas (bits Referenciada / Modificada / Presente-ausente y Nº de marco) — hay que decir qué página se reemplaza, justificarlo y dejar el estado final de la cola; conteo de fallos de página con N marcos; FIFO y LRU.
 
 ---
@@ -115,6 +122,13 @@ Verificado en los 11 inicios de capítulo del Tanenbaum (ver `inventario.md`). E
 
 **Recorte sugerido:** impresas 255–328 → **PDF 285–358**, más 622–641 → **PDF 652–671**.
 
+**Notas al preparar la U4 (2026-11-13):**
+- Recorte hecho: PDF 285–358 (cap. 4 completo), 621–626 (8.4.4 middleware basado en sistemas de archivos), 652–671 (9.3 protección, incluye 9.3.8 canales encubiertos), 809–833 (10.6 Linux con NFS) y 936–948 (11.8 NTFS) → 138 págs.
+- Resumen de la cátedra: págs. 67–86 del `resumen so (5).pdf`; llega solo hasta 4.4.1 (no cubre respaldos, consistencia, rendimiento ni ejemplos).
+- **No están en el material:** detalles internos de ext4/xfs/btrfs/zfs (el libro llega a ext3; la cartilla solo los nombra como FSTYPE); un comando para ver el tamaño de bloque de ext4 (fstab no lo muestra; complemento: `tune2fs -l`, `stat -f`). "Actualización atómica, transacciones" = transacción atómica de 4.3.6 + JBD de ext3. "Canales de conversión" del programa = canales encubiertos (9.3.8).
+- **Errores en el material:** práctica, máximo con i-nodo de 10 directos y 4 KB → "4,27 TB" (correcto ≈ 4 TiB = 4,40·10¹² B); práctica, fragmentación FAT32 de 3712518 B → "2580,48 B" (correcto 2554 B, con el resto exacto 1542); libro, ISO 9660 "1998" (es 1988, el propio libro lo dice después); libro 10.6.3, "10 + 2¹⁶ bloques" mezcla los 10 directos de V7 con los 12 de Linux.
+- Ejemplo de examen (foto en la práctica, pág. 8): FAT32 con bloque de 256 B, archivo desde el cluster 4: cluster final y espacio ocupado (n clusters × 256). La tabla de la foto no se lee bien: en la clase usar la fig. 4-12 o datos propios.
+
 **Lo que más cae (EXA/FIN/PAR):** **FAT** — seguir la cadena de clusters, decir en qué cluster termina el archivo y calcular el espacio ocupado en disco; **i-nodos** — 10 ó 12 punteros directos más indirecto simple, doble y triple, calcular el tamaño máximo de archivo; fragmentación interna; `cat /etc/fstab` para el tamaño de bloque de una partición ext4.
 
 ---
@@ -139,6 +153,13 @@ Verificado en los 11 inicios de capítulo del Tanenbaum (ver `inventario.md`). E
 **Recorte sugerido:** impresas 329–432 → **PDF 359–462**.
 
 **Lo que más cae (PRA/EXA):** tiempo medio de lectura/escritura en disco = tiempo de posicionamiento + retardo rotacional (media vuelta: 30000/rpm ms) + tiempo de transferencia + sobrecarga; `iostat`, `vmstat` (columna `id` = porcentaje de CPU inactiva); dispositivos de carácter vs. de bloque.
+
+**Notas al preparar la U5 (2026-11-18):**
+- Recorte hecho: PDF 359–462 (cap. 5 completo), 761–764 (10.2.3 el shell), 801–809 (10.5 E/S en Linux) y 926–936 (11.7 E/S en Windows Vista) → 128 págs. Páginas del recorte: 1–104 cap. 5, 105–108 shell, 109–117 E/S Linux, 118–128 E/S Windows.
+- Resumen de la cátedra: págs. 86–101 del `resumen so (5).pdf`; cubre bien 5.1 a 5.3, pero de discos solo trae la definición de cilindro, pista y sector, y de relojes dos párrafos. No cubre RAID, formato, brazo, errores, almacenamiento estable, interfaces de usuario, energía ni los casos de estudio.
+- Práctica: el ejercicio 3 (pág. 1 de la práctica) es el de tiempo medio de lectura/escritura: 512 B, 7200 rpm, 6,8 ms, 19 MB/s, 2 ms → 12,99 ms.
+- **No están en el material:** iostat (la cartilla de comandos no tiene sección de E/S; vmstat solo aparece en la de memoria); los nombres SCAN/LOOK/C-SCAN/C-LOOK (el libro dice "elevador" y describe la variante de una sola dirección sin nombrarla); "discos de RAM" del programa (la 3.ª ed. no los trata; lo más cercano es el almacenamiento estable y la RAM no volátil); detalles de KMDF/UMDF más allá de un párrafo del libro. La administración de energía (5.8) está en el libro pero no en el programa.
+- **Errores en el material:** libro, "5535" cilindros máximos en la PC (es 65535, campo de 16 bits); libro 5.4.5, "2¹⁴⁴ valores de ECC" para un ECC de 16 bytes (16 bytes son 128 bits); libro 5.6.1, "la tecla INTRO se convierte en un avance de página" en UNIX (es avance de línea); libro 5.4.1, nivel 2 de IS 9660 con "32 caracteres" (en 4.5.1 dice 31).
 
 ---
 

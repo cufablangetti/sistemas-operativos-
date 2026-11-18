@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Asignación de memoria</title>
+<style>
+  :root{
+    --bg:#f4f5f8; --panel:#fff; --borde:#d6dae2; --texto:#1b1f24; --suave:#5b6572; --acento:#3d63c9;
+    --hueco:#e9edf2; --hueco-b:#94a3b8; --hl:#facc15; --mal:#c2410c; --mal-bg:#fff0e8; --cer:#7c3aed; --cer-bg:#f3edff; --ok:#15803d;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+      --hueco:#232933; --hueco-b:#5b6778; --hl:#eab308; --mal:#fb923c; --mal-bg:#2c1b12; --cer:#a78bfa; --cer-bg:#221a38; --ok:#4ade80;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+    --hueco:#232933; --hueco-b:#5b6778; --hl:#eab308; --mal:#fb923c; --mal-bg:#2c1b12; --cer:#a78bfa; --cer-bg:#221a38; --ok:#4ade80;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--texto); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .envoltura{max-width:1100px; margin:0 auto; padding:18px 16px 48px}
+  h1{font-size:1.35rem; margin:0 0 4px}
+  .sub{color:var(--suave); margin:0 0 14px; font-size:.92rem}
+  .tarjeta{background:var(--panel); border:1px solid var(--borde); border-radius:12px; padding:14px 16px; margin-bottom:12px}
+  .datos{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  @media (max-width:700px){ .datos{grid-template-columns:1fr} }
+  label{font-size:.85rem; font-weight:650; display:block; margin-bottom:3px}
+  input[type=text]{width:100%; font:inherit; padding:6px 9px; border-radius:8px; border:1px solid var(--borde); background:var(--bg); color:var(--texto)}
+  .ayuda{font-size:.78rem; color:var(--suave)}
+  .barra{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:12px 0}
+  button{font:inherit; font-size:.9rem; padding:7px 12px; border-radius:8px; border:1px solid var(--borde); background:var(--panel); color:var(--texto); cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--acento)}
+  button:disabled{opacity:.45; cursor:not-allowed}
+  button.prim{background:var(--acento); color:#fff; border-color:var(--acento); font-weight:650}
+  .algos{display:inline-flex; flex-wrap:wrap; border:1px solid var(--borde); border-radius:8px; overflow:hidden}
+  .algos button{border:0; border-radius:0}
+  .algos button.on{background:var(--acento); color:#fff}
+  .contador{margin-left:auto; color:var(--suave); font-size:.88rem}
+  h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave); margin:0 0 6px}
+  .mem{display:flex; height:74px; border:2px solid var(--borde); border-radius:9px; overflow:hidden}
+  .seg{display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:.78rem; border-right:1px solid var(--borde); min-width:0; overflow:hidden; transition:all .25s; text-align:center; line-height:1.2}
+  .seg:last-child{border-right:0}
+  .seg b{font-size:.9rem}
+  .seg.H{background:repeating-linear-gradient(45deg,var(--hueco),var(--hueco) 6px,transparent 6px,transparent 12px); color:var(--suave)}
+  .seg.mira{outline:3px solid var(--hueco-b); outline-offset:-3px}
+  .seg.elegido{outline:4px solid var(--hl); outline-offset:-4px}
+  .seg.nuevo{box-shadow:inset 0 0 0 4px var(--hl)}
+  .escala{display:flex; justify-content:space-between; font-size:.72rem; color:var(--suave); margin-top:2px}
+  .lista{font:13px/1.8 ui-monospace,Consolas,monospace; word-break:break-word; margin-top:8px}
+  .nodo{display:inline-block; border:1px solid var(--borde); border-radius:6px; padding:0 6px; margin:2px 0}
+  .nodo.H{border-style:dashed}
+  .porque{border:1px solid var(--borde); border-left:5px solid var(--acento); border-radius:10px; padding:12px 14px; margin-top:12px}
+  .marca{display:block; margin-top:8px; border-radius:8px; padding:7px 10px; font-size:.9rem}
+  .marca.ojo{background:var(--mal-bg); border:1px solid var(--mal)}
+  .marca.cer{background:var(--cer-bg); border:1px solid var(--cer)}
+  table{border-collapse:collapse; width:100%; font-size:.88rem}
+  th,td{border:1px solid var(--borde); padding:6px 8px; text-align:center}
+  th{background:var(--bg)}
+  td.mejor{font-weight:700; color:var(--ok)}
+  .tw{overflow-x:auto}
+  ul{margin:6px 0 0; padding-left:20px} li{margin:4px 0}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <h1>Asignación de memoria: primer, siguiente, mejor y peor ajuste</h1>
+  <p class="sub">Cargá los huecos de la memoria y una lista de pedidos. Cada <b>Siguiente paso</b> atiende un pedido:
+    el algoritmo recorre los huecos (borde gris = el que está mirando) y elige uno (borde amarillo). También podés liberar
+    un proceso con <code>-A</code> para ver cómo se fusionan los huecos. Abajo, la tabla compara los cuatro algoritmos con los mismos datos.
+    (Tanenbaum, cap. 3.2.3, págs. 184–187)</p>
+
+  <div class="tarjeta">
+    <div class="datos">
+      <div>
+        <label for="huecos">Memoria inicial (H = hueco, letra = proceso, en KB, en orden de dirección)</label>
+        <input type="text" id="huecos" value="H10 P4 H4 Q6 H20 R3 H18 S5 H7 T2 H9 U4 H12 V3 H15">
+        <div class="ayuda">Ejemplo: <code>H10 P4 H4</code> = hueco de 10, proceso P de 4, hueco de 4.</div>
+      </div>
+      <div>
+        <label for="pedidos">Pedidos (letra + KB para crear; <code>-letra</code> para liberar)</label>
+        <input type="text" id="pedidos" value="A12 B10 C9">
+        <div class="ayuda">Ejemplo: <code>A12 B10 -A C9</code> crea A, crea B, libera A y crea C.</div>
+      </div>
+    </div>
+    <div class="barra">
+      <div class="algos" role="group" aria-label="Algoritmo">
+        <button data-a="primer" class="on">Primer ajuste</button>
+        <button data-a="siguiente">Siguiente ajuste</button>
+        <button data-a="mejor">Mejor ajuste</button>
+        <button data-a="peor">Peor ajuste</button>
+      </div>
+      <button id="ej">Ejemplo de la clase</button>
+      <button id="ant">◀ Anterior</button>
+      <button id="sig" class="prim">Siguiente paso ▶</button>
+      <button id="rei">↺ Reiniciar</button>
+      <span class="contador" id="cont"></span>
+    </div>
+
+    <h2>Memoria (ancho proporcional al tamaño)</h2>
+    <div class="mem" id="mem"></div>
+    <div class="escala"><span>dirección 0</span><span id="total"></span></div>
+    <div class="lista" id="lista"></div>
+    <div class="porque" id="porque"></div>
+  </div>
+
+  <div class="tarjeta">
+    <h2>Los cuatro algoritmos con los mismos datos</h2>
+    <div class="tw"><table id="comp"></table></div>
+    <p class="ayuda" id="comp-nota"></p>
+  </div>
+
+  <div class="tarjeta">
+    <h2>Ideas clave y frases de examen</h2>
+    <ul>
+      <li><b>Primer ajuste</b> es el más rápido: busca lo menos posible. <b>Siguiente ajuste</b> rinde un poco peor que el primero (Bays, 1977).</li>
+      <li>⚠️ <b>El mejor ajuste NO es el que menos desperdicia</b>: deja huecos diminutos donde no entra nadie, y además es lento porque recorre toda la lista.</li>
+      <li>El <b>peor ajuste</b> intenta que la sobra sea útil, pero las simulaciones muestran que tampoco funciona bien.</li>
+      <li>🧠 Al liberar, el proceso se <b>fusiona con sus huecos vecinos</b> (4 casos: ninguno, izquierda, derecha o los dos). Con una lista ordenada por dirección es fácil; por eso conviene doblemente ligada.</li>
+    </ul>
+  </div>
+</div>
+
+<script id="motor">
+// ====================================================================
+// MOTOR — memoria como lista ordenada de segmentos {t:'H'|'P', n, tam}
+// ====================================================================
+function parsearMemoria(txt){
+  return txt.trim().split(/[\s,]+/).filter(Boolean).map(tok => {
+    const m = tok.match(/^([A-Za-z])(\d+)$/);
+    if (!m) throw new Error("No entiendo «" + tok + "»");
+    const letra = m[1].toUpperCase(), tam = +m[2];
+    return letra === "H" ? {t: "H", n: "", tam} : {t: "P", n: letra, tam};
+  });
+}
+function parsearPedidos(txt){
+  return txt.trim().split(/[\s,]+/).filter(Boolean).map(tok => {
+    let m = tok.match(/^-([A-Za-z])$/);
+    if (m) return {tipo: "liberar", n: m[1].toUpperCase()};
+    m = tok.match(/^([A-Za-z])(\d+)$/);
+    if (!m) throw new Error("No entiendo el pedido «" + tok + "»");
+    return {tipo: "crear", n: m[1].toUpperCase(), tam: +m[2]};
+  });
+}
+const clonar = x => JSON.parse(JSON.stringify(x));
+function fusionar(mem){
+  const out = [];
+  for (const s of mem){
+    if (s.tam === 0) continue;
+    const u = out[out.length - 1];
+    if (u && u.t === "H" && s.t === "H") u.tam += s.tam; else out.push(Object.assign({}, s));
+  }
+  return out;
+}
+// estado: {mem, ultimo (índice del segmento donde terminó la última búsqueda, para siguiente ajuste)}
+function paso(est, ped, algo){
+  const s = clonar(est), mem = s.mem;
+  const info = {pedido: ped, mirados: [], elegido: -1, ok: true, texto: "", sobra: 0};
+  if (ped.tipo === "liberar"){
+    const i = mem.findIndex(x => x.t === "P" && x.n === ped.n);
+    if (i < 0){ info.ok = false; info.texto = `No hay ningún proceso ${ped.n} para liberar.`; return {est: s, info}; }
+    const izq = mem[i - 1] && mem[i - 1].t === "H", der = mem[i + 1] && mem[i + 1].t === "H";
+    mem[i] = {t: "H", n: "", tam: mem[i].tam};
+    const caso = izq && der ? "con los huecos de los dos lados: tres entradas se vuelven una (la lista pierde dos)" :
+                 izq ? "con el hueco de la izquierda" : der ? "con el hueco de la derecha" : "con ninguno: sus dos vecinos son procesos, así que solo cambia P por H";
+    s.mem = fusionar(mem);
+    s.ultimo = Math.min(s.ultimo, s.mem.length - 1);
+    info.texto = `Se libera ${ped.n} (${mem[i].tam} KB) y se fusiona ${caso}.`;
+    info.liberado = true;
+    return {est: s, info};
+  }
+  const huecos = mem.map((x, i) => i).filter(i => mem[i].t === "H");
+  let orden = huecos;
+  if (algo === "siguiente"){
+    const desde = huecos.filter(i => i >= s.ultimo), antes = huecos.filter(i => i < s.ultimo);
+    orden = desde.concat(antes);
+  }
+  let elegido = -1;
+  if (algo === "primer" || algo === "siguiente"){
+    for (const i of orden){ info.mirados.push(i); if (mem[i].tam >= ped.tam){ elegido = i; break; } }
+  } else {
+    for (const i of orden){
+      info.mirados.push(i);
+      if (mem[i].tam < ped.tam) continue;
+      if (elegido < 0 || (algo === "mejor" ? mem[i].tam < mem[elegido].tam : mem[i].tam > mem[elegido].tam)) elegido = i;
+    }
+  }
+  if (elegido < 0){
+    info.ok = false;
+    info.texto = `Ningún hueco alcanza para ${ped.n} (${ped.tam} KB): el proceso tiene que esperar, o hay que intercambiar a otro al disco. La memoria libre total puede alcanzar, pero está partida en huecos (fragmentación externa).`;
+    return {est: s, info};
+  }
+  const h = mem[elegido];
+  info.elegido = elegido; info.huecoTam = h.tam; info.sobra = h.tam - ped.tam;
+  mem.splice(elegido, 1, {t: "P", n: ped.n, tam: ped.tam, nuevo: true}, {t: "H", n: "", tam: h.tam - ped.tam});
+  s.mem = fusionar(mem);
+  s.ultimo = elegido;            // el siguiente ajuste retoma desde acá
+  const regla = {primer: "el primer hueco que alcanza", siguiente: "el primer hueco que alcanza, buscando desde donde quedó la vez anterior",
+                 mejor: "el hueco más chico que alcanza (tuvo que recorrer toda la lista)", peor: "el hueco más grande (tuvo que recorrer toda la lista)"}[algo];
+  info.texto = `${ped.n} pide ${ped.tam} KB. Se elige ${regla}: el de ${h.tam} KB. ` +
+               (info.sobra ? `Queda un hueco de ${info.sobra} KB.` : "Encaja justo: no queda hueco.");
+  return {est: s, info};
+}
+function correr(memTxt, pedTxt, algo){
+  let est = {mem: fusionar(parsearMemoria(memTxt)), ultimo: 0};
+  const peds = parsearPedidos(pedTxt), hist = [{est, info: null}];
+  peds.forEach(p => { const r = paso(est, p, algo); est = r.est; hist.push(r); });
+  return hist;
+}
+if (typeof module !== "undefined") module.exports = {parsearMemoria, parsearPedidos, paso, correr, fusionar};
+</script>
+
+<script>
+const $ = id => document.getElementById(id);
+let algo = "primer", hist = [], k = 0;
+const COLORES = ["#60a5fa","#f59e0b","#34d399","#f472b6","#a78bfa","#fb7185","#22d3ee","#a3e635","#fbbf24","#c084fc"];
+const color = n => COLORES[(n.charCodeAt(0) - 65) % COLORES.length];
+
+function calcular(){
+  try { hist = correr($("huecos").value, $("pedidos").value, algo); $("porque").innerHTML = ""; }
+  catch (e) { hist = []; $("porque").innerHTML = "<b>Error en los datos:</b> " + e.message; }
+  k = 0; pintar(); comparar();
+}
+function pintar(){
+  if (!hist.length) return;
+  const actual = hist[k], prev = k > 0 ? hist[k - 1].est : null, info = actual.info;
+  const mem = actual.est.mem, total = mem.reduce((a, s) => a + s.tam, 0);
+  // en el paso k mostramos la memoria ANTES del pedido con lo mirado, y DESPUÉS con el resultado:
+  const mostrar = mem;
+  $("mem").innerHTML = mostrar.map((s, i) => {
+    const w = s.tam / total * 100;
+    const esNuevo = info && info.ok && s.nuevo && info.pedido.tipo === "crear" && s.n === info.pedido.n;
+    return `<div class="seg ${s.t}${esNuevo ? " nuevo" : ""}" style="flex:0 0 ${w}%;${s.t === "P" ? "background:" + color(s.n) + ";color:#111" : ""}" title="${s.t === "H" ? "hueco" : "proceso " + s.n} de ${s.tam} KB">` +
+      (w > 2 ? `<b>${s.t === "H" ? "·" : s.n}</b>${s.tam}` : "") + "</div>";
+  }).join("");
+  $("total").textContent = total + " KB";
+  $("lista").innerHTML = "Lista: " + mostrar.map(s => `<span class="nodo ${s.t}">${s.t === "H" ? "H" : "P " + s.n} ${s.tam}</span>`).join(" → ");
+  // explicación + huecos mirados (sobre la memoria anterior)
+  if (info){
+    let detalle = "";
+    if (info.pedido.tipo === "crear" && prev){
+      const pm = prev.mem;
+      detalle = "<div style='margin-top:8px;font-size:.88rem'>Huecos que miró, en orden: " +
+        info.mirados.map(i => `<span class="nodo H" style="${i === info.elegido ? "border:2px solid var(--hl);font-weight:700" : ""}">${pm[i].tam}${i === info.elegido ? " ✓" : pm[i].tam < info.pedido.tam ? " ✗" : ""}</span>`).join(" ") + "</div>";
+    }
+    const mal = !info.ok ? `<span class="marca ojo">⚠️ ${info.texto}</span>` : "";
+    const cer = info.ok && algo === "mejor" && info.sobra > 0 && info.sobra < 3 ? `<span class="marca ojo">⚠️ Sobró un hueco de ${info.sobra} KB: casi inútil. Así es como el mejor ajuste llena la memoria de migajas.</span>` : "";
+    const lib = info.liberado ? `<span class="marca cer">🧠 Fusionar es simple porque la lista está ordenada por dirección: solo hay que mirar el vecino de cada lado.</span>` : "";
+    $("porque").innerHTML = `<b>Paso ${k}:</b> ${info.ok ? info.texto : "no se pudo atender el pedido."}${detalle}${mal}${cer}${lib}`;
+  } else {
+    $("porque").innerHTML = "<b>Situación inicial.</b> Elegí un algoritmo y apretá «Siguiente paso».";
+  }
+  $("cont").textContent = `Pedido ${k} de ${hist.length - 1}`;
+  $("sig").disabled = k >= hist.length - 1; $("ant").disabled = k === 0;
+}
+function comparar(){
+  let peds;
+  try { peds = parsearPedidos($("pedidos").value); } catch (e) { $("comp").innerHTML = ""; return; }
+  const filas = ["primer", "siguiente", "mejor", "peor"].map(a => {
+    let h; try { h = correr($("huecos").value, $("pedidos").value, a); } catch (e) { return null; }
+    const fin = h[h.length - 1].est.mem, huecos = fin.filter(s => s.t === "H").map(s => s.tam);
+    const celdas = h.slice(1).map(r => r.info.pedido.tipo === "liberar" ? "libera " + r.info.pedido.n : r.info.ok ? `hueco de ${r.info.huecoTam}` : "⚠️ no entra");
+    return {a, celdas, huecos, chicos: huecos.filter(x => x > 0 && x < 3).length, fallas: h.slice(1).filter(r => !r.info.ok).length, mayor: Math.max(0, ...huecos)};
+  }).filter(Boolean);
+  const nombres = {primer: "Primer ajuste", siguiente: "Siguiente ajuste", mejor: "Mejor ajuste", peor: "Peor ajuste"};
+  $("comp").innerHTML = "<tr><th>Algoritmo</th>" + peds.map(p => `<th>${p.tipo === "liberar" ? "−" + p.n : p.n + " (" + p.tam + ")"}</th>`).join("") +
+    "<th>Huecos que quedan</th><th>Hueco más grande</th><th>Pedidos sin lugar</th></tr>" +
+    filas.map(f => `<tr><th>${nombres[f.a]}</th>${f.celdas.map(c => `<td>${c}</td>`).join("")}<td>${f.huecos.join(", ")}</td><td>${f.mayor}</td><td>${f.fallas}</td></tr>`).join("");
+  $("comp-nota").textContent = "Mirá la columna «Hueco más grande»: es lo que decide si el próximo proceso grande va a entrar.";
+}
+document.querySelectorAll(".algos button").forEach(b => b.onclick = () => {
+  algo = b.dataset.a; document.querySelectorAll(".algos button").forEach(x => x.classList.toggle("on", x === b)); calcular();
+});
+$("sig").onclick = () => { if (k < hist.length - 1){ k++; pintar(); } };
+$("ant").onclick = () => { if (k > 0){ k--; pintar(); } };
+$("rei").onclick = () => { k = 0; pintar(); };
+$("ej").onclick = () => { $("huecos").value = "H10 P4 H4 Q6 H20 R3 H18 S5 H7 T2 H9 U4 H12 V3 H15"; $("pedidos").value = "A12 B10 C9"; calcular(); };
+$("huecos").oninput = calcular; $("pedidos").oninput = calcular;
+document.addEventListener("keydown", e => { if (e.target.tagName === "INPUT") return; if (e.key === "ArrowRight") $("sig").click(); if (e.key === "ArrowLeft") $("ant").click(); });
+calcular();
+</script>
+</body>
+</html>

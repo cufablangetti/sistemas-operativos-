@@ -1,0 +1,833 @@
+<html><body>
+<h1>Unidad 4 — Sistemas de archivos</h1>
+<p class="sub">Sistemas Operativos — UTN FRM — Repaso de la clase completa en el chat: 11 temas, correcciones y cierre</p>
+<div class="clave"><b>Cómo leer este repaso.</b> Es la clase tal como se dio, tema por tema, con los mismos
+diagramas y ejemplos. Al final de cada tema están las <b>preguntas de control</b> y, a continuación, su
+<b>corrección</b>: ahí quedaron marcados los errores que conviene no repetir (⚠️). La referencia al Tanenbaum
+está en cada bloque. Los simuladores interactivos de cada tema están en <b>visuales/index.html</b>.
+El resumen de todo y <b>lo que más se toma</b> está en el <b>Cierre de la Unidad 4</b>, en las últimas páginas.</div>
+
+<h2>Mapa de la unidad</h2>
+<p>La pregunta que recorre la unidad: <b>¿cómo guardamos información que sobreviva al proceso, en un disco que solo sabe «leer el bloque k» y «escribir el bloque k»?</b></p>
+<pre> PUNTO DE VISTA DEL USUARIO                PUNTO DE VISTA DEL IMPLEMENTADOR
+ ──────────────────────────                ────────────────────────────────
+ 1. Archivos (nombres, tipos,      ┌──►  3. Distribución del disco y asignación:
+    acceso, atributos, operaciones)│        contigua · lista enlazada · FAT ★
+        │                          │     4. i-nodos y bloques indirectos ★
+ 2. Directorios y rutas ───────────┘     5. Directorios por dentro + vínculos
+                                            duros y simbólicos ★
+                                         6. Bitácora, transacciones y VFS
+                                                │
+                    ┌───────────────────────────┘
+                    ▼
+ 7. Espacio en disco: tamaño de bloque, bloques libres, fragmentación ★
+ 8. Confiabilidad y rendimiento: respaldos, fsck, caché
+ 9. Ejemplos reales: CD-ROM, MS-DOS/FAT, UNIX V7, NTFS, NFS
+10. Protección: dominios, ACL, capacidades, canales encubiertos
+11. Caso Linux: open/read/write/lseek, ext2/ext3, comandos (fstab, lsblk, ln)</pre>
+<p>Los ★ son lo que más se toma en los exámenes de la cátedra:</p>
+<ul><li><b>FAT</b>: seguir la cadena y calcular el espacio ocupado.</li><li><b>i-nodos</b>: tamaño máximo de un archivo y cuántos bloques de índice usa.</li><li><b>Fragmentación interna</b>.</li></ul>
+<p>Para los tres te voy a armar simuladores.</p>
+<p>🔗 La unidad repite muchas ideas de la U3: bloques fijos ↔ páginas, asignación contigua ↔ segmentación, caché de búfer ↔ reemplazo de páginas. Te las voy marcando.</p>
+<hr/>
+<h2>Tema 1 — Archivos</h2>
+<h4>La intuición</h4>
+<p>El disco «crudo» es un depósito gigante de cajas numeradas: «dame la caja 48.211». Nadie quiere trabajar así.</p>
+<p>El SO te da <b>carpetas con etiquetas</b> («informe.docx»). Por debajo se encarga de saber en qué cajas está cada cosa, quién puede abrirla y qué cajas están libres.</p>
+<h4>Por qué no alcanza la memoria (pág. 255)</h4>
+<p>Guardar los datos dentro del espacio de direcciones del proceso falla por <b>tres razones</b>:</p>
+<ol><li><b>No entra</b>: el espacio de direcciones es limitado.</li><li><b>Se pierde</b> cuando el proceso termina.</li><li><b>No se comparte</b>: varios procesos necesitan la misma información al mismo tiempo.</li></ol>
+<p>De ahí salen los <b>tres requisitos</b> del almacenamiento a largo plazo: mucha capacidad, <b>persistencia</b> y <b>acceso concurrente</b>.</p>
+<div class="clave"><b>Archivo:</b> unidad lógica de información creada por los procesos, <b>independiente de ellos</b> y <b>persistente</b> (desaparece solo si el dueño la borra).<br/><b>Sistema de archivos:</b> la parte del SO que estructura, nombra, accede, usa, protege e implementa los archivos.</div>
+<p>🧠 Es la tercera abstracción del SO: <b>proceso</b> (de la CPU, U2), <b>espacio de direcciones</b> (de la RAM, U3) y <b>archivo</b> (del disco, U4).</p>
+<h4>Lo que ve el usuario</h4>
+<table><tr><th>Aspecto</th><th>Lo clave</th></tr><tr><td><b>Nombres</b></td><td>hasta 255 caracteres. La extensión es una <b>convención en UNIX</b> (<code>prog.java.gz</code> vale); en <b>Windows tiene significado</b>: asocia el archivo con un programa</td></tr><tr><td><b>Estructura</b></td><td>(a) <b>secuencia de bytes</b> (UNIX y Windows: el SO no interpreta nada); (b) secuencia de registros fijos (mainframes viejos); (c) <b>árbol de registros con llave</b> (mainframes comerciales)</td></tr><tr><td><b>Tipos</b></td><td>regulares (ASCII o binarios), directorios, especiales de <b>caracteres</b> (terminal, impresora) y de <b>bloques</b> (discos)</td></tr><tr><td><b>Acceso</b></td><td><b>secuencial</b> (cinta) o <b>aleatorio</b> (disco). UNIX y Windows usan <b>seek + read</b></td></tr><tr><td><b>Atributos</b> (metadatos)</td><td>protección, propietario, banderas (solo lectura, oculto, archivo, temporal), fechas de creación, acceso y modificación, tamaño</td></tr></table>
+<p><b>Fig. 4-3, el ejecutable de UNIX:</b> aunque es «una secuencia de bytes», el SO <b>exige un formato</b>. Tiene encabezado (con el <b>número mágico</b>, tamaños y dirección de inicio), texto, datos, bits de reubicación y tabla de símbolos. Si no tiene ese formato, no lo ejecuta.</p>
+<h4>Las operaciones (llamadas al sistema, pág. 264)</h4>
+<pre> create ─► open ─► read / write / append / seek ─► close ─► delete
+                   get/set attributes · rename</pre>
+<ul><li><b>open</b> trae a memoria los <b>atributos y la lista de direcciones de disco</b>, y por eso los accesos siguientes son rápidos.</li><li><b>close</b> libera las tablas y <b>fuerza la escritura del último bloque</b>.</li><li><b>write en el medio</b> del archivo sobrescribe; <b>al final</b>, el archivo crece.</li></ul>
+<h4>Ejemplo: <code>copyfile abc xyz</code> (fig. 4-5)</h4>
+<pre>ent = open("abc", O_RDONLY);         // descriptor de archivo (entero chico)
+sal = creat("xyz", 0700);            // crea y abre para escribir
+while ((n = read(ent, buf, 4096)) &gt; 0)   // n = bytes leídos; 0 = fin; &lt;0 = error
+    write(sal, buf, n);              // escribe EXACTAMENTE lo que leyó
+close(ent); close(sal);</pre>
+<p>🔗 <b>U1:</b> son las mismas llamadas al sistema de la U1 (TRAP, modo kernel). Y el <b>descriptor de archivo</b>, el entero chico que devuelve <code>open</code>, ya lo viste en la U2: es lo que hereda el hijo en un <code>fork</code>.</p>
+<p>📖 <i>Tanenbaum 4.1, págs. 255–268 · Resumen de la cátedra U4, págs. 1–8.</i></p>
+<hr/>
+<h4>Preguntas rápidas</h4>
+<p><b>1.</b> Un compañero dice: <i>«En UNIX, si a un ejecutable le cambio la extensión a <code>.txt</code>, el sistema ya no lo puede ejecutar.»</i> ¿Tiene razón? ¿Y en Windows, qué cambiaría si hacés doble clic?</p>
+<p><b>2.</b> En <code>copyfile</code>, ¿por qué se hace <code>write(sal, buf, n)</code> con <b>n</b> y no directamente con 4096? ¿Qué pasaría con el archivo copia si se usara 4096?</p>
+<h3>Corrección del tema 1</h3>
+<p><b>1. ✅ Correcta, con un detalle que falta.</b> En UNIX la extensión es <b>solo parte del nombre</b>, una convención.</p>
+<p>Para nota completa, decí <b>qué decide</b> si se ejecuta:</p>
+<ul><li>el <b>bit de permiso de ejecución</b> (<code>x</code>);</li><li>y el <b>formato del archivo</b>: el encabezado empieza con el <b>número mágico</b> (fig. 4-3). El SO mira el contenido, no el nombre.</li></ul>
+<p>En Windows, con doble clic sobre <code>programa.txt</code> <b>no se ejecuta</b>: se abre con el programa asociado a <code>.txt</code> (el Bloc de notas), que muestra <b>basura binaria</b>.</p>
+<p><b>2. ✅ Correcta.</b> El último <code>read</code> casi nunca trae 4096 bytes: trae lo que queda. Con 4096, la copia quedaría <b>más grande que el original</b> (redondeada a un múltiplo de 4096), con <b>basura</b> al final, lo que haya quedado en el búfer de la vuelta anterior.</p>
+<hr/>
+<hr/>
+<h2>Tema 2 — Directorios</h2>
+<h4>La intuición</h4>
+<p>Un directorio es una <b>guía telefónica</b>: asocia un <b>nombre</b> con «dónde está el archivo». Al principio había una sola guía para todos; después cada uno tuvo la suya, con secciones y subsecciones (un árbol).</p>
+<h4>Los dos modelos (págs. 268–269)</h4>
+<pre> UN SOLO NIVEL (fig. 4-6)            JERÁRQUICO (fig. 4-7)
+   [ raíz ]                             [ raíz ]
+   ├ A: notas                         ┌────┼────┐
+   ├ A: tp                           [A]  [B]  [C]
+   ├ B: tp   ← ¡choca con A!          │         ├ proy1/
+   └ C: foto                          tp        └ foto</pre>
+<table><tr><th></th><th>Un solo nivel</th><th>Jerárquico</th></tr><tr><td><b>+</b></td><td>simplísimo, búsqueda rápida</td><td>cada usuario se organiza por temas o proyectos; los nombres no chocan</td></tr><tr><td><b>−</b></td><td>no escala; dos usuarios no pueden usar el mismo nombre</td><td>más complejo</td></tr><tr><td>Uso</td><td>CDC 6600, primeras PC; hoy <b>cámaras y reproductores</b></td><td>casi todos los SO modernos</td></tr></table>
+<h4>Nombres de rutas (págs. 269–272)</h4>
+<ul><li><b>Ruta absoluta</b>: desde la raíz, por ejemplo <code>/usr/ast/mailbox</code>. <b>Empieza con el separador</b> y es única. El separador es <code>/</code> en UNIX, <code>\</code> en Windows y <code>&gt;</code> en MULTICS.</li><li><b>Ruta relativa</b>: desde el <b>directorio de trabajo</b> (actual). Si estás en <code>/usr/ast</code>, alcanza con <code>mailbox</code>.</li><li><b>Cada proceso tiene su propio directorio de trabajo.</b> Por eso un procedimiento de biblioteca que lo cambia <b>tiene que devolverlo</b> antes de terminar.</li><li><b><code>.</code></b> es el directorio actual y <b><code>..</code></b> es el padre. En la raíz, <code>..</code> apunta a la raíz misma.</li></ul>
+<p><b>Ejemplo (fig. 4-8):</b> estás en <code>/usr/ast</code> y querés el diccionario <code>/usr/lib/dictionary</code>.</p>
+<pre> /                       cp ../lib/dictionary .
+ ├ bin                       │  │   │         └ "." = acá (/usr/ast)
+ ├ usr ◄──── ".." sube acá   │  │   └ el archivo
+ │  ├ ast  ◄── estás acá     │  └ baja a lib
+ │  ├ jim                    └ sube a /usr
+ │  └ lib
+ │     └ dictionary</pre>
+<p>Estas tres formas hacen exactamente lo mismo:</p>
+<ul><li><code>cp ../lib/dictionary .</code></li><li><code>cp /usr/lib/dictionary dictionary</code></li><li><code>cp /usr/lib/dictionary /usr/ast/dictionary</code></li></ul>
+<h4>Operaciones de directorios en UNIX (págs. 272–273)</h4>
+<table><tr><th>Llamada</th><th>Qué hace</th><th>Ojo</th></tr><tr><td><code>create</code></td><td>crea el directorio</td><td>ya trae <code>.</code> y <code>..</code></td></tr><tr><td><code>delete</code></td><td>lo borra</td><td><b>solo si está vacío</b> (con solo <code>.</code> y <code>..</code> cuenta como vacío)</td></tr><tr><td><code>opendir</code> / <code>readdir</code> / <code>closedir</code></td><td>leer el contenido</td><td><code>readdir</code> devuelve una entrada en <b>formato estándar</b>: el programa no necesita conocer la estructura interna</td></tr><tr><td><code>rename</code></td><td>cambia el nombre</td><td></td></tr><tr><td><b><code>link</code></b></td><td>el mismo archivo aparece en <b>otro directorio</b></td><td><b>sube el contador del i-nodo</b> → «vínculo duro»</td></tr><tr><td><b><code>unlink</code></b></td><td>borra una entrada</td><td>si era la última, el archivo <b>desaparece</b>. <b>En UNIX, borrar un archivo ES <code>unlink</code></b></td></tr></table>
+<p><b>El vínculo simbólico</b> es un archivo chico que contiene <b>una ruta</b> a otro archivo. Puede cruzar discos y apuntar a otra máquina, pero es un poco más lento. Lo vemos a fondo en el tema 5.</p>
+<p>🔗 <b>U2:</b> el directorio de trabajo es parte del estado del proceso: el hijo lo <b>hereda</b> en el <code>fork</code>, y si después lo cambia (<code>cd</code>), <b>el padre no se entera</b>. Por eso <code>cd</code> tiene que ser un comando <b>interno del shell</b>: si fuera un programa aparte, cambiaría el directorio de un hijo que muere enseguida.</p>
+<p>📖 <i>Tanenbaum 4.2, págs. 268–273 · Resumen de la cátedra, págs. 8–12.</i></p>
+<hr/>
+<h4>Preguntas rápidas</h4>
+<p><b>1.</b> Estás en <code>/home/ana/tp</code>. Escribí la ruta <b>relativa</b> y la <b>absoluta</b> para llegar a <code>/home/luis/notas.txt</code>.</p>
+<p><b>2.</b> V o F, justificá: <i>«<code>rmdir</code> no me deja borrar un directorio que solo tiene las entradas <code>.</code> y <code>..</code>, porque no está vacío.»</i></p>
+<h3>Corrección del tema 2</h3>
+<p><b>1. ✅ Correcta.</b> Las dos rutas están bien:</p>
+<ul><li>absoluta: <code>/home/luis/notas.txt</code></li><li>relativa: <code>../../luis/notas.txt</code></li></ul>
+<p>⚠️ En el paso 3 escribiste «<code>/luis/notas.txt</code>». La ruta final que diste está bien, pero ojo en el examen: si después de los <code>..</code> ponés una barra al principio, deja de ser relativa. <b>Toda ruta que empieza con <code>/</code> es absoluta</b> y arranca desde la raíz, así que <code>/luis/notas.txt</code> buscaría una carpeta <code>luis</code> colgada de <code>/</code>.</p>
+<p><b>2. ✅ Falso es lo correcto.</b> Te armo la justificación para que la tengas lista:</p>
+<div class="clave">Para UNIX, un directorio que solo tiene <code>.</code> y <code>..</code> <b>está vacío</b>. Esas dos entradas las crea el propio sistema al hacer <code>mkdir</code>, y existen en <b>todo</b> directorio: <code>.</code> apunta a sí mismo y <code>..</code> al padre. No son contenido del usuario, sino parte de la estructura del árbol. Por eso un directorio en UNIX <b>nunca tiene cero entradas</b>, y «vacío» quiere decir «sin entradas aparte de <code>.</code> y <code>..</code>». <code>rmdir</code> lo borra sin problema, y las dos entradas desaparecen con él.</div>
+<p>Lo que <code>rmdir</code> sí rechaza es un directorio con <b>cualquier otra entrada</b>, aunque sea un archivo oculto como <code>.bashrc</code>. Ahí responde <i>«Directory not empty»</i> y hay que usar <code>rm -r</code>, que borra recursivamente.</p>
+<p>🧠 <b>Regla para recitar:</b> «vacío = solo <code>.</code> y <code>..</code>».</p>
+<p>📖 <i>Tanenbaum 4.2.6, pág. 272: «Sólo se puede eliminar un directorio vacío. Un directorio que sólo contiene a punto y punto-punto se considera vacío, ya que por lo general éstos no se pueden eliminar».</i></p>
+<hr/>
+<p>Con esto cerramos <b>la parte del usuario</b> (archivos y directorios). Lo que viene es lo más pesado de la unidad, y lo que más se toma en examen: el <b>tema 3, cómo se guardan los archivos en el disco</b>. Vemos la distribución de la partición (MBR, superbloque…) y la asignación contigua, por lista enlazada y con <b>FAT</b>, con un simulador para seguir cadenas de clusters.</p>
+<hr/>
+<h2>Tema 3 — Implementación: distribución del disco y asignación (contigua, enlazada, FAT)</h2>
+<p>Hasta acá miramos el sistema de archivos <b>desde el usuario</b> (nombres, rutas, operaciones). Ahora lo miramos <b>desde quien lo implementa</b>: dónde va cada cosa en el disco y cómo se sabe <b>qué bloques son de qué archivo</b>.</p>
+<h4>Parte A: cómo está repartido el disco (fig. 4-9, pág. 274)</h4>
+<pre> DISCO COMPLETO
+ ┌─────┬────────────────┬────────────────┬──────────────┐
+ │ MBR │  Partición 1   │  Partición 2   │ Partición 3  │
+ └──┬──┴───────┬────────┴────────────────┴──────────────┘
+    │          ▼  (una partición por dentro)
+    │  ┌──────────┬───────┬────────────┬────────┬──────┬───────────────┐
+    │  │ Bloque de│ Super │ Espacio    │ Nodos-i│ Dir. │ Archivos y    │
+    │  │ arranque │ bloque│ libre      │        │ raíz │ directorios   │
+    │  └──────────┴───────┴────────────┴────────┴──────┴───────────────┘
+    └─ sector 0: código de arranque + TABLA DE PARTICIONES (una marcada ACTIVA)</pre>
+<p><b>El arranque, en orden:</b></p>
+<ol><li>El <b>BIOS</b> lee y ejecuta el <b>MBR</b> (sector 0 del disco).</li><li>El MBR busca en la tabla la <b>partición activa</b>.</li><li>Lee el <b>bloque de arranque</b> de esa partición y lo ejecuta.</li><li>Ese bloque <b>carga el SO</b> que está en la partición.</li></ol>
+<p>Todas las particiones empiezan con un bloque de arranque, aunque no tengan SO: así quedan uniformes, y además podrían tener uno en el futuro.</p>
+<table><tr><th>Pieza</th><th>Qué guarda</th></tr><tr><td><b>Superbloque</b></td><td>Los parámetros clave del sistema de archivos: <b>número mágico</b> (qué tipo de sistema de archivos es), cantidad de bloques y otros datos administrativos. <b>Se lee a RAM</b> al arrancar o al montar.</td></tr><tr><td>Espacio libre</td><td>Un <b>mapa de bits</b> o una <b>lista de apuntadores</b> (tema 7)</td></tr><tr><td>Nodos-i</td><td>Un arreglo con <b>un nodo-i por archivo</b> (tema 4)</td></tr><tr><td>Directorio raíz</td><td>La punta del árbol</td></tr></table>
+<p>🔗 <b>U1:</b> esto es el «sector de booteo» que viste en el arranque. Lo nuevo es lo que hay <b>dentro de la partición</b>.</p>
+<hr/>
+<h4>Parte B: los métodos de asignación (págs. 274–278)</h4>
+<p>El problema central es este: el archivo <code>tp.c</code> ocupa 5 bloques, <b>¿cuáles?</b></p>
+<h4>1) Asignación contigua: «todos juntos, uno al lado del otro»</h4>
+<pre> (a) bloque: 0  1  2  3  4  5  6  7  8  9 10 11 12 ...
+             [A][A][A][A][B][B][B][B][B][B][C][C][C]...
+
+ (b) se borran D y F:  ...[ E ][░ 5 libres ░][ G ][░ 6 libres ░]...
+                                  └─ huecos: FRAGMENTACIÓN EXTERNA</pre>
+<ul><li>El directorio guarda <b>dos números</b>: el primer bloque y la cantidad. El bloque <i>k</i> está en <b>inicio + k</b>.</li><li><b>+</b> Muy simple. <b>+</b> Lectura excelente: <b>una sola búsqueda</b> y después todo seguido.</li><li><b>−</b> Al borrar quedan huecos, y compactar es carísimo. <b>−</b> Hay que saber el <b>tamaño final al crear</b> el archivo: imaginate un editor que te pregunte cuántos bytes va a tener tu documento.</li><li><b>Hoy se usa en CD-ROM y DVD</b>: se escriben una sola vez y los tamaños se conocen de antemano. En DVD, UDF limita los archivos a 1 GB, así que una película se guarda en 3 o 4 <b>fragmentos</b> contiguos.</li></ul>
+<p>🔗 <b>U3:</b> es el mismo problema de la <b>segmentación</b> y el <b>tablero de ajedrez</b>: huecos, fragmentación externa y compactación.</p>
+<h4>2) Lista enlazada: «cada bloque dice cuál sigue»</h4>
+<pre> Archivo A:  [4|→7] → [7|→2] → [2|→10] → [10|→12] → [12|FIN]
+               ▲ la primera palabra de cada bloque es el puntero</pre>
+<ul><li>El directorio guarda <b>solo el primer bloque</b>.</li><li><b>+</b> No hay fragmentación externa: sirve <b>cualquier</b> bloque libre. Solo queda la interna, en el último bloque.</li><li><b>−</b> El <b>acceso aleatorio es lentísimo</b>: para llegar al bloque <i>n</i> hay que <b>leer del disco</b> los <i>n−1</i> anteriores.</li><li><b>−</b> Lo que queda para datos ya <b>no es potencia de 2</b>, porque el puntero ocupa unos bytes. Leer «un bloque lógico» obliga a juntar pedazos de dos bloques físicos.</li></ul>
+<h4>3) FAT: «sacar los punteros a una tabla en RAM»</h4>
+<p>Se toman los punteros de la lista enlazada y se ponen en un arreglo en memoria con <b>una entrada por bloque</b>: la <b>FAT</b> (<i>File Allocation Table</i>).</p>
+<pre> FAT (fig. 4-12)         Lectura: «FAT[c] = el bloque que SIGUE a c»
+  0 │       │
+  1 │       │            Archivo A empieza en 4:
+  2 │  10   │              4 → FAT[4]=7 → FAT[7]=2 → FAT[2]=10
+  3 │  11   │                → FAT[10]=12 → FAT[12]=−1  FIN
+  4 │   7   │ ◄─ A         = 5 bloques: 4, 7, 2, 10, 12
+  5 │       │
+  6 │   3   │ ◄─ B         Archivo B empieza en 6:
+  7 │   2   │              6 → 3 → 11 → 14 → FIN
+ 10 │  12   │              = 4 bloques
+ 11 │  14   │
+ 12 │  −1   │
+ 14 │  −1   │</pre>
+<ul><li><b>+</b> El bloque <b>entero</b> queda para datos.</li><li><b>+</b> El acceso aleatorio mejora: igual hay que seguir la cadena, pero <b>en RAM</b>, sin ir al disco.</li><li><b>+</b> El directorio sigue guardando <b>un solo entero</b>: el primer bloque.</li><li><b>−</b> <b>Toda la tabla tiene que estar en RAM, siempre.</b> Con un disco de 200 GB y bloques de 1 KB son 200 millones de entradas: entre <b>600 y 800 MB</b> de RAM, según sean de 3 o 4 bytes. <b>No escala.</b></li></ul>
+<p>🔗 <b>U3:</b> es el mismo drama que la <b>tabla de páginas grande</b>: una entrada por bloque del recurso, aunque casi todo esté sin usar. El nodo-i (tema 4) lo resuelve como la tabla invertida: solo ocupa RAM lo que está en uso.</p>
+<hr/>
+<h4>Ejemplo resuelto: el ejercicio de <b>final de la cátedra</b> ★</h4>
+<p>Lo encontré en la práctica: <i>«FAT32 con bloques de 256 bytes. La entrada de directorio dice que el archivo empieza en el cluster 4. a) ¿En qué cluster termina? (5 p) b) ¿Qué espacio ocupa en disco? (15 p)»</i></p>
+<p>La tabla es de 5×5 y <b>se numera fila por fila, de 0 a 24</b>:</p>
+<pre>          col0  col1  col2  col3  col4
+ 0–4   :    0    22    71     8   [9]   ← entrada 4 = 9
+ 5–9   :   23    13   [FF]    4   [24]
+ 10–14 :  [21]   FF    FF    11   [16]
+ 15–19 :    6   [10]    0    FF    21
+ 20–24 :    0   [7]    FF    FF   [14]</pre>
+<table><tr><th>Paso</th><th>Cluster actual <i>c</i></th><th>FAT[<i>c</i>]</th><th>Bloque lógico</th></tr><tr><td>1</td><td><b>4</b> (dato del directorio)</td><td>9</td><td>0</td></tr><tr><td>2</td><td>9</td><td>24</td><td>1</td></tr><tr><td>3</td><td>24</td><td>14</td><td>2</td></tr><tr><td>4</td><td>14</td><td>16</td><td>3</td></tr><tr><td>5</td><td>16</td><td>10</td><td>4</td></tr><tr><td>6</td><td>10</td><td>21</td><td>5</td></tr><tr><td>7</td><td>21</td><td>7</td><td>6</td></tr><tr><td>8</td><td><b>7</b></td><td><b>FF → FIN</b></td><td>7</td></tr></table>
+<ul><li><b>a)</b> Termina en el <b>cluster 7</b>.</li><li><b>b)</b> <b>8 clusters × 256 B = 2048 bytes.</b></li></ul>
+<p>⚠️ <b>Dos trampas de este ejercicio:</b></p>
+<ol><li>«¿En qué cluster termina?» se responde con el <b>número de entrada que contiene FF</b> (el 7), no con «FF».</li><li>Se cuentan <b>clusters, no saltos</b>. Hay 7 flechas pero <b>8 clusters</b>: el que tiene FIN <b>también tiene datos</b>.</li></ol>
+<p>Los valores sueltos que no están en la cadena (22, 71, 8, el 21 de la entrada 19…) son <b>ruido para distraer</b>: no los mires.</p>
+<hr/>
+<h4>Preguntas rápidas</h4>
+<p><b>1. (Estilo final)</b> FAT con clusters de <b>512 B</b>. El archivo empieza en el <b>cluster 3</b>. La tabla, desde la entrada 0, es:</p>
+<pre> entrada:  0   1   2   3   4   5   6   7   8   9  10  11
+ valor  :  0   8  FF   6   0   2  11  FF   7   0   5  10</pre>
+<ul><li>a) ¿En qué cluster termina?</li><li>b) ¿Cuánto espacio ocupa en disco?</li><li>c) Si el archivo mide en realidad 2900 bytes, ¿cuánta fragmentación interna hay?</li></ul>
+<p><b>2.</b> Un compañero dice: <i>«Con FAT, leer el byte 1.000.000 de un archivo es tan lento como con lista enlazada, porque igual hay que recorrer la cadena desde el principio.»</i> ¿Tiene razón? Justificá en qué sí y en qué no.</p>
+<h3>Corrección del tema 3</h3>
+<p><b>1. ✅ Las tres bien.</b></p>
+<ul><li>a) Termina en el <b>cluster 2</b>.</li><li>b) <b>3072 B</b>.</li><li>c) <b>172 B</b>.</li></ul>
+<p>⚠️ En el examen, <b>mostrá la cadena</b>. En el final de la cátedra la parte b) vale 15 puntos, y sin el desarrollo un número suelto puede quedar como «parcial». Escribilo así:</p>
+<pre>3 → FAT[3]=6 → FAT[6]=11 → FAT[11]=10 → FAT[10]=5 → FAT[5]=2 → FAT[2]=FF (FIN)
+Clusters: 3, 6, 11, 10, 5, 2  →  6 clusters
+Espacio = 6 × 512 = 3072 B
+Frag. interna = 3072 − 2900 = 172 B   (⌈2900/512⌉ = 6 ✔ coincide con la cadena)</pre>
+<p>Esa última verificación (que ⌈tamaño / cluster⌉ dé la misma cantidad de clusters que la cadena) es un control rápido de que leíste bien la tabla.</p>
+<p><b>2. ✅ Correcta en la idea.</b> Para nota completa, poné el <b>costo</b> concreto:</p>
+<table><tr><th></th><th>Recorrer la cadena</th><th>Leer el dato</th><th>Total de accesos a disco</th></tr><tr><td><b>Lista enlazada</b></td><td>hay que <b>leer del disco</b> cada bloque anterior</td><td>—</td><td>con bloques de 1 KB, el byte 1.000.000 está cerca del bloque 980 → <b>~980 lecturas</b></td></tr><tr><td><b>FAT</b></td><td>~980 consultas <b>en RAM</b></td><td>1 lectura</td><td><b>1 lectura</b></td></tr></table>
+<p>Así que el compañero tiene razón en que <b>hay que seguir la cadena desde el principio</b> en los dos casos (la FAT no da acceso directo como la contigua). Se equivoca en lo de «igual de lento»: un acceso a RAM tarda <b>nanosegundos</b> y uno a disco <b>milisegundos</b>, alrededor de un millón de veces más.</p>
+<p>🔗 <b>U1:</b> es la jerarquía de memoria; la diferencia la hace <b>dónde</b> está la cadena.</p>
+<hr/>
+<p>El próximo es el <b>tema 4: nodos-i</b> ★, el otro ejercicio fijo del final: bloques directos, indirectos simple, doble y triple, el tamaño máximo de un archivo y cuántos bloques índice necesita. Te armo una calculadora y un simulador.</p>
+<hr/>
+<h2>Tema 4 — Nodos-i</h2>
+<h4>La intuición</h4>
+<p>La FAT es <b>una agenda gigante para todo el edificio</b>: aunque vos solo busques tu departamento, la agenda entera tiene que estar sobre la mesa.</p>
+<p>El nodo-i es <b>una ficha por archivo</b>: cuando abrís un archivo, sacás <i>su</i> ficha del cajón y la ponés sobre la mesa. Las demás quedan guardadas.</p>
+<h4>El concepto (fig. 4-13, págs. 279–280)</h4>
+<p>Cada archivo tiene <b>un nodo-i</b> (nodo índice) con dos cosas:</p>
+<ul><li><b>Los atributos</b>: tamaño, dueño, grupo, permisos, tres tiempos y el <b>contador de vínculos</b>.</li><li><b>Las direcciones de disco</b> de sus bloques.</li></ul>
+<pre>        NODO-I (fig. 4-34, UNIX)
+ ┌──────────────────────────┐
+ │ atributos                │
+ │ (tamaño, dueño, permisos,│
+ │  tiempos, nº de vínculos)│
+ ├──────────────────────────┤
+ │ dirección 0  ────────────┼──► [dato]
+ │ dirección 1  ────────────┼──► [dato]       D DIRECTOS
+ │   ...                    │                 (V7: 10 · ext2: 12)
+ │ dirección D−1 ───────────┼──► [dato]
+ ├──────────────────────────┤
+ │ indirecto SIMPLE ────────┼──► [P direcciones] ──► P datos
+ │ indirecto DOBLE  ────────┼──► [P dir.] ──► P × [P dir.] ──► P² datos
+ │ indirecto TRIPLE ────────┼──► [P] ──► [P] ──► [P] ──────► P³ datos
+ └──────────────────────────┘
+         P = tamaño de bloque / tamaño de puntero</pre>
+<p><b>La gran ventaja contra la FAT:</b> el nodo-i se carga a RAM <b>solo mientras el archivo está abierto</b>. Con <i>k</i> archivos abiertos y nodos-i de <i>n</i> bytes, la RAM ocupada es <b>k · n</b>:</p>
+<ul><li>La <b>FAT</b> es proporcional al <b>tamaño del disco</b>: si el disco crece, la tabla crece.</li><li>El arreglo de <b>nodos-i</b> es proporcional a la <b>cantidad de archivos abiertos</b>. Da igual si el disco tiene 10 GB o 1000 GB.</li></ul>
+<p><b>El crecimiento por niveles:</b> los archivos chicos, que son la mayoría, entran enteros en los directos y se leen rapidísimo. Si el archivo no entra, se usa el simple; si tampoco, el doble; y si hace falta, el triple.</p>
+<p>📖 <i>Tanenbaum 4.3.2, págs. 279–280; 4.5.3, págs. 321–322 (nodo-i de V7) · Resumen de la cátedra, págs. 14–15.</i></p>
+<hr/>
+<h4>Ejemplo resuelto 1: tamaño máximo (el de la práctica de la cátedra)</h4>
+<p><i>10 directos, simple, doble y triple; bloques de 4 KB; punteros de 4 B.</i></p>
+<pre>P = 4096 / 4 = 1024 direcciones por bloque índice
+
+ directos :          10 bloques
+ simple   :       1.024 bloques
+ doble    :   1.048.576 bloques   (1024²)
+ triple   : 1.073.741.824 bloques (1024³)
+            ─────────────
+            1.074.791.434 bloques × 4096 B = 4.402.345.713.664 B ≈ 4 TiB</pre>
+<p>🧠 <b>Atajo para el examen:</b> el triple se come casi todo. P³ × B = 2³⁰ × 2¹² = 2⁴² B = <b>4 TiB</b>. Los demás términos casi no cambian el resultado.</p>
+<p>⚠️ <b>Errata de la práctica:</b> dice «4,27 TB». Está mal: 4.402.345.713.664 / 2⁴⁰ = <b>4,00 TiB</b> (o 4,40 TB si dividís por 10¹²). Si te lo toman, mostrá la cuenta.</p>
+<h4>Ejemplo resuelto 2: ¿cuántos bloques índice? (también de la práctica)</h4>
+<p><i>12 directos, bloques de 2 KB, punteros de 4 B, archivo de 5,5 MB.</i></p>
+<pre>P = 2048 / 4 = 512
+Bloques de datos = 5,5 MB / 2 KB = 5632 KB / 2 KB = 2816
+
+ directos : 12 bloques              → 0 bloques índice    (quedan 2804)
+ simple   : 512 bloques             → 1 bloque índice     (quedan 2292)
+ doble    : 2292 bloques            → 1 bloque doble
+                                      + ⌈2292 / 512⌉ = 5 sencillos  → 6
+                                                                   ───
+                                       TOTAL BLOQUES ÍNDICE  =  7</pre>
+<p>⚠️ <b>La trampa:</b> en el doble se cuenta <b>el bloque doble mismo</b> más <b>cada sencillo que cuelga de él</b>. Si contás solo los 5, te da 6 y está mal.</p>
+<h4>Ejemplo resuelto 3: ¿dónde está un byte? (ext2: 12 directos, 1 KB, 4 B, P = 256)</h4>
+<p><i>Un proceso hace <code>lseek</code> al byte 300.000 y lee.</i></p>
+<ol><li>Bloque lógico: n = ⌊300.000 / 1024⌋ = <b>292</b>. Desplazamiento: 300.000 mod 1024 = 992.</li><li>¿Es directo? 292 ≥ 12, no. Resto: 292 − 12 = 280.</li><li>¿Está en el simple? 280 ≥ 256, no. Resto: 280 − 256 = 24.</li><li>¿Está en el doble? 24 &lt; 256² = 65.536, <b>sí</b>. Entrada del doble: ⌊24 / 256⌋ = <b>0</b>. Entrada del sencillo: 24 mod 256 = <b>24</b>.</li><li>Lecturas de disco, con el nodo-i ya en RAM: doble + sencillo + dato = <b>3</b>.</li></ol>
+<table><tr><th>Nivel</th><th>Lecturas (nodo-i en RAM)</th></tr><tr><td>directo</td><td>1</td></tr><tr><td>simple</td><td>2</td></tr><tr><td>doble</td><td>3</td></tr><tr><td>triple</td><td>4</td></tr></table>
+<p>⚠️ Si el enunciado dice que el nodo-i <b>no</b> está en memoria, sumá 1.</p>
+<hr/>
+<h4>Preguntas rápidas</h4>
+<p><b>1.</b> Nodo-i con <b>10 directos</b> más simple, doble y triple; bloques de <b>1 KB</b>; punteros de <b>4 B</b>.</p>
+<ul><li>a) Un archivo de <b>300 KB</b>: ¿cuántos bloques de datos y cuántos bloques índice usa?</li><li>b) Se hace <code>lseek</code> al byte <b>270.000</b> y se lee. ¿En qué nivel cae, qué entrada se usa y cuántas lecturas de disco hacen falta (nodo-i ya en RAM)?</li></ul>
+<p><b>2.</b> Tenés un disco de 2 TB. ¿Por qué en ese disco el nodo-i usa mucha menos RAM que la FAT? Respondé con lo que crece en cada caso.</p>
+<h3>Corrección del tema 4</h3>
+<p><b>1. ✅ a) y b) correctas.</b> Ejercicio completo. Para el examen, el desarrollo quedaría así:</p>
+<pre>P = 1024 / 4 = 256 · bloques de datos = 300 KB / 1 KB = 300
+
+a) directos: 10            → 0 índice   (quedan 290)
+   simple  : 256           → 1 índice   (quedan 34)
+   doble   : 34            → 1 doble + ⌈34/256⌉ = 1 sencillo → 2
+   ─────────────────────────────────────────────
+   300 de datos + 3 índice = 303 bloques en disco
+
+b) n = ⌊270.000 / 1024⌋ = 263   (desp = 688)
+   263 − 10 = 253 &lt; 256  → indirecto SIMPLE, entrada 253
+   Lecturas: bloque simple + dato = 2</pre>
+<p><b>2. ✅ Correcta en la idea.</b> Ajustá el vocabulario: la FAT no «copia índices», sino que tiene <b>una entrada por cada bloque del disco</b>. Y del lado del nodo-i, lo que va a RAM es <b>el nodo-i de cada archivo abierto</b>, no el archivo.</p>
+<p>Si le ponés números, la respuesta queda redonda. Por ejemplo, con bloques de 1 KB y entradas de 4 B:</p>
+<table><tr><th></th><th>Qué crece</th><th>En un disco de 2 TB</th></tr><tr><td><b>FAT</b></td><td>el <b>tamaño del disco</b> (una entrada por bloque)</td><td>2·10⁹ bloques × 4 B ≈ <b>8 GB de RAM</b>, siempre</td></tr><tr><td><b>Nodos-i</b></td><td>la cantidad de <b>archivos abiertos</b> (k · n)</td><td>1000 abiertos × 128 B (ext2) ≈ <b>128 KB</b></td></tr></table>
+<p>🧠 La frase para el examen: <b>«la FAT es proporcional al disco; los nodos-i, a los archivos abiertos»</b>.</p>
+<hr/>
+<p>Ya tenés los <b>dos ejercicios fijos del final</b> (FAT y nodo-i). Lo que sigue es el <b>tema 5: implementación de directorios y vínculos duros y simbólicos</b> ★, donde vemos:</p>
+<ul><li>qué guarda una entrada de directorio (MS-DOS contra UNIX);</li><li>los nombres largos;</li><li>la búsqueda de <code>/usr/ast/mbox</code>;</li><li>y qué pasa con el <b>contador de vínculos</b> cuando borrás un archivo que tiene un vínculo duro. Esto se pregunta mucho.</li></ul>
+<hr/>
+<h2>Tema 5 — Implementación de directorios y vínculos</h2>
+<h4>Parte A: ¿qué guarda una entrada de directorio? (fig. 4-14, págs. 280–281)</h4>
+<p>La función del directorio es <b>traducir un nombre ASCII</b> en «lo necesario para encontrar los datos». Según el método de asignación, eso es:</p>
+<ul><li>en la <b>contigua</b>, la dirección de todo el archivo;</li><li>en las <b>enlazadas</b> (con o sin FAT), el <b>primer bloque</b>;</li><li>con <b>nodos-i</b>, el <b>número de nodo-i</b>.</li></ul>
+<p>La pregunta de diseño es <b>dónde van los atributos</b>:</p>
+<pre> (a) ATRIBUTOS EN LA ENTRADA            (b) ENTRADA → NODO-I
+     (estilo Windows / MS-DOS)              (estilo UNIX)
+ ┌─────────┬──────────────────┐        ┌─────────┬────┐     ┌─────────────┐
+ │ juegos  │ atributos + dir. │        │ juegos  │ 12 │ ──► │ nodo-i 12:  │
+ │ correo  │ atributos + dir. │        │ correo  │ 40 │     │ atributos + │
+ │ noticias│ atributos + dir. │        │ noticias│  7 │     │ direcciones │
+ └─────────┴──────────────────┘        └─────────┴────┘     └─────────────┘</pre>
+<p>En <b>UNIX V7</b>, la entrada tiene <b>solo dos campos</b>: el nombre (<b>14 bytes</b>) y el número de nodo-i (<b>2 bytes</b>). Por eso <b>un sistema de archivos admite como máximo 64 K archivos</b> (2¹⁶) (fig. 4-33, pág. 321).</p>
+<p><b>Nombres largos (fig. 4-15).</b> Reservar 255 caracteres en cada entrada desperdicia espacio. Hay dos alternativas:</p>
+<table><tr><th></th><th><b>En línea</b> (fig. 4-15a)</th><th><b>En un heap</b> (fig. 4-15b)</th></tr><tr><td>Cómo</td><td>cada entrada lleva su longitud, los atributos y el nombre, rellenado hasta completar una palabra</td><td>entradas de tamaño fijo con un <b>puntero</b> al nombre, que vive en un heap al final del directorio</td></tr><tr><td>−</td><td>al borrar queda un <b>hueco variable</b> (es la fragmentación de la contigua, pero se puede compactar porque el directorio está en RAM); una entrada puede cruzar páginas → <b>fallo de página</b></td><td>hay que administrar el heap; también puede haber fallos de página</td></tr><tr><td>+</td><td>—</td><td>al borrar, el próximo archivo <b>siempre entra</b>; no hace falta relleno</td></tr></table>
+<p><b>Búsqueda rápida (págs. 281–282).</b> Normalmente se busca <b>lineal</b>. Hay dos formas de acelerar:</p>
+<ul><li><b>Tabla hash</b> por directorio. Si dos nombres caen en la misma ranura, se encadenan en una lista enlazada. Vale la pena con directorios de cientos o miles de archivos; a cambio, la administración es más compleja.</li><li><b>Caché de búsquedas</b>, que sirve si pocos archivos concentran la mayoría de los accesos.</li></ul>
+<h4>Parte B: buscar <code>/usr/ast/mbox</code> (fig. 4-35, págs. 322–323)</h4>
+<pre> nodo-i raíz        bloque 1          nodo-i 6        bloque 132       nodo-i 26       bloque 406
+ (lugar FIJO) ──►  1  .           ──► bloque=132 ──►  6  .         ──► bloque=406 ──► 26  .
+                   1  ..                              1  ..                            6  ..
+                   4  bin                            19  dick                         64  becas
+                   ...                               51  jim                          92  libros
+                   6  usr ◄─ está                    26  ast ◄─ está                  60  mbox ◄─ ¡acá!
+                   8  tmp                            45  bal                          81  minix</pre>
+<p><b>Se alterna nodo-i → bloque de directorio → nodo-i → …</b> Al final, el <b>nodo-i 60 se lee a RAM</b> y queda ahí hasta el <code>close</code>.</p>
+<p>Sin caché, eso son <b>7 lecturas</b>: 3 directorios × 2 (su nodo-i y su bloque) + el nodo-i final. Una ruta relativa se busca igual, pero arrancando en el directorio de trabajo; <code>..</code> es <b>una entrada más</b>, con el número de nodo-i del padre.</p>
+<h4>Parte C: archivos compartidos y vínculos (figs. 4-16 y 4-17, págs. 283–285)</h4>
+<p>Con vínculos, el sistema de archivos deja de ser un árbol y pasa a ser un <b>DAG</b> (grafo acíclico dirigido).</p>
+<p><b>Por qué hace falta el nodo-i:</b> si el directorio guardara las direcciones de disco y se copiaran en el directorio de B, cuando C agregara bloques <b>B no los vería</b>. La solución es que las direcciones vivan en <b>una estructura del archivo</b> (el nodo-i) y que los dos directorios <b>apunten a ella</b>.</p>
+<pre> VÍNCULO DURO (ln)                         VÍNCULO SIMBÓLICO (ln -s)
+ dir C: (datos, 20) ──┐                    dir C: (datos, 20) ───► nodo-i 20 (dueño C, cont 1)
+                      ├─► nodo-i 20        dir B: (datos, 21) ───► nodo-i 21 tipo LINK
+ dir B: (datos, 20) ──┘   dueño C                                  contenido: "/home/c/datos"
+                          contador = 2</pre>
+<p><b>La historia de la fig. 4-17, con vínculo DURO:</b></p>
+<table><tr><th>Paso</th><th>Contador del nodo-i 20</th><th>Qué pasa</th></tr><tr><td>C crea <code>datos</code></td><td>1</td><td></td></tr><tr><td>B hace <code>ln</code></td><td><b>2</b></td><td>el <b>dueño sigue siendo C</b></td></tr><tr><td>C hace <code>rm</code></td><td><b>1</b></td><td>se borra <b>solo la entrada de C</b>; el archivo <b>sigue vivo</b> para B</td></tr><tr><td>B hace <code>rm</code></td><td><b>0</b></td><td>recién ahora se liberan el nodo-i y los bloques</td></tr></table>
+<p>⚠️ <b>Por qué no se libera al borrar C:</b> B quedaría apuntando a un nodo-i inválido, que <b>podría reasignarse a otro archivo</b>. Y el sistema no puede ir a borrar la entrada de B, porque <b>el nodo-i no sabe qué directorios lo apuntan</b>: podrían ser ilimitados.</p>
+<p>⚠️ <b>La consecuencia:</b> C sigue siendo dueño y <b>se le sigue cobrando la cuota</b> por un archivo que ya «borró», hasta que B lo borre.</p>
+<p><b>Con vínculo SIMBÓLICO:</b> solo C tiene el puntero al nodo-i. Si C borra, el archivo <b>se destruye de verdad</b> y el simbólico de B queda <b>colgado</b>: «No such file or directory». Si B borra su simbólico, el original no se entera.</p>
+<table><tr><th></th><th>Duro</th><th>Simbólico</th></tr><tr><td>Qué es</td><td>otra entrada <b>al mismo nodo-i</b></td><td>un <b>archivo nuevo</b> (tipo LINK) que contiene <b>una ruta</b></td></tr><tr><td>Contador del original</td><td><b>sube</b></td><td><b>no cambia</b></td></tr><tr><td>Si el dueño borra</td><td>sigue vivo (contador &gt; 0)</td><td>queda <b>colgado</b></td></tr><tr><td>Costo</td><td>ninguno extra</td><td>un nodo-i (y quizá un bloque) más, y <b>más lento</b>: hay que recorrer la ruta</td></tr><tr><td>Alcance</td><td><b>mismo sistema de archivos</b></td><td>puede cruzar discos y <b>hasta máquinas</b></td></tr></table>
+<p><b>Un problema de los dos:</b> el archivo tiene <b>varias rutas</b>. Un programa de respaldo puede copiarlo <b>dos veces</b> y, al restaurarlo, crear dos archivos en vez de uno vinculado.</p>
+<hr/>
+<h4>Preguntas rápidas</h4>
+<p><b>1.</b> Ana crea <code>/home/ana/informe</code>, que queda en el nodo-i 40. Después, en orden:</p>
+<ol><li>Luis ejecuta <code>ln /home/ana/informe /home/luis/inf</code>.</li><li>Luis ejecuta <code>ln -s /home/ana/informe /home/luis/atajo</code>.</li><li>Ana ejecuta <code>rm /home/ana/informe</code>.</li></ol>
+<ul><li>a) ¿Cuánto vale el contador del nodo-i 40 después de cada paso?</li><li>b) ¿Qué pasa si Luis hace <code>cat inf</code> y qué pasa si hace <code>cat atajo</code>?</li><li>c) ¿A quién se le cobra el espacio del archivo?</li></ul>
+<p><b>2.</b> ¿Por qué no se puede hacer un vínculo <b>duro</b> entre dos particiones distintas y uno <b>simbólico</b> sí?</p>
+<h3>Corrección del tema 5</h3>
+<p><b>1. a) ⚠️ Parcial.</b> La consigna pedía el valor <b>después de cada paso</b>, y el <b>3</b> es el que cambia todo:</p>
+<table><tr><th>Paso</th><th>Contador del nodo-i 40</th><th>Por qué</th></tr><tr><td>Ana crea</td><td>1</td><td>la entrada de Ana</td></tr><tr><td><code>ln</code> (duro)</td><td><b>2</b></td><td>otra entrada al <b>mismo</b> nodo-i</td></tr><tr><td><code>ln -s</code> (simbólico)</td><td><b>2</b></td><td>el simbólico es <b>otro</b> nodo-i (con una ruta adentro): no toca el 40</td></tr><tr><td>Ana hace <code>rm</code></td><td><b>1</b></td><td>se borra la entrada de Ana; queda <b>la de <code>inf</code></b></td></tr></table>
+<p><b>b) ❌ Incorrecta.</b> Respondiste como si Ana no hubiera borrado nada, pero el paso 3 ya pasó:</p>
+<ul><li><code>cat inf</code> → <b>funciona</b>. <code>inf</code> apunta directo al nodo-i 40, que sigue vivo con contador 1.</li><li><code>cat atajo</code> → <b>falla</b>: <i>«No such file or directory»</i>. El atajo guarda el <b>texto</b> <code>/home/ana/informe</code>, el kernel busca ese nombre en el directorio de Ana y <b>ya no existe</b>. Queda <b>colgado</b>.</li></ul>
+<p><b>c) ❌ Incorrecta, y con los roles invertidos.</b></p>
+<ul><li>Se le cobra a <b>Ana</b>: el nodo-i dice <b>dueño = Ana</b>, y crear un vínculo <b>no cambia el dueño</b>. Ana «borró» el archivo, pero lo sigue pagando hasta que Luis borre <code>inf</code>.</li><li>Lo que mantiene vivo el archivo es <b><code>inf</code> (el duro)</b>, no <code>atajo</code>. El simbólico <b>nunca</b> mantiene vivo nada: ni siquiera cuenta en el contador.</li></ul>
+<p><b>2. ✅ Correcta.</b> Para completarla, decí el <b>porqué técnico</b>:</p>
+<ul><li>La entrada de directorio es solo <b>(nombre, número de nodo-i)</b>, sin ningún dato de la partición.</li><li>El número de nodo-i <b>es local</b> a cada sistema de archivos: «nodo-i 40» en <code>/dev/sda1</code> y «nodo-i 40» en <code>/dev/sdb1</code> son archivos distintos. Un vínculo duro hacia otra partición no tendría forma de decir <i>de cuál</i>.</li><li>El simbólico guarda una <b>ruta</b>, y la ruta se resuelve con la búsqueda normal, que sí cruza puntos de montaje y hasta puede ir a otra máquina.</li></ul>
+<hr/>
+<h4>Te lo explico de otra forma, porque esto se toma siempre</h4>
+<p>Pensá el <b>nodo-i como una casa</b>, y las <b>entradas de directorio como llaves</b>.</p>
+<ul><li><b>Vínculo duro = hacerle una copia de la llave a Luis.</b> Ahora hay 2 llaves (contador 2). Si Ana tira la suya, Luis sigue entrando, y la casa se demuele recién cuando <b>no queda ninguna llave</b> (contador 0). La escritura sigue a nombre de Ana: <b>paga Ana</b>.</li><li><b>Vínculo simbólico = darle a Luis un papelito que dice «la casa está en la calle Ana 123».</b> No es una llave (el contador no sube). Si Ana tira su llave y era la única, la casa se demuele, y cuando Luis va con el papelito encuentra <b>un terreno vacío</b>: está colgado.</li></ul>
+<p>🧠 <b>Regla para recitar:</b> <i>«el duro cuenta, el simbólico apunta»</i>. El duro suma al contador y mantiene vivo el archivo. El simbólico es una ruta escrita, que puede quedar colgada.</p>
+<p><b>Pregunta de control rápida</b> (antes de seguir al tema 6):</p>
+<p>Mismo escenario, pero ahora el paso 3 lo hace <b>Luis</b>: <code>rm /home/luis/inf</code>. ¿Cuánto queda el contador del nodo-i 40, y funcionan <code>cat /home/ana/informe</code> y <code>cat /home/luis/atajo</code>?</p>
+<hr/>
+<h2>Tema 6 — LFS, bitácora y VFS</h2>
+<p>Son tres ideas distintas sobre <b>cómo diseñar un sistema de archivos moderno</b>:</p>
+<ul><li><b>LFS</b>, para escribir rápido;</li><li><b>bitácora</b>, para no romperse si se corta la luz;</li><li><b>VFS</b>, para que convivan muchos sistemas de archivos.</li></ul>
+<p>⚠️ El resumen de la cátedra solo trae LFS, pero el programa nombra «actualización atómica, transacciones» y «VFS». Así que esta parte la basé en el libro.</p>
+<hr/>
+<h4>1) LFS: sistema de archivos estructurado por registro (págs. 285–287)</h4>
+<p><b>El problema:</b> las CPU y las RAM crecen muchísimo, pero el <b>tiempo de búsqueda del disco casi no mejora</b>. Con cachés grandes, casi todas las lecturas salen de RAM, así que lo que va al disco son <b>escrituras chicas</b>. Y una escritura chica es carísima: 50 µs de escritura después de 10 ms de búsqueda y 4 ms de rotación da <b>menos del 1 %</b> de eficiencia.</p>
+<p>Crear un archivo en UNIX obliga a escribir el nodo-i del directorio, el bloque del directorio, el nodo-i del archivo y el archivo: muchas escrituras chicas en lugares distintos.</p>
+<p><b>La idea:</b> tratar el disco entero como <b>un registro (log)</b>:</p>
+<pre> RAM: búfer de escrituras pendientes ──(periódicamente)──► UN segmento grande (~1 MB)
+                                                            al FINAL del registro
+ DISCO (búfer circular):
+ ┌────────┬────────┬────────┬────────┬────────┬──────────┐
+ │ seg 1  │ seg 2  │ seg 3  │ seg 4  │ seg 5  │  libre   │
+ └────────┴────────┴────────┴────────┴────────┴──────────┘
+   ▲ el LIMPIADOR lee segmentos viejos,          ▲ el ESCRITOR agrega
+     rescata lo vivo y libera el segmento          segmentos nuevos acá</pre>
+<ul><li>Cada segmento mezcla nodos-i, bloques de directorio y datos, y empieza con un <b>resumen de segmento</b> que dice qué contiene.</li><li>Los nodos-i <b>ya no están en un lugar fijo</b>: hay un <b>mapa de nodos-i</b> (indexado por número), guardado en disco y cacheado en RAM.</li><li>El <b>hilo limpiador</b> recorre el registro en círculo: descarta lo viejo, reescribe lo vivo en el segmento nuevo y libera el segmento original.</li><li><b>+</b> Es un orden de magnitud más rápido que UNIX en escrituras chicas, e igual o mejor en lecturas y escrituras grandes. <b>−</b> Es muy incompatible con los sistemas existentes, y por eso <b>casi no se usa</b>.</li></ul>
+<p>🔗 <b>U3:</b> el limpiador hace lo mismo que la <b>compactación</b>, y el búfer circular es la misma idea que el <b>reloj</b>.</p>
+<hr/>
+<h4>2) Bitácora (journaling) ★ (págs. 287–288)</h4>
+<p><b>El problema:</b> borrar un archivo en UNIX son <b>tres escrituras</b>:</p>
+<pre> A. Quitar la entrada del directorio
+ B. Liberar el nodo-i (a la reserva de nodos-i libres)
+ C. Devolver los bloques (a la reserva de bloques libres)</pre>
+<p>Si se corta la luz en el medio, <b>ningún orden es seguro</b>:</p>
+<table><tr><th>Orden</th><th>Se cae después de…</th><th>Resultado</th></tr><tr><td>A, B, C</td><td>A</td><td>nodo-i y bloques <b>en el limbo</b>: no son de nadie, pero tampoco están libres</td></tr><tr><td>A, B, C</td><td>A y B</td><td>se pierden los <b>bloques</b></td></tr><tr><td><b>B</b> primero</td><td>B</td><td>el nodo-i se reasigna, y la entrada vieja <b>abre otro archivo</b></td></tr><tr><td><b>C</b> primero</td><td>C</td><td>los bloques se reutilizan y <b>dos archivos comparten bloques</b></td></tr></table>
+<p><b>La solución, en orden:</b></p>
+<ol><li>Escribir en el disco una <b>entrada de bitácora</b> con las tres acciones (y, si hace falta, releerla para verificarla).</li><li>Recién entonces hacer A, B y C.</li><li>Si todo salió bien, <b>borrar la entrada</b>.</li><li>Si se cae: al re-arrancar se mira la bitácora y se <b>rehacen</b> las operaciones pendientes, las veces que haga falta.</li></ol>
+<p>⚠️ <b>La condición clave: las operaciones tienen que ser idempotentes</b>, es decir, que repetirlas no cambie el resultado. Hay que rehacerlas sin saber cuáles se alcanzaron a hacer:</p>
+<table><tr><th>Operación</th><th>¿Idempotente?</th></tr><tr><td>«Marcar en el mapa de bits el bloque <i>n</i> como libre»</td><td>✅ sí</td></tr><tr><td>«Buscar en el directorio y eliminar la entrada <code>foobar</code>»</td><td>✅ sí</td></tr><tr><td>«Agregar los bloques del nodo-i <i>K</i> al <b>final de la lista libre</b>»</td><td>❌ <b>no</b>: si ya estaban, quedan <b>duplicados</b></td></tr><tr><td>«Buscar en la lista libre y agregar el bloque <i>n</i> <b>si no está</b>»</td><td>✅ sí (más cara)</td></tr></table>
+<p><b>Transacción atómica</b> (idea de bases de datos): <code>begin transaction … end transaction</code> agrupa operaciones, y se hacen <b>todas o ninguna</b>.</p>
+<p><b>Quiénes la usan:</b> <b>NTFS</b> (desde Windows NT, 1993), <b>ReiserFS</b> (el primero en Linux, pero incompatible con ext2) y <b>ext3</b> (bitácora y <b>compatible con ext2</b>).</p>
+<hr/>
+<h4>3) VFS: sistema de archivos virtual (fig. 4-18, págs. 288–291)</h4>
+<p><b>El problema:</b> en una misma máquina hay NTFS, FAT32, un CD ISO 9660, un disco en red…</p>
+<ul><li><b>Windows</b> los separa con <b>letras de unidad</b> (C:, D:) y no los integra.</li><li><b>UNIX</b> los <b>monta</b> en un solo árbol: ext2 en <code>/</code>, ext3 en <code>/usr</code>, ReiserFS en <code>/home</code>, el CD en <code>/mnt</code>. El usuario ve una sola jerarquía.</li></ul>
+<pre>       proceso:  open / read / write / lseek / close
+                          │   ← interfaz SUPERIOR = POSIX
+               ┌──────────▼───────────┐
+               │   VFS (lo común):    │  tabla de montaje, descriptores,
+               │                      │  nodos-v en RAM
+               └──┬───────┬───────┬───┘
+                  │       │       │   ← interfaz INFERIOR = «interfaz de VFS»
+               [ext3]  [FAT32]  [NFS]     (cada FS registra sus funciones)
+                  └───────┴───┬───┘
+                        caché de búfer → disco / red</pre>
+<p><b><code>open("/usr/include/unistd.h")</code> paso a paso:</b></p>
+<ol><li>Al montarse, cada FS se <b>registra</b> y le da al VFS su <b>vector de funciones</b>.</li><li>El VFS analiza la ruta, ve que hay un FS montado en <code>/usr</code> y busca su <b>superbloque</b>.</li><li>Busca <code>include/unistd.h</code> desde la raíz de ese FS.</li><li>Crea un <b>nodo-v</b> en RAM, con los datos del nodo-i y el <b>puntero a la tabla de funciones</b> de ese FS.</li><li>Agrega una entrada en la <b>tabla de descriptores</b> del proceso y devuelve el <b>descriptor</b>.</li><li>Cada <code>read</code> sigue el camino descriptor → nodo-v → la función <code>read</code> <b>del FS concreto</b>. Al VFS no le importa si los datos vienen del disco, de la red o de un USB.</li></ol>
+<p>🧠 La motivación original de Sun fue <b>NFS</b>: poder montar sistemas de archivos <b>remotos</b> como si fueran locales.</p>
+<p>🔗 <b>U1:</b> el VFS es lo mismo que la <b>capa independiente del dispositivo</b> en E/S: una interfaz común arriba y los «controladores» (FS concretos) abajo. Es orientado a objetos aunque esté escrito en C: los objetos son el superbloque, el nodo-v y el directorio.</p>
+<hr/>
+<h4>Preguntas rápidas</h4>
+<p><b>1.</b> Un sistema <b>sin bitácora</b> borra archivos en este orden: primero <b>libera el nodo-i</b> y después <b>borra la entrada del directorio</b>. Se corta la luz justo entre los dos pasos. Al re-arrancar, un usuario crea un archivo nuevo. ¿Qué problema concreto aparece? ¿Cómo lo evitaría una bitácora?</p>
+<p><b>2.</b> ¿Cuáles de estas operaciones son <b>idempotentes</b>? Justificá cada una.</p>
+<ul><li>a) «Poner en 1 (libre) el bit 500 del mapa de bits.»</li><li>b) «Incrementar en 1 el contador de vínculos del nodo-i 7.»</li><li>c) «Si en el directorio existe la entrada <code>foobar</code>, borrarla.»</li></ul>
+<h3>Corrección del tema 6</h3>
+<p><b>1. ⚠️ Parcial.</b> Vas bien, pero te faltó <b>el problema concreto</b>, que es lo que pide la consigna:</p>
+<ol><li>El nodo-i 7 ya figura <b>libre</b>, pero la entrada <code>foobar → 7</code> <b>sigue en el directorio</b> (eso es lo que llamaste «aislada»: es una <b>entrada colgada</b>).</li><li>El usuario crea un archivo nuevo y el sistema le da un nodo-i libre: <b>el 7</b>.</li><li>Ahora <code>foobar</code> apunta a un nodo-i que es <b>de otro archivo</b>. Quien abra <code>foobar</code> <b>lee y escribe los datos del archivo nuevo</b>.</li></ol>
+<p>Sobre la bitácora, un ajuste: no «empieza de cero» ni deshace nada.</p>
+<ul><li><b>Antes</b> de tocar nada, se escribe en el disco la entrada con las acciones pendientes.</li><li>Al re-arrancar, si esa entrada sigue ahí, se <b>rehacen</b> todas las acciones hasta completarlas.</li><li>Hay que rehacer <b>todas</b> porque no se sabe cuáles se alcanzaron a hacer. Por eso tienen que ser idempotentes.</li></ul>
+<p><b>2. ❌ Acá se mezcló el concepto.</b> Juzgaste si cada operación era «la correcta» para borrar un archivo, pero la pregunta era otra:</p>
+<div class="clave"><b>Idempotente = hacerla 2 veces deja el mismo resultado que hacerla 1 vez.</b></div>
+<p>No importa si la operación «tiene sentido»: importa qué pasa <b>si la repetís</b>.</p>
+<table><tr><th></th><th>¿Idempotente?</th><th>Por qué</th></tr><tr><td><b>a)</b> poner en 1 el bit 500</td><td>✅ <b>SÍ</b></td><td>La primera vez queda en 1; la segunda, sigue en 1. <b>Fija un valor.</b> (En el libro, en el mapa de bits libre = 1; en la fig. 4-22, 1 = libre.)</td></tr><tr><td><b>b)</b> incrementar el contador del nodo-i 7</td><td>❌ <b>NO</b></td><td>Si valía 1: una vez da 2, dos veces da 3. Cada repetición <b>suma</b>. (Pusiste «falso», que coincide, pero por otra razón.)</td></tr><tr><td><b>c)</b> borrar <code>foobar</code> si existe</td><td>✅ <b>SÍ</b></td><td>La primera vez la borra; la segunda no la encuentra y no hace nada. Bien.</td></tr></table>
+<h4>Otra forma de verlo</h4>
+<p>Pensá en el <b>botón de un ascensor</b>: apretar «piso 5» tres veces es igual que apretarlo una, porque el ascensor va al 5. Eso es idempotente.</p>
+<p>Un <b>interruptor de luz que alterna</b> (apagado ↔ encendido) <b>no</b> lo es: dos apretadas te dejan donde estabas, y tres te cambian el estado.</p>
+<p>🧠 <b>Regla rápida para el examen:</b></p>
+<ul><li><b>«Fijar / poner en X / borrar si existe / agregar si no está»</b> → idempotente.</li><li><b>«Sumar / incrementar / agregar al final / alternar»</b> → <b>NO</b> idempotente.</li></ul>
+<p><b>Control rápido (respondé solo sí o no):</b></p>
+<ul><li>a) «Poner el tamaño del archivo en 4096 bytes.»</li><li>b) «Agregar 512 bytes al final del archivo.»</li><li>c) «Decrementar en 1 el contador de vínculos.»</li></ul>
+<hr/>
+<h2>Tema 7 — Administración del espacio en disco</h2>
+<h4>La intuición</h4>
+<p>El disco se reparte en <b>cajas de tamaño fijo</b> (bloques). Si las cajas son grandes, mudás todo en pocos viajes, pero un objeto chico ocupa una caja entera y desperdicia lugar. Si son chicas, no desperdiciás, pero necesitás muchísimos viajes.</p>
+<p>Ese es todo el dilema del tamaño de bloque.</p>
+<h4>1) ¿Por qué bloques? (pág. 292)</h4>
+<p>Guardar un archivo en <b>n bytes contiguos</b> tiene el problema de que, si crece, <b>hay que moverlo</b>, y en disco eso es carísimo. Por eso casi todos los sistemas usan <b>bloques fijos, no necesariamente contiguos</b>.</p>
+<p>🔗 <b>U3:</b> es la misma decisión que entre <b>segmentación</b> (contiguo) y <b>paginación</b> (bloques fijos).</p>
+<h4>2) Tamaño de bloque (figs. 4-20 y 4-21, págs. 292–295)</h4>
+<pre> tiempo para leer un bloque de k bytes
+   = búsqueda + media rotación + transferencia
+   =   5 ms   +   4,165 ms    + (k / 1 MB) × 8,33 ms
+                 └──── ~9,2 ms casi fijos ────┘</pre>
+<table><tr><th>Bloque</th><th>Tiempo por acceso</th><th>Velocidad</th><th>Eficiencia de espacio (archivos de 4 KB)</th></tr><tr><td>1 KB</td><td>9,17 ms</td><td>~0,1 MB/s</td><td>100 %</td></tr><tr><td>4 KB</td><td>9,20 ms</td><td>~0,45 MB/s</td><td>100 %</td></tr><tr><td>8 KB</td><td>9,23 ms</td><td>~0,9 MB/s</td><td><b>50 %</b></td></tr><tr><td>64 KB</td><td>9,71 ms</td><td>~6,6 MB/s</td><td><b>≈ 7 %</b></td></tr></table>
+<pre>    ▲                                         ━━ velocidad: sube casi lineal
+    │  ┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
+    │                     ┅┅┅
+    │                         ┅┅         ━━━━━━
+    │                            ┅┅━━━━━━
+    │                     ━━━━━━━━━┅┅┅
+    │          ━━━━━━━━━━              ┅┅┅┅┅┅  ┅┅ eficiencia: se desploma
+    └────────────────────────────────────────►  tamaño de bloque
+      1K   2K   4K   8K   16K  32K  64K</pre>
+<p><b>Conclusiones del libro:</b></p>
+<ul><li>El acceso está <b>dominado por la búsqueda y la rotación</b>: cuanto más se trae por acceso, mejor.</li><li><b>Velocidad y espacio están en conflicto</b>: las curvas se cruzan cerca de 64 KB, y ahí las dos son malas. No hay tamaño ideal.</li><li><b>Mediciones</b> (VU de Ámsterdam, 2005): el 59 % de los archivos tiene <b>4 KB o menos</b>. Pero el 93 % de los bloques del disco los usa el 10 % de los archivos más grandes. Así que el desperdicio de los archivos chicos casi no se nota en el total.</li><li>Históricamente se usaron <b>1 a 4 KB</b>. Con discos de varios TB, podría convenir <b>64 KB</b> y aceptar el desperdicio.</li></ul>
+<h4>3) Fragmentación interna: el ejercicio de la práctica ★</h4>
+<p><i>FAT32 con el bloque igual al marco de página (<b>4 KB</b>), sectores de <b>512 B</b>, y un ejecutable de <b>3.712.518 B</b>.</i></p>
+<pre>a) Sectores por bloque = 4096 / 512 = 8
+
+b) BPB, bytes por sector (desplazamientos 0x0B y 0x0C, little-endian):
+   512 = 0x0200   →   0x0B = 00 ,  0x0C = 02
+
+c) 3.712.518 div 4096 = 906 bloques llenos
+   resto = 3.712.518 − 906 × 4096 = 3.712.518 − 3.710.976 = 1542 B   (van en el bloque 907)
+   fragmentación interna = 4096 − 1542 = 2554 B
+   ocupa 907 bloques = 3.715.072 B en disco</pre>
+<p>⚠️ <b>Errata de la práctica:</b> la versión escrita dice <b>2580,48 B</b>, porque hizo 906,37 → 0,37 × 4096. <b>Está mal</b>: el 0,37 viene redondeado. Usá siempre el <b>resto exacto de la división entera</b>. La resolución manuscrita de la misma práctica llega a <b>2554</b>.</p>
+<h4>4) Registro de bloques libres (figs. 4-22 y 4-23, págs. 295–297)</h4>
+<pre> (a) LISTA ENLAZADA de bloques               (b) MAPA DE BITS
+ ┌────────────┐   ┌────────────┐              1 bit por bloque del disco
+ │ 42  136    │   │ 230  162   │              1 = libre · 0 = ocupado
+ │ 210 97 ... │──►│ 612  342...│──► ...       1001101101101100
+ │ (255 nºs + │   │            │              0110110111110111
+ │  1 puntero)│   │            │              1010110110110110
+ └────────────┘   └────────────┘
+  bloque de 1 KB / números de 32 bits = 256 → 255 libres + 1 al siguiente</pre>
+<p><b>Ejemplo del libro:</b> 500 GB con bloques de 1 KB son <b>≈ 488 millones de bloques</b>.</p>
+<table><tr><th></th><th>Cuenta</th><th>Resultado</th></tr><tr><td>Lista</td><td>488 M / 255</td><td><b>≈ 1,9 millones de bloques</b></td></tr><tr><td>Mapa de bits</td><td>488 M bits / 8 / 1024</td><td><b>≈ 60.000 bloques</b></td></tr></table>
+<ul><li>El mapa gana porque usa <b>1 bit</b> por bloque, contra <b>32 bits</b> de la lista. La lista solo ocupa menos con el <b>disco casi lleno</b> (con estos números, menos del 3 % libre).</li><li>A favor de la lista: sus bloques <b>son bloques libres</b>, así que en la práctica «no cuestan».</li><li>A favor del mapa: asignando desde un mismo pedazo del mapa, los bloques quedan <b>cerca</b> y el brazo se mueve menos.</li><li><b>Variante:</b> guardar <b>series</b> (primer bloque + cantidad) en vez de bloques sueltos. Es buenísimo con el disco poco fragmentado y malo si está muy fragmentado.</li></ul>
+<p><b>El detalle de la fig. 4-23:</b> en RAM se tiene <b>un solo bloque de punteros</b>. Si está casi lleno y entran y salen archivos temporales chicos, se escribe y se relee del disco sin parar. La solución es <b>dividirlo</b> para que el bloque en RAM quede <b>por la mitad</b>: así absorbe tanto altas como bajas sin E/S.</p>
+<h4>5) Cuotas de disco (fig. 4-24, págs. 297–298)</h4>
+<ul><li>Al abrir un archivo, su entrada en la tabla de archivos abiertos apunta al <b>registro de cuota del dueño</b>.</li><li>Cada bloque nuevo <b>se le carga al dueño</b> y se compara contra dos límites:</li><li><b>Suave</b>: se puede pasar durante la sesión. Al iniciar sesión pasado del límite, recibe una <b>advertencia</b>; si se le acaban las advertencias, <b>no puede entrar</b> hasta hablar con el administrador.</li><li><b>Duro</b>: <b>nunca</b> se pasa; el intento da <b>error</b>.</li><li>Hay límites iguales (suave y duro) para la <b>cantidad de archivos</b>.</li></ul>
+<p>🔗 <b>Tema 5:</b> por esto el <b>vínculo duro le sigue costando cuota al dueño</b> después de su <code>rm</code>.</p>
+<hr/>
+<h4>Preguntas rápidas</h4>
+<p><b>1. (Estilo final)</b> Un FAT32 usa clusters de <b>8 KB</b> y sectores de <b>512 B</b>. Se guarda un archivo de <b>1.000.000 bytes</b>.</p>
+<ul><li>a) ¿Cuántos sectores tiene cada cluster?</li><li>b) ¿Cuántos clusters ocupa el archivo y cuánto espacio en disco usa?</li><li>c) ¿Cuánta fragmentación interna hay?</li></ul>
+<p><b>2.</b> Un servidor tiene un disco de 1 TB <b>casi lleno</b>: solo el <b>2 %</b> de los bloques está libre. ¿Qué ocupa menos espacio para registrar los libres, la lista enlazada o el mapa de bits? ¿Por qué?</p>
+<h3>Corrección del tema 7</h3>
+<h4>Pregunta 1: el planteo está bien, pero hay dos errores de cuenta</h4>
+<p><b>a) ✅ 16 sectores.</b> 8192 / 512 = 16.</p>
+<p><b>b) ✅ 123 clusters. ❌ El espacio en disco es otro.</b></p>
+<pre>1.000.000 div 8192 = 122 clusters llenos   → 122 × 8192 = 999.424 B
+resto = 1.000.000 − 999.424 = 576 B          → va en el cluster 123
+espacio en disco = 123 × 8192 = 1.007.616 B</pre>
+<p>Vos pusiste 1.008.192, que da justo <b>576 de más</b>: sumaste el resto encima de los 123 clusters. El resto ya está <b>adentro</b> del cluster 123. El espacio en disco es siempre <b>clusters × tamaño del cluster</b>, sin sumar nada más.</p>
+<p><b>c) ❌ Son 7616 B, no 448.</b></p>
+<pre>fragmentación interna = 8192 − 576 = 7616 B</pre>
+<p>Creo que tus 448 salen de pensar en <b>sectores</b>: 576 B ocupan 1 sector lleno y 64 B del segundo, y 512 − 64 = 448.</p>
+<p>⚠️ <b>Pero el sistema de archivos asigna clusters enteros, no sectores.</b> Aunque el último cluster use 2 de sus 16 sectores, los 16 quedan reservados para ese archivo. La fragmentación se mide contra la <b>unidad de asignación</b>, que acá es el cluster.</p>
+<p>🧠 Dato curioso: este archivo desperdicia casi un cluster entero (93 %), porque el resto le quedó muy chico. Es el peor caso.</p>
+<h4>Pregunta 2: ✅ correcta, con el razonamiento justo</h4>
+<p>Con números (bloques de 1 KB y números de 32 bits):</p>
+<pre>1 TB / 1 KB = 2^30 ≈ 1.074 millones de bloques
+
+Mapa de bits: 2^30 bits / 8 / 1024           = 131.072 bloques   (fijo, no depende de cuántos haya libres)
+Lista (2 % libre): 21,5 M libres / 255       ≈  84.200 bloques   ← gana</pre>
+<ul><li>La lista gana porque el disco está <b>por debajo del ~3 % libre</b>. Ese es el punto donde se cruzan las dos.</li><li><b>Para el final:</b> el mapa ocupa <b>siempre lo mismo</b>, porque representa todo el disco. La lista <b>crece con la cantidad de libres</b>.</li><li>Encima, los bloques de la lista <b>son bloques libres</b>, así que en la práctica no le roban espacio a nadie.</li></ul>
+<h4>Diagnóstico del tema 7</h4>
+<ul><li><b>Firme:</b> la idea de lista contra mapa de bits.</li><li><b>A cuidar:</b> la cuenta de fragmentación.</li></ul>
+<p>Para no volver a errarle:</p>
+<pre>1) n_llenos = tamaño div bloque
+2) resto    = tamaño − n_llenos × bloque
+3) bloques  = n_llenos + 1   (si resto &gt; 0)
+4) disco    = bloques × bloque
+5) frag     = bloque − resto          ← contra el BLOQUE / CLUSTER, nunca contra el sector</pre>
+<p>Si querés practicarla, en espacio_disco.html poné 1.000.000 B, bloque de 8 KB y sector de 512 B, y vas a ver las mismas cuentas paso a paso.</p>
+<hr/>
+<h2>Tema 8 — Respaldos, consistencia (fsck) y rendimiento</h2>
+<p>Este tema son <b>tres herramientas para que el sistema de archivos sobreviva</b>:</p>
+<pre>   RESPALDOS                CONSISTENCIA (fsck)              RENDIMIENTO
+   "si se pierde todo"      "si se cortó la luz a mitad"     "que no sea lento"
+   vaciado físico/lógico    bloques + directorios            caché · lectura adelantada
+   incremental                                               brazo cerca · desfragmentar</pre>
+<hr/>
+<h3>8.1 Respaldos (págs. 298–304)</h3>
+<p><b>Para qué sirven:</b> para recuperarse de un <b>desastre</b> (el disco se rompe, un incendio) y de la <b>estupidez</b> (borraste algo que necesitabas; por eso existe la Papelera).</p>
+<p><b>Qué hay que decidir:</b></p>
+<ul><li><b>Qué respaldar.</b> No todo: ni los binarios reinstalables, ni los temporales, ni <code>/dev</code>. Este último es <b>peligroso</b>, porque el respaldo se colgaría leyendo un dispositivo.</li><li><b>Incremental.</b> Un vaciado completo cada semana o cada mes, más uno diario de lo que cambió. Al restaurar, va primero el completo y después <b>todos los incrementales en orden</b>.</li><li><b>Compresión.</b> Ahorra espacio, pero un solo error en la cinta puede arruinar todo.</li><li><b>Sistema activo.</b> Si se modifica mientras se copia, el respaldo queda inconsistente. La solución son las <b>instantáneas</b> (snapshots).</li><li><b>Guardar las cintas fuera del sitio</b>, para que un incendio no se lleve también el respaldo.</li></ul>
+<table><tr><th></th><th><b>Vaciado físico</b></th><th><b>Vaciado lógico</b></th></tr><tr><td>Qué copia</td><td>bloques 0 … n, en orden</td><td>recorre el árbol y copia lo modificado desde una fecha</td></tr><tr><td>A favor</td><td>simple, rápido, casi sin errores</td><td>incremental, restaura <b>un</b> archivo</td></tr><tr><td>En contra</td><td>no saltea directorios, no es incremental, no restaura archivos sueltos</td><td>más complejo</td></tr></table>
+<p><b>El algoritmo de UNIX (fig. 4-25)</b> usa un mapa de bits indexado por nodo-i y tiene 4 fases:</p>
+<pre>1) marcar los archivos modificados y TODOS los directorios
+2) desmarcar los directorios que no tienen nada modificado debajo
+3) vaciar los directorios marcados (con sus atributos)
+4) vaciar los archivos marcados</pre>
+<p>⚠️ <b>Se vacían directorios que no cambiaron</b> si están <b>en el camino</b> a algo modificado. Así se puede restaurar en un disco nuevo, o recuperar <code>/usr/jhs/proy/nr3/planes/resumen</code> aunque hayan borrado <code>nr3</code>.</p>
+<p>🧠 <b>Trampas al restaurar:</b></p>
+<ul><li>La lista de libres <b>no se respalda</b>: se reconstruye como complemento de los bloques usados.</li><li>Un archivo con <b>varios vínculos</b> se restaura <b>una sola vez</b>.</li><li>Los <b>huecos</b> de un archivo no se restauran como ceros (si no, un <code>core</code> restaurado ocuparía todo el espacio de direcciones).</li><li>Los archivos especiales (por ejemplo, los pipes con nombre) no se vacían.</li></ul>
+<hr/>
+<h3>8.2 Consistencia: fsck (págs. 304–307) ★ práctico</h3>
+<p>Si el sistema se cae antes de escribir los bloques modificados, el FS puede quedar inconsistente. Es grave si eran bloques de <b>nodos-i, directorios o la lista de libres</b>. <b>fsck</b> (UNIX) o <b>scandisk</b> (Windows) lo verifican <b>usando la redundancia</b> del propio FS.</p>
+<h4>a) Bloques: dos tablas de contadores</h4>
+<ul><li><b>«En uso»</b>: se leen todos los nodos-i y se suma 1 por cada bloque que lista cada uno.</li><li><b>«Libres»</b>: se suma 1 por cada vez que el bloque aparece en la lista o en el mapa.</li></ul>
+<p><b>Regla:</b> en cada bloque, <b>uso + libres = 1</b>.</p>
+<pre> Bloque   0 1 2 3 4 5 6 7 …
+ (b) uso  1 1 0 1 0 1 1 1     bloque 2: 0 y 0 → FALTANTE
+     lib  0 0 0 0 1 0 0 0        → se agrega a libres (solo desperdiciaba)
+
+ (c) lib  0 0 1 0 2 0 0 0     bloque 4: 2 en libres → DUPLICADO EN LIBRES
+                                 → se reconstruye la lista
+                                 (con mapa de bits es IMPOSIBLE)
+
+ (d) uso  1 1 0 1 0 2 1 1     bloque 5: 2 en uso → DUPLICADO DE DATOS  ← el peor
+                                 → copiarlo a un bloque libre, darle la copia
+                                   a uno de los archivos y AVISAR al usuario</pre>
+<p>⚠️ En el caso (d), la estructura queda bien, pero <b>seguramente uno de los dos archivos tiene basura</b>. Si no se arreglara, al borrar uno de los archivos el bloque quedaría <b>libre y en uso a la vez</b>.</p>
+<h4>b) Directorios: contador por <b>nodo-i</b></h4>
+<p>fsck recorre el árbol desde la raíz y cuenta <b>en cuántos directorios aparece cada nodo-i</b> (los vínculos duros suman; los simbólicos no). Después compara con la <b>cuenta de vínculos</b> guardada en el nodo-i:</p>
+<table><tr><th>Caso</th><th>Qué pasa</th><th>Gravedad</th></tr><tr><td>cuenta <b>&gt;</b> entradas</td><td>nunca llega a 0, el nodo-i no se libera</td><td>desperdicio</td></tr><tr><td>cuenta <b>&lt;</b> entradas</td><td>al borrar un nombre llega a 0, se libera, y <b>el otro nombre queda apuntando a un nodo-i que se va a reasignar</b></td><td><b>catastrófico</b></td></tr></table>
+<p>En los dos casos el arreglo es el mismo: <b>cuenta = cantidad real de entradas</b>.</p>
+<p>🔗 La cuenta baja es <b>exactamente el desastre del tema 6</b>: el nombre viejo termina abriendo otro archivo. Y la <b>bitácora</b> existe para no tener que correr fsck sobre todo el disco.</p>
+<p>También marca como sospechosos los modos raros como <code>0007</code> y los archivos del superusuario con <b>SETUID</b> dentro de directorios de usuarios.</p>
+<hr/>
+<h3>8.3 Rendimiento (págs. 307–312)</h3>
+<p>Leer una palabra de memoria tarda unos 10 ns; ir al disco, unos 5–10 ms. Es <b>un millón de veces</b> más lento.</p>
+<p><b>Caché de bloques (fig. 4-28):</b> una tabla de hash por dirección de bloque y una lista doblemente enlazada en orden de uso (LRU).</p>
+<pre> pedido de bloque ─► ¿está en la caché (hash)? ─ sí ─► se usa, sin disco
+                                 │ no
+                                 ▼
+                     sacar uno (LRU), escribirlo si estaba modificado,
+                     leer el pedido del disco a la caché</pre>
+<ul><li>🔗 <b>U3:</b> es reemplazo de páginas (FIFO, segunda oportunidad, LRU), y el bit de modificado es el <b>bit M</b>.</li><li>⚠️ <b>El LRU exacto acá SÍ es posible</b> (hay pocas referencias), <b>pero no conviene</b>: un bloque de nodos-i modificado podría quedar mucho tiempo sin escribirse. Por eso se usa un <b>LRU modificado</b>:</li><li>los bloques <b>esenciales para la consistencia</b> (todo menos los datos) <b>se escriben apenas se modifican</b>;</li><li>los que no se van a volver a usar pronto van <b>al frente</b> de la lista, para reutilizarse primero.</li></ul>
+<table><tr><th><b>UNIX: <code>sync</code> cada 30 s</b> (programa <i>update</i>)</th><th><b>Windows histórico: write-through</b></th></tr><tr><td>+ junta escrituras: 1 KB escrito carácter por carácter = 1 E/S</td><td>− 1 E/S por carácter</td></tr><tr><td>− si se cae, se pierden hasta 30 s</td><td>+ sacar el disquete no rompía nada</td></tr><tr><td>se impuso con los discos rígidos</td><td>hoy existe <code>FlushFileBuffers</code> y NTFS tiene bitácora</td></tr></table>
+<p><b>Otras tres técnicas:</b></p>
+<ul><li><b>Lectura adelantada:</b> cuando se pide el bloque k, se trae también el k+1. Solo sirve con acceso secuencial: hay <b>un bit por archivo abierto</b>, y cada <code>seek</code> lo pasa a «aleatorio».</li><li><b>Menos movimiento del brazo:</b></li><li>asignar bloques cercanos (fácil con mapa de bits, 🔗 tema 7);</li><li>poner los nodos-i <b>en el medio del disco</b>, o usar <b>grupos de cilindros</b> con sus propios nodos-i, bloques y lista libre (fig. 4-29).</li><li><b>Desfragmentar:</b> mover los archivos para hacerlos contiguos (<code>defrag</code>). No se pueden mover el archivo de paginación, el de hibernación ni la bitácora. ext2 y ext3 casi no lo necesitan.</li></ul>
+<hr/>
+<h4>Preguntas rápidas</h4>
+<p><b>1. (Estilo final)</b> Después de un corte de luz, fsck arma estas tablas en un disco de 10 bloques:</p>
+<pre> Bloque   0 1 2 3 4 5 6 7 8 9
+ En uso   1 0 1 1 2 0 0 1 0 1
+ Libres   0 0 0 0 0 1 2 0 1 1</pre>
+<ul><li>a) Diagnosticá cada bloque con problema y decí cómo lo repara fsck.</li><li>b) ¿Alguno de esos problemas sería imposible si se usara mapa de bits en vez de lista? ¿Cuál y por qué?</li></ul>
+<p><b>2.</b> Un usuario de Linux copia un trabajo a un pendrive y lo saca <b>sin expulsarlo</b>. Al abrirlo en otra máquina, el archivo está vacío o corrupto. ¿Por qué pasa esto en UNIX y no pasaba con la escritura inmediata (write-through) del Windows viejo? ¿Qué hace «expulsar» por debajo?</p>
+<h3>Corrección del tema 8</h3>
+<h4>1a) Bien encaminada: dos bloques correctos y dos a medias</h4>
+<table><tr><th>Bloque</th><th>uso / libres</th><th>Tu respuesta</th><th>Corrección</th></tr><tr><td>1</td><td>0 / 0</td><td>✅ faltante, se agrega a libres</td><td>—</td></tr><tr><td>4</td><td>2 / 0</td><td>🟡 la idea está</td><td>Faltan dos cosas (abajo)</td></tr><tr><td>6</td><td>0 / 2</td><td>✅ duplicado en libres, se reconstruye la lista</td><td>—</td></tr><tr><td>9</td><td>1 / 1</td><td>❌ «ver cuál fue el paso reciente»</td><td>fsck no puede saber eso (abajo)</td></tr></table>
+<p><b>Bloque 4.</b> Tenías la mitad: fsck toma un bloque libre (el <b>5</b>, el primero libre) y lo saca de la lista. Te faltó:</p>
+<ul><li><b>Copiar el contenido</b> del bloque 4 en el bloque 5 y darle la copia a <b>uno</b> de los dos archivos. Si solo agregás un puntero a un bloque vacío, ese archivo pierde sus datos.</li><li><b>Avisarle al usuario</b>, porque seguramente uno de los dos archivos tiene basura y fsck no sabe cuál.</li></ul>
+<p><b>Bloque 9.</b> fsck <b>no tiene historial</b>: no sabe qué pasó primero. Solo ve dos tablas. La regla es:</p>
+<pre> en uso por un archivo  +  figura como libre   →   se SACA DE LA LISTA DE LIBRES</pre>
+<p><b>Nunca</b> se le saca el bloque al archivo, porque perderías datos. Si en cambio lo dejás en la lista de libres, el próximo archivo que se cree podría recibirlo y <b>pisar</b> los datos.</p>
+<p>🧠 <b>Idea para recordar:</b> fsck reconstruye la lista de libres como el <b>complemento de los bloques que usan los nodos-i</b>. Con eso se arreglan de un saque los bloques 1, 6 y 9. Solo el <b>duplicado de datos</b> (bloque 4) necesita un tratamiento especial.</p>
+<h4>1b) ✅ Correcta</h4>
+<p>El <b>bloque 6</b> (duplicado en libres) es imposible con mapa de bits: un bit vale 0 o 1, no puede valer 2.</p>
+<p>⚠️ Ojo con generalizar: el mapa de bits <b>no</b> evita los otros casos.</p>
+<ul><li>El faltante (1) también puede pasar con un bit en 0 y ningún nodo-i que lo use.</li><li>El de uso y libre a la vez (9) también: un bit en «libre» mientras un nodo-i lo usa.</li><li>El duplicado de datos (4) está en los nodos-i, no en el registro de libres.</li></ul>
+<h4>2) ✅ Correcta, y nombraste el desmontaje, bien ahí</h4>
+<p>Para afinar el porqué:</p>
+<ul><li>Con escritura <b>diferida</b>, el <code>write</code> termina cuando los datos llegan a la <b>caché en RAM</b>, no al pendrive. Pasan al disco recién con <code>sync</code>, que el programa <i>update</i> corre cada 30 s.</li><li>Si lo sacás antes, los datos <b>nunca llegaron</b> al pendrive. Peor todavía, pueden haber llegado <b>a medias</b> los metadatos: nodo-i o FAT, directorio, lista de libres. Eso lo deja <b>corrupto</b>, no solo vacío. 🔗 Es el problema de consistencia de este mismo tema.</li><li>Con <b>write-through</b>, cada bloque iba al disco en el momento, así que el medio siempre estaba al día. Era más lento, pero se podía sacar sin riesgo.</li><li><b>Expulsar = <code>sync</code> + desmontar</b> (se saca de la tabla de montaje), y recién ahí es seguro sacarlo.</li></ul>
+<h4>Diagnóstico</h4>
+<ul><li><b>Firme:</b> los casos de fsck y la caché con <code>sync</code>.</li><li><b>A pulir:</b> el duplicado de datos (<b>copiar el contenido + avisar</b>) y el caso de uso y libre (<b>se saca de libres, nunca del archivo</b>).</li></ul>
+<hr/>
+<h2>Tema 9 — Ejemplos: ISO 9660, MS-DOS, UNIX V7, NTFS y NFS</h2>
+<p>Este tema no trae teoría nueva: es <b>ver aplicado</b> lo de los temas 3 y 4. Cada sistema real eligió una forma de guardar los bloques:</p>
+<pre>                ¿dónde están los bloques?        ¿y los libres?
+ ISO 9660   →   CONTIGUOS (inicio + tamaño)      no se registran
+ MS-DOS     →   FAT (lista enlazada en RAM)      la misma FAT
+ UNIX V7    →   NODO-I (10 directos + indir.)    lista libre
+ NTFS       →   TIRADAS en la MFT                mapa de bits</pre>
+<p>⚠️ El <b>resumen de la cátedra no cubre este tema</b>. Lo que sigue sale del libro (4.5, 11.8 y 10.6.4), y el programa lo pide en «NTFS» y «servidores de archivos».</p>
+<hr/>
+<h3>9.1 CD-ROM: ISO 9660 (págs. 312–316)</h3>
+<p><b>Intuición:</b> se escribe <b>una sola vez</b>, así que todo es simplísimo. No hace falta registrar bloques libres porque nunca se borra nada.</p>
+<ul><li><b>Objetivo:</b> que cualquier CD se lea en cualquier máquina. Por eso los números binarios se guardan <b>dos veces</b>, en little-endian y en big-endian.</li><li>No hay cilindros sino <b>una espiral</b>. Bloques de 2352 B, de los cuales <b>2048 son datos útiles</b>.</li><li><b>Estructura:</b> 16 bloques libres (para el arranque, por ejemplo), después el <b>descriptor de volumen primario</b> y después el directorio raíz.</li><li><b>Archivos contiguos:</b> la entrada del directorio guarda <b>primer bloque + tamaño</b> y con eso basta (🔗 asignación contigua, tema 3).</li><li><b>Nombres:</b> <code>NOMBRE.EXT;versión</code>, solo mayúsculas, compatibles con MS-DOS.</li><li><b>Límites:</b> máximo <b>8 niveles</b> de directorios; los años se cuentan desde 1900, así que hay un problema en <b>2156</b>.</li><li><b>Niveles:</b></li><li><b>1:</b> 8+3 y contiguo;</li><li><b>2:</b> nombres de hasta 31 caracteres;</li><li><b>3:</b> archivos en varias secciones.</li><li><b>Extensiones</b>, que van en el campo «uso del sistema», así un lector viejo las ignora:</li><li><b>Rock Ridge (UNIX):</b> PX para los permisos rwx, SL para los vínculos simbólicos, NM para nombres largos, TF para los 3 tiempos.</li><li><b>Joliet (Microsoft):</b> 64 caracteres Unicode y más de 8 niveles.</li></ul>
+<p>⚠️ <b>Errata del libro:</b> dice que se adoptó en «1998». <b>Es 1988</b>, como dice el mismo libro unas páginas después.</p>
+<h3>9.2 MS-DOS / FAT (págs. 316–320) ★</h3>
+<p><b>Entrada de directorio fija de 32 bytes (fig. 4-31):</b></p>
+<pre> ┌────────┬───┬───┬──────────┬────┬─────┬──────┬────────┐
+ │ nombre │ext│atr│reservado │hora│fecha│1er bl│ tamaño │
+ │   8    │ 3 │ 1 │    10    │ 2  │  2  │  2   │   4    │  = 32 bytes
+ └────────┴───┴───┴──────────┴────┴─────┴──────┴────────┘</pre>
+<ul><li><b>Atributos:</b> solo lectura, <b>archivado</b> (los programas de respaldo lo apagan y cualquier modificación lo vuelve a prender), oculto y sistema.</li><li><b>Hora</b> en 16 bits: horas (5), minutos (6) y <b>segundos / 2</b> (5). Por eso la precisión es <b>±2 s</b>: 65.536 valores no alcanzan para los 86.400 segundos de un día.</li><li><b>Fecha:</b> año − 1980 (7 bits), mes (4) y día (5). El último año posible es 1980 + 127 = <b>2107</b>.</li><li><b>Bloques:</b> la entrada tiene el <b>primer bloque</b> y el resto se sigue en la <b>FAT</b>, en RAM (🔗 tema 3).</li><li><b>Libres:</b> la <b>misma FAT</b>, con un código especial. No hace falta ni mapa de bits ni lista.</li></ul>
+<p><b>Las versiones de FAT:</b></p>
+<table><tr><th></th><th>Bits</th><th>Bloque</th><th>Partición máx.</th></tr><tr><td>FAT-12</td><td>12</td><td>0,5–4 KB</td><td>2–16 MB (disquetes)</td></tr><tr><td>FAT-16</td><td>16</td><td>2–32 KB</td><td>hasta <b>2 GB</b> (64K × 32 KB)</td></tr><tr><td>FAT-32</td><td><b>28</b> ⚠️</td><td>4–32 KB</td><td>1 TB con 4 KB y <b>tope de 2 TB</b> (2⁹ × 2³²)</td></tr></table>
+<p><b>El ejemplo del libro, una partición de 2 GB:</b></p>
+<ul><li><b>FAT-16</b> está obligada a usar bloques de <b>32 KB</b>. Con archivos de 8 KB, <b>se desperdician 3/4 del disco</b>.</li><li><b>FAT-32</b> puede usar bloques de <b>4 KB</b>, así que no hay desperdicio. Pero la FAT tiene 2 GB / 4 KB = 512K entradas × 4 B = <b>2 MB de RAM</b>.</li></ul>
+<p>🧠 Es el mismo compromiso del tema 7: <b>bloque chico = menos desperdicio, tabla más grande</b>.</p>
+<h3>9.3 UNIX V7 (págs. 320–324)</h3>
+<pre> Entrada de directorio (16 B):   ┌──────────┬────────────────┐
+                                 │ nº nodo-i│     nombre     │
+                                 │   2 B    │     14 B       │
+                                 └──────────┴────────────────┘</pre>
+<ul><li>Todo lo demás (tamaño, 3 tiempos, dueño, permisos, <b>cuenta de vínculos</b> y direcciones) está en el <b>nodo-i</b>.</li><li><b>10 directos</b>, más indirecto simple, doble y triple (🔗 tema 4).</li><li>Con 2 B de número de nodo-i, el máximo es <b>64K archivos por FS</b>.</li><li>Nombres de hasta 14 caracteres, con cualquier ASCII salvo <code>/</code> y NUL.</li><li>🔗 La búsqueda de <code>/usr/ast/mbox</code> (7 lecturas) ya la hiciste en el tema 5.</li></ul>
+<h3>9.4 NTFS (11.8, págs. 906–915)</h3>
+<ul><li>Direcciones de <b>64 bits</b>, nombres de <b>255 caracteres Unicode</b> y clusters de 512 B a 64 KB (casi siempre <b>4 KB</b>).</li><li>Un archivo es un <b>conjunto de atributos</b> (flujos), no solo una secuencia de bytes. Puede tener flujos extra, como <code>foo:flujo1</code>, que <b>se pierden al copiar</b> a otro FS.</li><li><b>MFT (Master File Table):</b> registros de <b>1 KB</b>, uno por archivo, con pares (encabezado de atributo, valor).</li><li>Si el valor es <b>corto, va adentro</b> del registro: los archivos chicos ni siquiera usan bloques.</li><li>Si es largo, es <b>no residente</b> y el registro apunta a otro lado.</li><li><b>Los bloques van en tiradas</b> (fig. 11-43): pares (dirección, longitud). Ejemplo: <code>(20,4) (64,2) (80,3)</code> = 9 bloques en 3 tiradas.</li><li><b>Los primeros 16 registros son metadatos:</b></li><li>0 = <code>$Mft</code>, la propia MFT, que <b>es un archivo</b>;</li><li>1 = el espejo de la MFT;</li><li>2 = <code>$LogFile</code>, la <b>bitácora</b> (🔗 tema 6);</li><li>5 = la raíz;</li><li>6 = <code>$Bitmap</code>, los <b>libres</b>;</li><li>8 = los bloques defectuosos;</li><li>9 = <code>$Secure</code>, la seguridad.</li></ul>
+<h3>9.5 NFS: servidores de archivos (10.6.4 y 8.4.4)</h3>
+<ul><li>El servidor <b>exporta</b> directorios (<code>/etc/exports</code>) y el cliente los <b>monta</b> donde quiere.</li><li>El mismo archivo puede llamarse <code>/usr/ast/trabajo/proy1/a</code> en un cliente y <code>/mnt/proy1/a</code> en otro.</li><li>El servidor no conoce el punto de montaje.</li><li><b>Dos protocolos:</b></li><li><b>montaje</b>, que devuelve un <i>manejador de archivo</i>;</li><li><b>acceso</b> (lookup, read, write).</li><li><b>NFSv3 no tiene estado:</b> no hay open ni close en el servidor.</li><li><b>+</b> Si el servidor se cae y rearranca, no se pierde nada.</li><li><b>−</b> Los bloqueos de archivos necesitan otro mecanismo.</li><li><b>NFSv4 sí tiene estado.</b></li><li><b>Implementación:</b> el <b>VFS</b> (🔗 tema 6) tiene un nodo-v por archivo abierto. El nodo-v apunta a un <b>nodo-i</b> si el archivo es local, o a un <b>nodo-r</b> si es remoto; en ese caso el cliente NFS manda el mensaje al servidor.</li><li><b>Problema de caché:</b> dos clientes pueden tener el mismo bloque en caché. Se parchea con temporizadores (<b>3 s</b> para datos, <b>30 s</b> para directorios).</li><li><b>Semántica de sesión:</b> los cambios los ven los demás <b>recién cuando se cierra el archivo</b>. Si dos lo modifican a la vez, <b>gana el que cierra último</b>.</li><li><b>Transparencia de localización</b> (la ruta no dice dónde está el archivo) <b>≠ independencia de ubicación</b> (se puede mover sin cambiarle el nombre). El montaje remoto <b>no</b> tiene independencia de ubicación.</li></ul>
+<hr/>
+<h4>Preguntas rápidas</h4>
+<p><b>1. (Estilo final)</b> Tenés una partición de <b>1 GB</b> y archivos de <b>2 KB</b> en promedio.</p>
+<ul><li>a) Con <b>FAT-16</b>, ¿cuál es el bloque <b>más chico</b> que podés usar para cubrir 1 GB? ¿Qué porcentaje se desperdicia con cada archivo?</li><li>b) Con <b>FAT-32</b> y bloques de <b>4 KB</b>, ¿cuánta RAM ocupa la FAT? ¿Y el desperdicio?</li></ul>
+<p><b>2.</b> Un cliente está leyendo un archivo por NFSv3 y <b>el servidor se reinicia</b> en el medio. Cuando vuelve, el cliente sigue leyendo como si nada. ¿Por qué es posible? ¿Qué tendría que pasar si fuera un servidor con estado?</p>
+<h3>Corrección del tema 9</h3>
+<h4>1) ✅ Todo correcto</h4>
+<p><b>a) Bloque de 16 KB, con 87,5 % de desperdicio.</b> El razonamiento (2¹⁶ entradas, y partición / entradas = bloque mínimo) es exactamente el que se pide.</p>
+<p>Para cerrar el dato: en la fig. 4-32, FAT-16 con 16 KB da justo <b>1024 MB</b>. Tu partición usa el <b>100 %</b> de lo direccionable, o sea que estás <b>al límite</b>: si la partición creciera un poco, tendrías que pasar a 32 KB y el desperdicio subiría a 30/32 ≈ 94 %.</p>
+<p><b>b) 256K entradas × 4 B = 1 MB de RAM, con 50 % de desperdicio.</b> ✅ Y bien la aclaración de que la entrada ocupa 32 bits pero usa 28.</p>
+<p>🧠 La comparación que querría ver en un final: FAT-32 <b>cambia RAM por disco</b>. Gasta 1 MB de RAM para pasar de 87,5 % a 50 % de desperdicio. Con FAT-16, la tabla ocupa 64K × 2 B = <b>128 KB</b>.</p>
+<h4>2) ✅ Correcta y completa</h4>
+<ul><li><b>Sin estado:</b> cada <code>read</code> trae el manejador, el desplazamiento y la cantidad, así que no hay nada que perder. Bien explicado, y bien nombrado que no hay <code>open</code> ni <code>close</code> remotos.</li><li><b>Con estado:</b> se pierden las tablas de archivos abiertos y de bloqueos, y hace falta recuperarlas.</li></ul>
+<p>Una aclaración: el «período de gracia» donde los clientes reclaman sus bloqueos es correcto para NFSv4 real, pero <b>el Tanenbaum no lo describe</b>. En el examen, quedate con lo del libro: <i>v3 sin estado → al caer no se pierde nada, pero los bloqueos necesitan un mecanismo aparte; v4 con estado → admite <code>open</code>, porque el servidor guarda las estructuras de los archivos abiertos.</i></p>
+<h4>Diagnóstico</h4>
+<ul><li><b>Firme:</b> las cuentas de FAT y NFS sin estado contra con estado.</li></ul>
+<hr/>
+<hr/>
+<h2>Tema 10 — Protección</h2>
+<h4>La intuición</h4>
+<p>Pensá en un edificio con muchas puertas. Se puede controlar de dos formas:</p>
+<ul><li><b>un guardia en cada puerta</b> con la lista de quién puede pasar: eso es la <b>ACL</b>;</li><li><b>un llavero para cada persona</b> con las llaves de las puertas que puede abrir: eso es la <b>capacidad</b>.</li></ul>
+<p>Es la misma información guardada al revés.</p>
+<p>⚠️ El <b>resumen de la cátedra no cubre este tema</b>. Viene del libro, capítulo 9.3, y el programa lo pide.</p>
+<hr/>
+<h3>10.1 Dominios y POLA (págs. 622–625)</h3>
+<ul><li><b>Objeto:</b> lo que se protege, sea hardware (CPU, impresora) o software (archivo, semáforo). Cada uno tiene sus <b>operaciones</b>: read y write para un archivo, up y down para un semáforo.</li><li><b>Derecho:</b> el permiso para hacer una operación.</li><li><b>Dominio:</b> un conjunto de pares <b>(objeto, derechos)</b>. Suele ser un usuario, pero puede ser un grupo.</li><li><b>POLA</b> (<i>principio de menor autoridad</i>): cada dominio tiene <b>lo mínimo necesario</b>.</li></ul>
+<pre>   Fig. 9-4                 ┌──────────── Dominio 2 ────────────┐
+  ┌── Dominio 1 ──┐         │ Archivo1[RW] Archivo4[RWX]        │
+  │ Archivo1[R]   │         │ Archivo5[RW]   ┌─────────────┐    │
+  │ Archivo2[RW]  │         │                │Impresora1[W]│ ◄── en D2 y D3, mismos derechos
+  └───────────────┘         └────────────────┼─────────────┼────┘
+   Archivo1: en D1 (R) y en D2 (RW) ◄── mismo objeto, distintos derechos
+                                     Dominio 3: Archivo6[RWX] Plotter2[W]</pre>
+<p><b>En UNIX, el dominio es el par (UID, GID).</b> Hay dos formas de <b>cambiar de dominio</b>:</p>
+<ul><li>una <b>llamada al sistema</b>, que pasa de modo usuario a modo kernel (🔗 U1);</li><li>un <code>exec</code> de un archivo con <b>SETUID o SETGID</b>, que le cambia al proceso el UID o el GID efectivo.</li></ul>
+<h3>10.2 Matriz de protección (págs. 625–626)</h3>
+<p>Filas = dominios, columnas = objetos, y cada celda tiene los derechos.</p>
+<pre>           F1    F2    F3          ← Fig. 9-7 / 9-9
+    A      RW    R     ·
+    B      R     RW    RWX
+    C      ·     R     RX
+           │                ─────────────────── fila de B = su LISTA DE CAPACIDADES
+           └─ columna de F1 = su ACL</pre>
+<ul><li><b>El cambio de dominio</b> se modela poniendo los <b>dominios como objetos</b>, con el derecho <b>enter</b> (fig. 9-6). Así se representa un programa SETUID: D1 puede entrar a D2, pero no volver.</li><li>La matriz <b>no se guarda entera</b>, porque es enorme y <b>casi vacía</b>. Se guarda <b>por columnas o por filas</b>, solo con lo que no está vacío.</li></ul>
+<h3>10.3 ACL: por columnas (págs. 626–628)</h3>
+<p>Cada <b>objeto</b> tiene una lista ordenada de quién puede y qué:</p>
+<pre> F1: A: RW; B: R          F2: A: R; B: RW; C: R          F3: B: RWX; C: RX</pre>
+<ul><li><b>Con grupos (roles):</b> las entradas son <code>usuario, grupo: derechos</code>.</li><li>Tana, que es administradora (sysadm) y miembro de fanpichones, puede escribir el archivo de contraseñas <b>solo si inició sesión como sysadm</b>.</li><li><code>tana, *: RW</code> le da acceso con cualquier grupo.</li><li><b>Se aplica la primera entrada que coincide.</b></li><li><code>virgil, *: (nada); *, *: RW</code> deja pasar a todos <b>menos a Virgil</b>.</li><li>Si invertís el orden, Virgil entra.</li><li><b>Revocar es fácil:</b> se edita la ACL.</li><li>⚠️ Pero si se revisa solo al hacer <code>open</code>, <b>un archivo ya abierto conserva los derechos</b> que tenía.</li></ul>
+<h3>10.4 Capacidades: por filas (págs. 628–631)</h3>
+<p>Cada <b>proceso</b> tiene su <b>lista-C</b>. Cada capacidad es un <b>identificador de objeto + un mapa de bits de derechos</b>.</p>
+<p><b>Hay que impedir que el usuario las falsifique.</b> Tres métodos:</p>
+<ol><li><b>Arquitectura etiquetada:</b> un bit extra por palabra de memoria que solo toca el kernel (IBM AS/400).</li><li><b>La lista-C dentro del SO</b>, y el proceso la usa <b>por posición</b>: «leer de la capacidad 2». Es la idea de los <b>descriptores de archivo</b> de UNIX (Hydra).</li><li><b>Cifrada en espacio de usuario</b> (Amoeba, fig. 9-10):</li></ol>
+<pre>   ┌──────────┬────────┬──────────┬────────────────────────────────────┐
+   │ servidor │ objeto │ derechos │ f(objeto, derechos, comprobación)  │
+   └──────────┴────────┴──────────┴────────────────────────────────────┘
+   f = función de una vía · la comprobación es un número aleatorio que el servidor NUNCA envía
+   → si cambiás "R" por "RW", no podés fabricar el 4.º campo</pre>
+<h3>10.5 ACL contra capacidades ★ (pág. 631)</h3>
+<table><tr><th></th><th><b>ACL</b></th><th><b>Capacidades</b></th></tr><tr><td>Verificar un acceso</td><td>puede ser una búsqueda larga</td><td>inmediato («capacidad 3»)</td></tr><tr><td>Revocar</td><td><b>fácil y selectivo</b></td><td><b>difícil</b>: están repartidas por todos lados</td></tr><tr><td>Revocar en Amoeba</td><td>—</td><td>cambiar la comprobación → <b>invalida a todos</b></td></tr><tr><td>Encapsular un proceso</td><td>difícil</td><td>fácil</td></tr><tr><td>Se borra el objeto</td><td>se va con su ACL</td><td>quedan capacidades colgadas</td></tr></table>
+<p><b>El ejemplo resuelto:</b> sacarle a B la lectura de F1.</p>
+<ul><li><b>Con ACL:</b> se edita la ACL de F1 y listo.</li><li><b>Con capacidades administradas por el kernel:</b> hay que <i>encontrar</i> la capacidad de B.</li><li><b>Con Amoeba:</b> se cambia la comprobación de F1, y <b>A también pierde la suya</b>.</li></ul>
+<h3>10.6 Sistemas confiables y TCB (págs. 631–633)</h3>
+<ul><li><b>Sistema confiable:</b> declaró formalmente sus requisitos de seguridad y los cumple.</li><li><b>TCB</b> (<i>base de cómputo confiable</i>): el hardware y el software <b>mínimos</b> que hacen cumplir la seguridad. Incluye casi todo el hardware, parte del kernel y los programas SETUID de root.</li><li><b>Monitor de referencia:</b> el punto de la TCB por donde pasan <b>todas</b> las llamadas de seguridad (como <code>open</code>). No hay forma de saltearlo.</li><li>🧠 <b>«Las características son enemigas de la seguridad»:</b> solo un sistema simple puede ser seguro.</li></ul>
+<h3>10.7 Seguridad multinivel (págs. 633–636)</h3>
+<ul><li><b>Discrecional:</b> decide el dueño del archivo.</li><li><b>Obligatorio:</b> decide la organización (militares, hospitales).</li><li>Los niveles van de 0 a 3: no clasificado, confidencial, secreto, alto secreto.</li></ul>
+<pre>            BELL-LA PADULA (secreto)            BIBA (integridad)
+ leer       solo MI nivel o ABAJO               solo MI nivel o ARRIBA
+            "no leer hacia arriba"              "no leer hacia abajo"
+ escribir   solo MI nivel o ARRIBA              solo MI nivel o ABAJO
+            "no escribir hacia abajo"           "no escribir hacia arriba"
+ resultado  la información solo SUBE            lo de abajo no ensucia lo de arriba</pre>
+<p>🧠 <b>Bell-La Padula:</b> el general lee los informes del teniente, y el teniente le puede <b>escribir</b> al general, pero no al revés: si no, el general filtraría secretos hacia abajo.</p>
+<p>⚠️ <b>Los dos modelos están en conflicto directo</b>, así que es difícil tener los dos a la vez.</p>
+<p><b>Harrison et al.</b> definieron 6 primitivas: create y delete object, create y delete domain, insert y remove right. Para un sistema arbitrario <b>no se puede probar</b> que nunca llegue a un estado no autorizado; para uno concreto, sí.</p>
+<h3>10.8 Canales encubiertos (págs. 636–641)</h3>
+<p><b>Modelo de Lampson:</b> un <b>cliente</b> le da sus datos a un <b>servidor</b>, y un <b>colaborador</b> quiere robárselos. El problema de impedirlo se llama <b>confinamiento</b>.</p>
+<p>La matriz puede prohibir que el servidor escriba archivos o le mande mensajes. Pero el servidor puede <b>modular algo observable</b>, un bit por intervalo:</p>
+<ul><li><b>CPU:</b> a fondo para un 1, inactiva para un 0. El colaborador mide su propio tiempo de respuesta. Es ruidoso, pero con <b>Hamming</b> se vuelve confiable.</li><li><b>Fallos de página:</b> muchos para un 1, ninguno para un 0.</li><li><b>Bloquear un archivo</b> (fig. 9-15, flujo <code>11010100</code>): ni siquiera hace falta que el colaborador pueda abrirlo.</li></ul>
+<p>⚠️ <b>Ningún modelo basado en la matriz puede evitarlos.</b> Encontrarlos todos es muy difícil y cerrarlos, casi imposible.</p>
+<ul><li><b>Esteganografía:</b> esconder <b>que existe</b> el mensaje. El ejemplo del libro: 5 obras de Shakespeare en los bits bajos de una foto de cebras, 1024 × 768 × 3 bits = 294.912 B.</li><li><b>Marcas de agua:</b> el mismo truco para probar la autoría.</li><li>🧠 El programa de la materia dice «canales de <b>conversión</b>»: es el mismo tema, que en el libro se llama canales <b>encubiertos</b> (<i>covert channels</i>).</li></ul>
+<hr/>
+<h4>Preguntas rápidas</h4>
+<p><b>1. (Estilo final)</b> Tenés esta matriz de protección:</p>
+<pre>           notas.txt   nomina.db   compilar
+  Ana      RW          ·           X
+  Beto     R           RW          ·
+  Caro     ·           R           RX</pre>
+<ul><li>a) Escribí las <b>ACL</b> de cada objeto y las <b>listas de capacidades</b> de cada usuario.</li><li>b) Hay que quitarle a Beto <b>todo</b> acceso a <code>nomina.db</code>. ¿Qué hay que hacer con ACL? ¿Y con capacidades cifradas tipo Amoeba? ¿Qué le pasa a Caro en cada caso?</li></ul>
+<p><b>2.</b> Dos situaciones:</p>
+<ul><li>a) Un proceso de nivel <b>Secreto</b> quiere <b>escribir</b> un informe en un archivo <b>Confidencial</b>. ¿Lo permite Bell-La Padula? ¿Y Biba? ¿Por qué?</li><li>b) Un archivo tiene la ACL <code>*, alumnos: R; juan, *: RW</code>. Juan, que inició sesión con el grupo <b>alumnos</b>, quiere <b>escribir</b>. ¿Puede? ¿Por qué?</li></ul>
+<h3>Corrección del tema 10</h3>
+<h4>1a) ✅ Correcta</h4>
+<p>Las ACL son las columnas y las listas-C son las filas, todo bien.</p>
+<p>Un detalle de forma: en una ACL <b>no se escribe</b> a quien «no entra». La lista guarda solo las celdas no vacías, y quien no figura no tiene acceso. Queda así:</p>
+<pre>notas.txt: Ana: RW; Beto: R       nomina.db: Beto: RW; Caro: R       compilar: Ana: X; Caro: RX</pre>
+<p>Esa es justamente la razón de guardarla así: <b>no gastar lugar en las celdas vacías</b>.</p>
+<h4>1b) ✅ Correcta</h4>
+<ul><li><b>Con ACL:</b> se borra la entrada de Beto en la ACL de <code>nomina.db</code>, y Caro <b>no se entera</b>. Eso es la revocación selectiva.</li><li><b>Con Amoeba:</b> se cambia la comprobación de <code>nomina.db</code>, y la capacidad de Caro <b>también deja de valer</b>. El servidor tiene que <b>darle una capacidad nueva</b> a Caro (y a todos los que tengan que conservar el acceso), pero no a Beto.</li></ul>
+<p>🧠 Dos cosas para sumar puntos en el examen:</p>
+<ul><li>Con ACL, si Beto <b>ya tenía abierto</b> <code>nomina.db</code> y la ACL se revisa solo en <code>open</code>, conserva el acceso <b>hasta que cierre</b>.</li><li>Con capacidades, Beto pudo haberle <b>copiado</b> la suya a otro antes, y hay que encontrarlas todas.</li></ul>
+<h4>2a) ✅ El resultado está bien, pero la razón de Bell-La Padula no</h4>
+<ul><li><b>Bell-La Padula: NO</b>, por la <b>propiedad \*: no escribir hacia abajo</b>.</li><li>⚠️ El motivo no es «me puedo equivocar». El modelo supone que <b>el proceso puede ser malicioso</b>, por ejemplo un troyano que corre con tu nivel.</li><li>Si un proceso Secreto pudiera escribir en Confidencial, <b>copiaría información secreta a un nivel donde la leen personas sin autorización</b>. Por eso la información solo puede <b>subir</b>.</li><li><b>Biba: SÍ</b>, por la integridad simple: escribir hacia <b>abajo</b> está permitido. Lo de arriba no se ensucia, porque un nivel alto es más confiable que uno bajo. ✅</li><li>🧠 Este es un ejemplo exacto del <b>conflicto directo</b> entre los dos modelos: en la misma situación, uno dice que no y el otro que sí.</li></ul>
+<h4>2b) ✅ Correcta</h4>
+<p>Juan coincide con la primera entrada (<code>*, alumnos</code>), que solo da <b>R</b>, así que no puede escribir. La entrada <code>juan, *: RW</code> <b>nunca se llega a mirar</b>.</p>
+<p>⚠️ Esta es la trampa típica: <b>gana la primera que coincide, no la más específica</b>. Para que Juan pueda escribir, su entrada tiene que ir <b>antes</b>.</p>
+<h4>Diagnóstico</h4>
+<ul><li><b>Firme:</b> ACL contra capacidades, la revocación y la ACL ordenada.</li><li><b>A pulir:</b> el <i>porqué</i> de Bell-La Padula. Pensalo como <b>fuga hacia abajo</b>, no como un error humano.</li></ul>
+<hr/>
+<hr/>
+<h2>Tema 11 — El sistema de archivos de Linux y los comandos de la cátedra</h2>
+<p>Es el <b>caso de estudio</b> que junta todo lo de la unidad en un sistema real:</p>
+<pre> llamadas (open, read, lseek…) ──► VFS (superbloque, nodo-i, dentry, file)
+                                        │
+                     ┌──────────────────┼──────────────────┐
+                    ext2               ext3               /proc
+            grupos de bloques     ext2 + bitácora     archivos que no
+            2 mapas de bits         (JBD)             existen en disco</pre>
+<hr/>
+<h3>11.1 Conceptos y llamadas al sistema (10.6.1–10.6.2, págs. 779–787)</h3>
+<ul><li><b>Archivo:</b> una secuencia de bytes, sin distinguir ASCII de binario. Nombres de hasta 255 caracteres; las <b>extensiones son convenciones</b>, no las exige el sistema.</li><li><b>Archivos especiales:</b></li><li><b>de caracteres:</b> <code>/dev/tty</code>, <code>/dev/lp</code>;</li><li><b>de bloques:</b> <code>/dev/hd1</code>, que permite leer la partición cruda (así trabajan <code>mkfs</code> y <b>fsck</b>, 🔗 tema 8).</li><li><b>Montaje:</b> un solo árbol. El DVD se monta en <code>/b</code> en vez de aparecer como <code>D:</code>.</li><li><b>Bloqueo POSIX:</b> desde un byte hasta el archivo entero.</li><li><b>Compartido:</b> varios a la vez.</li><li><b>Exclusivo:</b> ninguno más.</li><li>Si A bloquea 4–7, B 6–9 y C 2–11 (todos compartidos), un pedido <b>exclusivo del byte 9</b> espera a que liberen <b>B y C</b>.</li></ul>
+<table><tr><th>Llamada</th><th>Qué hace</th></tr><tr><td><code>fd = open(nombre, cómo)</code></td><td>devuelve el <b>descriptor libre más chico</b></td></tr><tr><td><code>creat(nombre, modo)</code></td><td>crea el archivo, o lo <b>trunca a 0</b> si existía</td></tr><tr><td><code>n = read(fd, buf, n)</code> / <code>write</code></td><td>avanzan la <b>posición</b> del archivo</td></tr><tr><td><code>lseek(fd, desp, de_dónde)</code></td><td>mueve la posición. 🧠 <b>Nunca mueve el brazo del disco</b>, solo cambia un número</td></tr><tr><td><code>stat</code> / <code>fstat</code></td><td>dispositivo, nº de nodo-i, modo, vínculos, dueño, grupo, tamaño, 3 tiempos</td></tr><tr><td><code>link</code> / <code>unlink</code></td><td>🔗 tema 5: con el último <code>unlink</code>, el archivo desaparece</td></tr></table>
+<p>Los descriptores <b>0, 1 y 2</b> (entrada, salida y error estándar) ya están abiertos. Por eso <code>sort</code> no sabe a qué archivo escribe: el shell redirigió el fd 1 antes de arrancarlo.</p>
+<h3>11.2 El VFS de Linux (pág. 787)</h3>
+<p>🔗 Es el tema 6 hecho realidad, con 4 objetos:</p>
+<ul><li><b>superbloque:</b> describe un FS;</li><li><b>nodo-i:</b> describe un archivo;</li><li><b>dentry:</b> una entrada de directorio, un componente de la ruta. Se guardan en caché, la <i>dentry_cache</i>;</li><li><b>file:</b> un archivo abierto, el que crea <code>open</code>.</li></ul>
+<h3>11.3 ext2 (págs. 788–793) ★</h3>
+<pre> ┌───────┬─────────────┬─────────────┬─────────────┬─────
+ │bloque0│   grupo 0   │   grupo 1   │   grupo 2   │ …
+ │(boot) │             │             │             │
+ └───────┴──────┬──────┴─────────────┴─────────────┴─────
+                ▼
+  ┌──────────┬──────────┬──────────┬──────────┬────────┬───────────────┐
+  │superblq. │descriptor│ mapa bits│ mapa bits│ nodos-i│ bloques de    │
+  │          │ de grupo │ BLOQUES  │ NODOS-I  │        │ datos         │
+  └──────────┴──────────┴──────────┴──────────┴────────┴───────────────┘</pre>
+<ul><li><b>Dos mapas de bits</b> de un bloque cada uno (🔗 tema 7). Con bloques de 1 KB: 8192 bloques y 8192 nodos-i por grupo.</li><li><b>Política de ubicación:</b> el archivo va al <b>mismo grupo que su directorio</b>, y los datos al mismo grupo que su nodo-i (🔗 los grupos de cilindros del tema 8). Además preasigna <b>8 bloques extra</b> para que el archivo crezca sin fragmentarse.</li><li><b>Nodo-i de 128 B.</b> La raíz es el <b>nodo-i 2</b>, porque el 1 se reserva para los bloques defectuosos. Tiene <b>12 directos</b> y después simple, doble y triple, más un <b>número de generación</b> que sube cada vez que el nodo-i se reutiliza.</li><li><b>Directorio (fig. 10-32):</b> entradas de la forma (nº de nodo-i, <code>rec_len</code>, tipo, longitud del nombre, nombre), <b>sin ordenar</b>.</li><li>🧠 Al borrar <code>voluminoso</code>, el <code>rec_len</code> de la entrada anterior se <b>agranda</b> y la tapa. No se compacta nada.</li></ul>
+<p><b>El ejemplo resuelto: <code>lseek</code> al byte 300.000</b>, con bloques de 1 KB y 256 direcciones por bloque.</p>
+<pre> bloque lógico = 300.000 div 1024 = 292      desplazamiento = 300.000 − 292·1024 = 992
+ 0–11 directos  ·  12–267 simple (256)  ·  268 en adelante → DOBLE
+ 292 − 268 = 24 → entrada 24 div 256 = 0 del doble · entrada 24 mod 256 = 24 del simple
+ lecturas (con el nodo-i en RAM): doble → simple → datos = 3</pre>
+<p>⚠️ <b>Errata del libro:</b> escribe «10 + 2¹⁶ bloques», que mezcla los <b>10</b> directos de V7 con los <b>12</b> de Linux. Con 12 directos son 12 + 256 + 65.536 bloques.</p>
+<h4>Las tres tablas (fig. 10-34) ★★</h4>
+<pre>  proceso A                proceso B
+ ┌─ descriptores ─┐      ┌─ descriptores ─┐          ① por proceso
+ │ fd 3 ──┐       │      │ fd 3 ──┐       │
+ └────────┼───────┘      └────────┼───────┘
+          ▼                       ▼
+   ┌──────────────┐        ┌──────────────┐           ② descripción de archivo abierto
+   │ POSICIÓN 120 │        │ POSICIÓN 0   │              (posición + modo)
+   └──────┬───────┘        └──────┬───────┘
+          └───────────┬───────────┘
+                      ▼
+               ┌────────────┐                         ③ nodo-i (uno por archivo abierto)
+               │ nodo-i 42  │
+               └────────────┘</pre>
+<p><b>¿Por qué hace falta la tabla del medio?</b> El libro descarta dos diseños:</p>
+<ol><li><b>Posición en el nodo-i:</b> dos procesos <b>no relacionados</b> compartirían la posición, y uno le correría la lectura al otro.</li><li><b>Posición en el descriptor:</b> en <code>(p1; p2) &gt; x</code>, p2 hereda una <b>copia</b> de la posición del shell, que sigue en 0, y <b>pisa</b> lo que escribió p1.</li></ol>
+<p>La solución es la tabla intermedia:</p>
+<ul><li><b><code>fork</code></b> copia el descriptor, pero apunta a la <b>misma</b> descripción, así que la posición se <b>comparte</b>.</li><li><b><code>open</code></b> crea una descripción <b>nueva</b>, con posición <b>propia</b>.</li></ul>
+<h3>11.4 ext3: con bitácora (págs. 793–795)</h3>
+<p>🔗 Es el tema 6 aplicado:</p>
+<ul><li>Un <b>registro de transacciones</b> secuencial, que es rápido porque el brazo no salta.</li><li>Después se <b>confirma</b> cada cambio en su lugar. Si se cae, al reiniciar se recorre el registro.</li><li><b>Compatible con ext2:</b> mismas estructuras.</li><li>El registro es un <b>búfer circular</b> y lo maneja el <b>JBD</b>, con tres niveles:</li><li><b>registro del diario:</b> un cambio dentro de un bloque;</li><li><b>operación atómica:</b> todos los cambios de una llamada, por ejemplo un <code>write</code>. Se aplican <b>todos o ninguno</b>;</li><li><b>transacción:</b> varias operaciones juntas, por eficiencia.</li><li>Se configura para registrar <b>todo</b> o <b>solo los metadatos</b>. Lo segundo es más rápido, pero <b>no protege los datos</b>.</li></ul>
+<h3>11.5 /proc (pág. 795)</h3>
+<ul><li>Hay un directorio por <b>PID</b> (<code>/proc/619</code>). Sus archivos <b>no existen en el disco</b>: el kernel los genera al leerlos.</li><li>También tiene información de CPU, particiones, módulos y más.</li><li>🔗 U2 y U3: <code>/proc/PID/status</code> y <code>/proc/meminfo</code>.</li></ul>
+<h3>11.6 Comandos de la cátedra ★</h3>
+<p><b><code>/etc/fstab</code></b>, con 6 columnas:</p>
+<pre> UUID=xxxx-xxxx   /home    ext4    defaults    0      2
+ └─ dispositivo   └─ punto └─ tipo └─ opciones └─dump └─ pass (orden de fsck: 1 raíz · 2 resto · 0 no)</pre>
+<p>⚠️ <b>fstab dice qué se monta <i>al arrancar</i>, no qué está montado ahora.</b> Lo montado ahora se ve con <code>cat /proc/mounts</code>, <code>mount</code> o <code>findmnt</code>.</p>
+<p><b><code>lsblk -f</code></b> muestra NAME, FSTYPE, FSVER, LABEL, UUID, FSAVAIL, FSUSE% y MOUNTPOINTS.</p>
+<p><b>La práctica de la imagen de disco:</b></p>
+<pre> dd if=/dev/zero of=mi_imagen.img bs=1M count=100   → 100 MB de ceros (todavía no es un FS)
+ mkfs.ext4 mi_imagen.img                             → ahora sí: un FS ext4 adentro
+ sudo mount -o loop mi_imagen.img /mnt/mi_imagen     → loop: un archivo como dispositivo de bloques
+ df -h | grep mi_imagen                              → espacio
+ sudo umount /mnt/mi_imagen                          → desmontar (hace sync, 🔗 tema 8)
+ … | sudo tee -a /etc/fstab ;  sudo mount -a         → que se monte sola, y probarlo</pre>
+<p>⚠️ <b>Lo que no está en el material:</b></p>
+<ul><li>El programa nombra <b>ext4, xfs, btrfs y zfs</b>, pero el libro llega hasta ext3 y la cartilla solo los nombra como valores de FSTYPE.</li><li>La pregunta típica de <b>«averiguar el tamaño de bloque de una partición ext4»</b> no tiene comando en la cartilla. Como complemento fuera del material: <code>sudo tune2fs -l /dev/sdXN</code> (la línea <i>Block size</i>) o <code>stat -f /punto</code>.</li></ul>
+<hr/>
+<h4>Preguntas rápidas (las últimas de la unidad)</h4>
+<p><b>1. (Estilo final)</b> Un proceso P hace <code>fd = open("datos", O_RDONLY)</code>, lee 100 bytes y después hace <code>fork()</code>. El hijo H lee 50 bytes. Mientras tanto, un proceso Q que no tiene nada que ver hace su propio <code>open("datos")</code> y lee 10 bytes.</p>
+<ul><li>a) ¿Desde qué byte lee H? ¿Y Q?</li><li>b) Si ahora P hace <code>read(fd, buf, 20)</code>, ¿desde qué byte lee? ¿Cuántas entradas hay en cada una de las tres tablas para el archivo <code>datos</code>?</li></ul>
+<p><b>2.</b></p>
+<ul><li>a) En ext2, con bloques de 1 KB y direcciones de 4 B, un proceso lee el <b>byte 20.000</b>. ¿Qué bloque lógico es, en qué nivel cae, qué entrada usa y cuántas lecturas a disco hacen falta, con el nodo-i ya en memoria?</li><li>b) Explicá esta línea de fstab: <code>UUID=ab12 /datos xfs ro,noauto 0 0</code>. ¿Se monta al arrancar? ¿La revisa fsck?</li></ul>
+<h3>Corrección del tema 11</h3>
+<h4>1) ✅ Todo correcto</h4>
+<ul><li><b>a)</b> H lee desde el <b>100</b>, porque comparte la descripción con P después del <code>fork</code>. Q lee desde el <b>0</b>, porque su <code>open</code> crea una descripción propia.</li><li><b>b)</b> P lee desde el <b>150</b>, porque H avanzó la posición compartida.</li><li><b>Tablas:</b> 3 descriptores, 2 descripciones y 1 nodo-i. Es la respuesta exacta.</li></ul>
+<p>🧠 Es el caso que más se toma de este tema, y lo resolviste completo.</p>
+<h4>2) ✅ Todo correcto</h4>
+<ul><li><b>a)</b> El bloque lógico es el <b>19</b>, con desplazamiento 544. Cae en el indirecto simple, entrada <b>7</b>, con <b>2 lecturas</b>.</li><li><b>b)</b> Las 6 columnas están bien, y también las conclusiones:</li><li><code>noauto</code> → <b>no</b> se monta al arrancar;</li><li>pass <code>0</code> → fsck <b>no</b> la revisa.</li></ul>
+<p>Para sumar: aunque tenga <code>noauto</code>, como está en fstab alcanza con <code>mount /datos</code>, sin repetir el dispositivo ni el tipo.</p>
+<hr/>
+<hr/>
+<h2>Cierre de la Unidad 4</h2>
+<h4>Lo más importante, en 8 puntos</h4>
+<ol><li><b>Archivo = abstracción del disco.</b> Nombre, tipo, acceso secuencial o aleatorio, atributos. Ruta <b>absoluta</b> (desde <code>/</code>) contra <b>relativa</b> (desde el directorio de trabajo), más <code>.</code> y <code>..</code>.</li><li><b>Las tres formas de guardar los bloques:</b></li><li><b>contigua:</b> rápida, pero fragmenta (es la del CD-ROM);</li><li><b>lista enlazada / FAT:</b> la tabla está en RAM, y en la cadena <b>se cuentan clusters, no saltos</b>;</li><li><b>nodo-i:</b> solo en RAM los de archivos abiertos, con directos, simple, doble y triple.</li><li><b>Cuentas de nodo-i ★:</b></li><li>máximo = (D + P + P² + P³) · B, con P = B / tamaño de puntero;</li><li>lecturas con el nodo-i en RAM: directo 1, simple 2, doble 3, triple 4.</li><li><b>Vínculos:</b></li><li><b>duro</b> = otra entrada al <b>mismo nodo-i</b>. Sube el contador, el archivo sigue vivo después del <code>rm</code> y la cuota la paga el dueño. No cruza particiones.</li><li><b>simbólico</b> = un archivo con una <b>ruta</b>. Puede quedar colgado y sí cruza particiones.</li><li><b>Consistencia:</b></li><li>El orden del borrado importa (directorio → nodo-i → bloques).</li><li>La <b>bitácora</b> hace atómicas las operaciones y exige que sean <b>idempotentes</b>: «poner un bit en 1» sí lo es; «incrementar» no.</li><li>Si no hay bitácora, <b>fsck</b> compara contadores: de bloques (uso + libres = 1) y de directorios (cuenta del nodo-i contra entradas reales).</li><li><b>Espacio en disco ★:</b></li><li><b>fragmentación interna = bloque − resto</b>, siempre con el resto exacto (la errata de la práctica: <b>2554, no 2580,48</b>);</li><li>bloque grande = rápido pero con desperdicio;</li><li><b>mapa de bits</b> (1 bit por bloque, tamaño fijo) contra <b>lista</b> (32 bits por bloque libre; gana con el disco casi lleno).</li><li><b>Protección:</b></li><li>matriz por columnas = <b>ACL</b> (revocar es fácil y selectivo);</li><li>por filas = <b>capacidades</b> (verificar es rápido; revocar es difícil);</li><li>en una ACL <b>gana la primera entrada que coincide</b>;</li><li><b>Bell-La Padula</b> (secreto: no leer arriba, no escribir abajo) contra <b>Biba</b> (integridad: al revés);</li><li>los <b>canales encubiertos</b> no los frena ninguna matriz.</li><li><b>Linux:</b></li><li>ext2 tiene grupos de bloques con <b>2 mapas de bits</b>;</li><li>las <b>3 tablas</b> (descriptor → descripción con <b>posición</b> → nodo-i): <code>fork</code> comparte la posición y <code>open</code> no;</li><li>ext3 = ext2 + bitácora;</li><li><b>fstab</b> tiene 6 columnas (la última es el orden de fsck) y dice lo que se monta <b>al arrancar</b>.</li></ol>
+<h4>Lo que más se toma en los finales</h4>
+<table><tr><th>Tipo</th><th>Ejercicio</th></tr><tr><td>🔢 Práctico</td><td>Seguir una <b>cadena FAT</b> y calcular cuántos bloques ocupa y qué espacio desperdicia</td></tr><tr><td>🔢 Práctico</td><td><b>Tamaño máximo con nodo-i</b> y <b>en qué nivel cae un byte</b>, con cuántas lecturas</td></tr><tr><td>🔢 Práctico</td><td><b>Fragmentación interna en FAT32</b> (sectores por bloque, BPB, resto exacto)</td></tr><tr><td>🔢 Práctico</td><td>Diagnosticar las <b>tablas de fsck</b></td></tr><tr><td>🧠 Concepto</td><td>Vínculo duro contra simbólico: contador, <code>rm</code>, cuota, particiones</td></tr><tr><td>🧠 Concepto</td><td>ACL contra capacidades y la revocación; Bell-La Padula contra Biba</td></tr><tr><td>🧠 Concepto</td><td>Las 3 tablas con <code>fork</code> y <code>open</code></td></tr><tr><td>🐧 Linux</td><td>Leer una línea de <b>fstab</b> y los comandos <code>lsblk</code>, <code>mount</code>, <code>ln</code></td></tr></table>
+<h4>⚠️ Tus errores de la unidad (van al mapa conceptual)</h4>
+<ul><li><b>Tema 5:</b> creer que el <b>simbólico</b> mantiene vivo el archivo. Es el <b>duro</b>, y la cuota la paga el dueño.</li><li><b>Tema 6:</b> confundir <i>idempotente</i> con «está bien hecho». Y olvidarte de que el nodo-i liberado <b>se reasigna</b>, así que el nombre viejo abre otro archivo.</li><li><b>Tema 7:</b> medir la fragmentación contra el <b>sector</b> en vez del <b>cluster</b> (448 en vez de 7616), y sumar dos veces el resto.</li><li><b>Tema 8:</b> en un duplicado de datos, olvidarte de <b>copiar el contenido y avisar</b>. En el caso de uso y libre a la vez, el bloque se saca de la <b>lista de libres, nunca del archivo</b>.</li><li><b>Tema 10:</b> justificar Bell-La Padula con «me puedo equivocar». Es <b>fuga de información hacia abajo</b>, por ejemplo con un troyano.</li></ul>
+<hr/>
+</body></html>

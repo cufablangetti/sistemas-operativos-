@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Protección: matriz, ACL y capacidades</title>
+<style>
+  :root{
+    --bg:#f4f5f8; --panel:#fff; --borde:#d6dae2; --texto:#1b1f24; --suave:#5b6572; --acento:#3d63c9;
+    --ok:#15803d; --ok-bg:#e9f8ee; --fal:#dc2626; --fal-bg:#fdecec; --lim:#b45309; --lim-bg:#fff6e0;
+    --cer:#7c3aed; --cer-bg:#f3edff; --hl:#facc15; --col:#0e7490; --col-bg:#e3f6f9; --fil:#c2410c; --fil-bg:#fdf0e7;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+      --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+      --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308; --col:#22d3ee; --col-bg:#0f2a30; --fil:#fb923c; --fil-bg:#2d1d10;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+    --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+    --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308; --col:#22d3ee; --col-bg:#0f2a30; --fil:#fb923c; --fil-bg:#2d1d10;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--texto); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .envoltura{max-width:1150px; margin:0 auto; padding:18px 16px 48px}
+  h1{font-size:1.35rem; margin:0 0 4px}
+  h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave); margin:0 0 8px}
+  h3{font-size:1rem; margin:0 0 4px}
+  .sub{color:var(--suave); margin:0 0 14px; font-size:.92rem}
+  .tarjeta{background:var(--panel); border:1px solid var(--borde); border-radius:12px; padding:14px 16px; margin-bottom:12px; min-width:0}
+  button,select,input{font:inherit; font-size:.86rem; padding:7px 11px; border-radius:8px; border:1px solid var(--borde); background:var(--panel); color:var(--texto); max-width:100%; min-width:0}
+  button{cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--acento)}
+  button:disabled{opacity:.4; cursor:not-allowed}
+  button.prim{background:var(--acento); color:#fff; border-color:var(--acento); font-weight:650}
+  input[type=text]{font-family:ui-monospace,Consolas,monospace; width:100%}
+  label{font-size:.82rem; color:var(--suave); display:flex; flex-direction:column; gap:3px; min-width:0; max-width:100%}
+  .pest{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px}
+  .pest button.on{background:var(--acento); color:#fff; border-color:var(--acento)}
+  .oculto{display:none}
+  .barra{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:10px}
+  .contador{margin-left:auto; color:var(--suave); font-size:.88rem}
+  .tablas{overflow-x:auto}
+  table{border-collapse:collapse; font:13px ui-monospace,Consolas,monospace}
+  td,th{border:1px solid var(--borde); padding:5px 8px; text-align:center}
+  th{font:600 .75rem system-ui,sans-serif; color:var(--suave)}
+  td.celda{cursor:pointer; min-width:64px}
+  td.celda span{display:inline-block; width:16px; border-radius:4px; margin:0 1px; font-weight:700}
+  td.celda span.on{background:var(--acento); color:#fff}
+  td.celda span.off{color:var(--borde)}
+  td.selCol{background:var(--col-bg)} td.selFil{background:var(--fil-bg)}
+  .tres{display:grid; grid-template-columns:1.2fr 1fr 1fr; gap:12px}
+  @media (max-width:900px){ .tres{grid-template-columns:1fr} }
+  .lista{font:13px/1.7 ui-monospace,Consolas,monospace}
+  .lista .obj{display:block; padding:2px 6px; border-radius:6px}
+  .lista .obj.hl{background:var(--hl); color:#000}
+  .col{border-left:5px solid var(--col)} .fil{border-left:5px solid var(--fil)}
+  .paneles{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  @media (max-width:760px){ .paneles{grid-template-columns:1fr} }
+  .paneles ul{margin:6px 0 0; padding-left:20px; font-size:.9rem}
+  .mas{color:var(--ok)} .menos{color:var(--fal)}
+  .marca{display:block; margin-top:8px; border-radius:8px; padding:7px 10px; font-size:.88rem}
+  .marca.ojo{background:var(--fal-bg); border:1px solid var(--fal)}
+  .marca.cer{background:var(--cer-bg); border:1px solid var(--cer)}
+  .estado{margin-top:10px; padding:8px 12px; border-radius:8px; font-weight:600}
+  .estado.ok{background:var(--ok-bg); border:1px solid var(--ok)}
+  .estado.mal{background:var(--fal-bg); border:1px solid var(--fal)}
+  .estado.lim{background:var(--lim-bg); border:1px solid var(--lim)}
+  .datos{display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:10px}
+  @media (max-width:760px){ .datos{grid-template-columns:1fr 1fr} }
+  .codigo{font:13px/1.6 ui-monospace,Consolas,monospace; margin:8px 0 0; padding:0; list-style:none}
+  .codigo li{padding:3px 8px; border-radius:6px; border:1px solid transparent}
+  .codigo li.ahora{background:var(--hl); color:#000}
+  .codigo li.hecho{color:var(--suave)}
+  .codigo li.gana{border-color:var(--ok); background:var(--ok-bg)}
+  .codigo li.niega{border-color:var(--fal); background:var(--fal-bg)}
+  .porque{border:1px solid var(--borde); border-left:5px solid var(--acento); border-radius:10px; padding:12px 14px; margin-top:10px}
+  .porque .tit{font-weight:700; margin:0 0 4px}
+  .niveles{display:flex; flex-direction:column-reverse; gap:6px}
+  .nivel{display:flex; align-items:center; gap:8px; border:2px solid var(--borde); border-radius:10px; padding:6px 10px; font-size:.9rem}
+  .nivel .n{font-weight:700; min-width:120px}
+  .nivel.suj{border-color:var(--acento); background:var(--cer-bg)}
+  .chip{display:inline-block; padding:1px 8px; border-radius:99px; font:700 .75rem system-ui,sans-serif; border:1px solid var(--borde)}
+  .chip.si{background:var(--ok-bg); border-color:var(--ok)} .chip.no{background:var(--fal-bg); border-color:var(--fal)}
+  .linea{display:flex; gap:2px; margin-top:10px; flex-wrap:wrap}
+  .linea div{width:34px; text-align:center; font:700 .8rem ui-monospace,Consolas,monospace}
+  .linea .bar{height:34px; border-radius:4px; display:flex; align-items:center; justify-content:center; color:#fff}
+  .ideas li{margin-bottom:5px}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <h1>Protección: matriz, ACL, capacidades y seguridad multinivel</h1>
+  <p class="sub">Un <b>dominio</b> es un conjunto de pares (objeto, derechos). La <b>matriz de protección</b> los junta a todos: filas = dominios, columnas = objetos. Como es enorme y casi vacía, se guarda <b>por columnas (ACL)</b> o <b>por filas (capacidades)</b>. Tanenbaum 9.3, págs. 622–641.</p>
+
+  <div class="pest">
+    <button id="t1" class="on">1 · Matriz → ACL y capacidades</button>
+    <button id="t2">2 · ACL en orden (primera que coincide)</button>
+    <button id="t3">3 · Bell-La Padula vs. Biba</button>
+    <button id="t4">4 · Canal encubierto</button>
+  </div>
+
+  <!-- ===== 1 ===== -->
+  <section id="s1">
+    <div class="tarjeta">
+      <div class="barra" style="margin-top:0">
+        <label style="flex-direction:row;align-items:center;gap:6px">Ejemplo
+          <select id="mEsc"></select>
+        </label>
+        <button id="mRev">Quitarle a B la lectura de F1</button>
+        <span class="contador">Tocá una letra de la matriz para dar o quitar ese derecho.</span>
+      </div>
+    </div>
+    <div class="tres">
+      <div class="tarjeta">
+        <h2>Matriz de protección (dominios × objetos)</h2>
+        <div class="tablas" id="mTabla"></div>
+        <span class="marca cer">🧠 Pasá el mouse por una celda: se pinta su <b style="color:var(--col)">columna</b> (lo que guarda la ACL del objeto) y su <b style="color:var(--fil)">fila</b> (lo que guarda la lista-C del dominio).</span>
+      </div>
+      <div class="tarjeta col">
+        <h2>ACL: la matriz por columnas</h2>
+        <div class="lista" id="mACL"></div>
+        <p class="sub" style="margin:6px 0 0">Una lista por <b>objeto</b>: quién puede y qué.</p>
+      </div>
+      <div class="tarjeta fil">
+        <h2>Capacidades: la matriz por filas</h2>
+        <div class="lista" id="mCap"></div>
+        <p class="sub" style="margin:6px 0 0">Una lista-C por <b>dominio</b> (proceso): qué objetos puede usar.</p>
+      </div>
+    </div>
+    <div id="mRevTxt"></div>
+    <div class="tarjeta">
+      <h2>ACL vs. capacidades</h2>
+      <div class="paneles">
+        <div>
+          <h3 style="color:var(--col)">ACL (por objeto)</h3>
+          <ul>
+            <li class="mas">+ revocación <b>selectiva</b> y fácil: se edita la lista del objeto</li>
+            <li class="mas">+ si se borra el objeto, se borra su ACL: nada queda colgado</li>
+            <li class="mas">+ grupos y comodines (<code>tana, *: RW</code>)</li>
+            <li class="menos">− verificar puede requerir una búsqueda larga en la lista</li>
+            <li class="menos">− difícil encapsular (confinar) un proceso</li>
+            <li class="menos">− si se revisa solo al abrir, un archivo ya abierto conserva sus derechos</li>
+          </ul>
+        </div>
+        <div>
+          <h3 style="color:var(--fil)">Capacidades (por proceso)</h3>
+          <ul>
+            <li class="mas">+ eficientes: «leer de la capacidad 3» no necesita buscar nada</li>
+            <li class="mas">+ encapsular un proceso es fácil: se le da una lista-C chica</li>
+            <li class="menos">− revocar es difícil: las capacidades están repartidas por todos lados</li>
+            <li class="menos">− en Amoeba, cambiar la comprobación invalida a <b>todos</b>: no hay revocación selectiva</li>
+            <li class="menos">− objeto borrado con capacidades vivas (o al revés): problemas</li>
+          </ul>
+        </div>
+      </div>
+      <span class="marca cer">🧠 Cómo se protegen las capacidades: (1) <b>arquitectura etiquetada</b>, un bit por palabra que solo toca el kernel (IBM AS/400); (2) la lista-C <b>dentro del SO</b> y se usa por posición, como los descriptores de archivo (Hydra); (3) en espacio de usuario pero <b>cifradas</b>: (servidor, objeto, derechos, f(objeto, derechos, comprobación)), con f de una vía (Amoeba).</span>
+    </div>
+  </section>
+
+  <!-- ===== 2 ===== -->
+  <section id="s2" class="oculto">
+    <div class="tarjeta">
+      <div class="datos">
+        <label>ACL del archivo (entradas <code>usuario, grupo: derechos</code> separadas por <code>;</code>, <code>*</code> = cualquiera, <code>-</code> = nada)
+          <input type="text" id="aACL">
+        </label>
+        <label>Usuario <input type="text" id="aUsr"></label>
+        <label>Grupo con el que inició sesión <input type="text" id="aGru"></label>
+        <label>Operación
+          <select id="aOp"><option>R</option><option>W</option><option>X</option></select>
+        </label>
+      </div>
+      <div class="barra">
+        <label style="flex-direction:row;align-items:center;gap:6px">Escenario <select id="aEsc"></select></label>
+        <button class="prim" id="aSig">Siguiente entrada ▶</button>
+        <button id="aFin">Ir al final</button>
+        <button id="aRei">Reiniciar</button>
+        <span class="contador" id="aCont"></span>
+      </div>
+    </div>
+    <div class="paneles">
+      <div class="tarjeta">
+        <h2>Se recorre la ACL en orden</h2>
+        <ol class="codigo" id="aLista"></ol>
+      </div>
+      <div class="tarjeta">
+        <h2>Por qué</h2>
+        <div class="porque" id="aPq"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 3 ===== -->
+  <section id="s3" class="oculto">
+    <div class="tarjeta">
+      <div class="barra" style="margin-top:0">
+        <label style="flex-direction:row;align-items:center;gap:6px">Nivel del proceso (sujeto)
+          <select id="nSuj"></select>
+        </label>
+        <span class="contador">Cada fila muestra si el proceso puede <b>leer</b> o <b>escribir</b> un objeto de ese nivel.</span>
+      </div>
+    </div>
+    <div class="paneles">
+      <div class="tarjeta">
+        <h3>Bell-La Padula: <span style="color:var(--suave);font-weight:400">guardar secretos</span></h3>
+        <div class="niveles" id="nBLP"></div>
+        <span class="marca cer">🧠 <b>No leer hacia arriba</b> (seguridad simple) · <b>no escribir hacia abajo</b> (propiedad *). El general lee al teniente; el teniente le escribe al general. La información sube, nunca baja.</span>
+      </div>
+      <div class="tarjeta">
+        <h3>Biba: <span style="color:var(--suave);font-weight:400">integridad</span></h3>
+        <div class="niveles" id="nBiba"></div>
+        <span class="marca cer">🧠 Exactamente al revés: <b>no escribir hacia arriba</b> (integridad simple) · <b>no leer hacia abajo</b> (propiedad * de integridad). Lo de abajo no puede «ensuciar» lo de arriba.</span>
+      </div>
+    </div>
+    <span class="marca ojo">⚠️ Los dos modelos están <b>en conflicto directo</b>: lo que uno permite el otro lo prohíbe (salvo en el mismo nivel). Por eso es difícil tener los dos a la vez. Y son <b>control de acceso obligatorio</b> (lo impone la organización), no discrecional (lo decide el dueño).</span>
+  </section>
+
+  <!-- ===== 4 ===== -->
+  <section id="s4" class="oculto">
+    <div class="tarjeta">
+      <div class="datos">
+        <label>Bits que el servidor quiere filtrar <input type="text" id="cBits" value="11010100"></label>
+        <label>Técnica
+          <select id="cTec"><option value="lock">Bloquear un archivo</option><option value="cpu">Usar la CPU a fondo</option><option value="pag">Provocar fallos de página</option></select>
+        </label>
+      </div>
+      <div class="linea" id="cLinea"></div>
+      <div class="porque" id="cPq"></div>
+      <span class="marca ojo">⚠️ La matriz de protección <b>no lo puede impedir</b>: el servidor no escribe ningún archivo ni manda mensajes al colaborador. Solo cambia algo que el otro puede <b>observar</b>. Encontrar todos los canales encubiertos es muy difícil y cerrarlos, casi imposible.</span>
+    </div>
+  </section>
+
+  <div class="tarjeta">
+    <h2>Ideas clave</h2>
+    <ul class="ideas">
+      <li>🧠 <b>ACL = columna</b> de la matriz (por objeto). <b>Capacidad = fila</b> (por dominio). Regla para no confundirse: <i>«la ACL cuelga del archivo; la capacidad la lleva el proceso, como una llave»</i>.</li>
+      <li>⚠️ <b>Revocar:</b> con ACL es fácil y selectivo; con capacidades es difícil, y en Amoeba se revoca a todos o a nadie.</li>
+      <li>🧠 <b>En UNIX, el dominio = (UID, GID).</b> Una llamada al sistema y un exec con <b>SETUID</b> son cambios de dominio (en la matriz: dominio como objeto con el derecho <i>enter</i>). <b>POLA:</b> cada dominio, lo mínimo necesario.</li>
+      <li>⚠️ <b>Bell-La Padula = secreto</b> (no leer arriba, no escribir abajo). <b>Biba = integridad</b> (al revés). Y aunque el modelo sea perfecto, quedan los <b>canales encubiertos</b>.</li>
+    </ul>
+  </div>
+</div>
+
+<script id="motor">
+// ---------- motor puro ----------
+const DER = ["R","W","X"];
+const ESC_MATRIZ = {
+  ej9:  {nombre:"Ejemplo resuelto: A y B", dom:["A","B"], obj:["F1","F2","F3"], m:{"A|F1":"RW","A|F2":"R","B|F1":"R","B|F3":"X"}},
+  fig97:{nombre:"Fig. 9-7 / 9-9: A, B y C", dom:["A","B","C"], obj:["F1","F2","F3"], m:{"A|F1":"RW","B|F1":"R","A|F2":"R","B|F2":"RW","C|F2":"R","B|F3":"RWX","C|F3":"RX"}},
+  fig95:{nombre:"Fig. 9-4: tres dominios", dom:["D1","D2","D3"], obj:["Archivo1","Archivo2","Archivo4","Archivo5","Archivo6","Impresora1","Plotter2"],
+         m:{"D1|Archivo1":"R","D1|Archivo2":"RW","D2|Archivo1":"RW","D2|Archivo4":"RWX","D2|Archivo5":"RW","D2|Impresora1":"W","D3|Archivo6":"RWX","D3|Impresora1":"W","D3|Plotter2":"W"}}
+};
+function normDer(s){ return DER.filter(d => String(s || "").toUpperCase().includes(d)).join(""); }
+function aACL(dom, obj, m){
+  const r = {};
+  for(const o of obj){ r[o] = []; for(const d of dom){ const x = normDer(m[d + "|" + o]); if(x) r[o].push([d, x]); } }
+  return r;
+}
+function aCap(dom, obj, m){
+  const r = {};
+  for(const d of dom){ r[d] = []; for(const o of obj){ const x = normDer(m[d + "|" + o]); if(x) r[d].push([o, x]); } }
+  return r;
+}
+function celdasNoVacias(dom, obj, m){ let n = 0; for(const d of dom) for(const o of obj) if(normDer(m[d + "|" + o])) n++; return n; }
+
+// ACL ordenada: primera entrada que coincide decide
+function parseACL(txt){
+  const out = [];
+  for(const p of String(txt).split(";")){
+    const s = p.trim(); if(!s) continue;
+    const m = s.match(/^([^,:]+),\s*([^:]+):\s*(.*)$/); if(!m) return null;
+    const der = m[3].trim().toLowerCase();
+    out.push({usr:m[1].trim(), gru:m[2].trim(), der: (der === "-" || der === "none" || der === "(none)") ? "" : normDer(der)});
+  }
+  return out;
+}
+function evaluarACL(entradas, usr, gru, op){
+  const pasos = [];
+  for(let i = 0; i < entradas.length; i++){
+    const e = entradas[i];
+    const coincide = (e.usr === "*" || e.usr === usr) && (e.gru === "*" || e.gru === gru);
+    pasos.push({i, coincide});
+    if(coincide) return {pasos, decide:i, permitido: e.der.includes(op)};
+  }
+  return {pasos, decide:-1, permitido:false};
+}
+const ESC_ACL = {
+  tanaAdm: {nombre:"Tana como sysadm, archivo de contraseñas", acl:"tana, sysadm: RW", usr:"tana", gru:"sysadm", op:"W"},
+  tanaPich:{nombre:"Tana como fanpichones, archivo de contraseñas", acl:"tana, sysadm: RW", usr:"tana", gru:"fanpichones", op:"R"},
+  comodin: {nombre:"Comodín: tana con cualquier grupo", acl:"tana, *: RW", usr:"tana", gru:"fanpichones", op:"W"},
+  virgil:  {nombre:"Bloqueo selectivo: todos menos Virgil", acl:"virgil, *: -; *, *: RW", usr:"virgil", gru:"alumnos", op:"R"},
+  otro:    {nombre:"Bloqueo selectivo: otro usuario", acl:"virgil, *: -; *, *: RW", usr:"debbie", gru:"alumnos", op:"W"},
+  orden:   {nombre:"⚠️ El orden importa (invertido)", acl:"*, *: RW; virgil, *: -", usr:"virgil", gru:"alumnos", op:"R"}
+};
+
+// Multinivel: niveles 0..3
+const NIVELES = ["No clasificado","Confidencial","Secreto","Alto secreto"];
+function blp(ns, no, op){ return op === "R" ? ns >= no : ns <= no; }
+function biba(ns, no, op){ return op === "R" ? ns <= no : ns >= no; }
+
+// Canal encubierto: un intervalo por bit
+function canal(bits){
+  const b = String(bits).replace(/\s/g, "");
+  if(!/^[01]+$/.test(b)) return null;
+  return b.split("").map(Number);
+}
+if(typeof module !== "undefined") module.exports = {ESC_MATRIZ, aACL, aCap, celdasNoVacias, normDer, parseACL, evaluarACL, ESC_ACL, blp, biba, NIVELES, canal};
+</script>
+
+<script>
+const $ = id => document.getElementById(id);
+for(const k of [1,2,3,4]) $("t" + k).onclick = () => { for(const j of [1,2,3,4]){ $("t" + j).classList.toggle("on", j === k); $("s" + j).classList.toggle("oculto", j !== k); } };
+
+// ===== 1 =====
+let E = null, hover = null, ultimaRev = null;
+for(const [k, e] of Object.entries(ESC_MATRIZ)) $("mEsc").add(new Option(e.nombre, k));
+$("mEsc").onchange = () => { const s = ESC_MATRIZ[$("mEsc").value]; E = {dom:s.dom.slice(), obj:s.obj.slice(), m:Object.assign({}, s.m)}; ultimaRev = null; dibM(); };
+$("mRev").onclick = () => {
+  if(!E.dom.includes("B") || !E.obj.includes("F1")) return;
+  const k = "B|F1", antes = normDer(E.m[k]);
+  E.m[k] = antes.replace("R", "");
+  ultimaRev = antes.includes("R");
+  dibM();
+};
+function dibM(){
+  $("mRev").disabled = !(E.dom.includes("B") && E.obj.includes("F1"));
+  let h = "<table><tr><th></th>" + E.obj.map(o => `<th>${o}</th>`).join("") + "</tr>";
+  for(const d of E.dom){
+    h += `<tr><th>${d}</th>`;
+    for(const o of E.obj){
+      const x = normDer(E.m[d + "|" + o]);
+      let cls = "celda";
+      if(hover && hover.o === o) cls += " selCol";
+      if(hover && hover.d === d) cls += " selFil";
+      h += `<td class="${cls}" data-d="${d}" data-o="${o}">` + DER.map(r => `<span data-r="${r}" class="${x.includes(r) ? "on" : "off"}">${r}</span>`).join("") + "</td>";
+    }
+    h += "</tr>";
+  }
+  $("mTabla").innerHTML = h + "</table>";
+  $("mTabla").querySelectorAll("td.celda").forEach(td => {
+    td.onmouseenter = () => { hover = {d:td.dataset.d, o:td.dataset.o}; pintarHover(); };
+    td.onmouseleave = () => { hover = null; pintarHover(); };
+    td.querySelectorAll("span").forEach(sp => sp.onclick = () => {
+      const k = td.dataset.d + "|" + td.dataset.o, x = normDer(E.m[k]), r = sp.dataset.r;
+      E.m[k] = x.includes(r) ? x.replace(r, "") : normDer(x + r);
+      ultimaRev = null; dibM();
+    });
+  });
+  const acl = aACL(E.dom, E.obj, E.m), cap = aCap(E.dom, E.obj, E.m);
+  $("mACL").innerHTML = E.obj.map(o => `<span class="obj" data-o="${o}"><b>${o}</b>: ${acl[o].length ? acl[o].map(([d, x]) => `${d}: ${x}`).join("; ") : "<i>(vacía)</i>"}</span>`).join("");
+  $("mCap").innerHTML = E.dom.map(d => `<span class="obj" data-d="${d}"><b>${d}</b>: ${cap[d].length ? cap[d].map(([o, x]) => `${o}: ${x}`).join("; ") : "<i>(vacía)</i>"}</span>`).join("");
+  const tot = E.dom.length * E.obj.length, nv = celdasNoVacias(E.dom, E.obj, E.m);
+  let rv = `<div class="estado ok">La matriz tiene ${tot} celdas pero solo ${nv} con derechos (${Math.round(nv/tot*100)} %). Por eso no se guarda entera: ACL y capacidades guardan solo las no vacías.</div>`;
+  if(ultimaRev !== null){
+    rv = ultimaRev
+      ? `<div class="estado lim">Le quitaste a B la lectura de F1.<ul>
+          <li><b>Con ACL:</b> se editó <b>una sola lista</b>, la de F1. Nadie más se entera.</li>
+          <li><b>Con capacidades administradas por el kernel:</b> hay que <b>encontrar</b> la capacidad de B, que puede estar copiada en cualquier lista-C del disco. Es difícil.</li>
+          <li><b>Con capacidades cifradas (Amoeba):</b> habría que cambiar la comprobación de F1, y eso <b>invalida también la de A</b>: no hay revocación selectiva.</li></ul></div>`
+      : `<div class="estado lim">B ya no tenía lectura sobre F1.</div>`;
+  }
+  $("mRevTxt").innerHTML = rv;
+  pintarHover();
+}
+function pintarHover(){
+  $("mTabla").querySelectorAll("td.celda").forEach(td => {
+    td.classList.toggle("selCol", !!hover && td.dataset.o === hover.o);
+    td.classList.toggle("selFil", !!hover && td.dataset.d === hover.d);
+  });
+  $("mACL").querySelectorAll(".obj").forEach(s => s.classList.toggle("hl", !!hover && s.dataset.o === hover.o));
+  $("mCap").querySelectorAll(".obj").forEach(s => s.classList.toggle("hl", !!hover && s.dataset.d === hover.d));
+}
+$("mEsc").value = "fig97"; $("mEsc").onchange();
+
+// ===== 2 =====
+let A = null, aI = 0;
+for(const [k, e] of Object.entries(ESC_ACL)) $("aEsc").add(new Option(e.nombre, k));
+$("aEsc").onchange = () => { const e = ESC_ACL[$("aEsc").value]; $("aACL").value = e.acl; $("aUsr").value = e.usr; $("aGru").value = e.gru; $("aOp").value = e.op; aIni(); };
+$("aACL").oninput = $("aUsr").oninput = $("aGru").oninput = $("aOp").onchange = () => aIni();
+$("aSig").onclick = () => { aI++; aDib(); };
+$("aFin").onclick = () => { aI = A ? A.res.pasos.length : 0; aDib(); };
+$("aRei").onclick = () => { aI = 0; aDib(); };
+function aIni(){
+  const ents = parseACL($("aACL").value);
+  if(!ents || !ents.length){ A = null; $("aLista").innerHTML = ""; $("aPq").innerHTML = `<div class="estado mal">Formato: <code>usuario, grupo: RW; *, *: R</code></div>`; $("aSig").disabled = $("aFin").disabled = true; $("aCont").textContent = ""; return; }
+  A = {ents, res: evaluarACL(ents, $("aUsr").value.trim(), $("aGru").value.trim(), $("aOp").value)};
+  aI = 0; aDib();
+}
+function aDib(){
+  if(!A) return;
+  const n = A.res.pasos.length;
+  aI = Math.min(aI, n);
+  $("aLista").innerHTML = A.ents.map((e, i) => {
+    let cls = "";
+    if(i < aI - 1 || (i === aI - 1 && !A.res.pasos[i].coincide)) cls = "hecho";
+    if(i === aI - 1 && A.res.pasos[i].coincide) cls = A.res.permitido ? "gana" : "niega";
+    if(i === aI && aI < n) cls = "ahora";
+    return `<li class="${cls}">${i + 1}. ${e.usr}, ${e.gru}: ${e.der || "(nada)"}</li>`;
+  }).join("");
+  $("aCont").textContent = `Entrada ${Math.min(aI, n)} de ${n}`;
+  $("aSig").disabled = $("aFin").disabled = aI >= n;
+  const usr = $("aUsr").value.trim(), gru = $("aGru").value.trim(), op = $("aOp").value;
+  let tit, txt = "", marca = "";
+  if(aI === 0){
+    tit = `Pedido: ${usr} (grupo ${gru}) quiere ${({R:"leer",W:"escribir",X:"ejecutar"})[op]}`;
+    txt = "Se recorren las entradas <b>en orden</b>. La <b>primera</b> que coincide con el usuario y el grupo decide, y no se mira el resto. <code>*</code> coincide con cualquiera.";
+  } else {
+    const i = aI - 1, e = A.ents[i], p = A.res.pasos[i];
+    if(!p.coincide){
+      tit = `Entrada ${i + 1}: no coincide`;
+      txt = `${e.usr !== "*" && e.usr !== usr ? `el usuario es «${e.usr}», no «${usr}»` : `el grupo es «${e.gru}», no «${gru}»`}. Sigue con la próxima.`;
+      if(aI === n && A.res.decide < 0){ tit += " · fin de la lista"; txt += "<br><b>Ninguna entrada coincidió → acceso denegado.</b>"; }
+    } else {
+      tit = `Entrada ${i + 1}: coincide → ${A.res.permitido ? "PERMITIDO" : "DENEGADO"}`;
+      txt = `La entrada da «${e.der || "nada"}» y se pidió ${op}. No se miran las entradas siguientes.`;
+      if(e.usr !== "*" && !e.der) marca = `<span class="marca cer">🧠 Bloqueo selectivo: una entrada sin derechos <b>antes</b> del comodín deja afuera a ese usuario y deja pasar al resto.</span>`;
+      if(e.usr === "*" && A.ents.slice(i + 1).some(x => x.usr === usr)) marca = `<span class="marca ojo">⚠️ Había una entrada más específica para ${usr} más abajo, pero <b>nunca se llega a ella</b>: el comodín la tapó. El orden importa.</span>`;
+      if(e.usr === usr && e.gru !== "*" && gru !== e.gru) marca = "";
+    }
+    if(aI === n && A.res.decide < 0 && $("aACL").value.includes("sysadm")) marca = `<span class="marca cer">🧠 Tana es la misma persona, pero <b>el rol con el que inició sesión</b> (el grupo) cambia lo que puede hacer.</span>`;
+  }
+  $("aPq").innerHTML = `<p class="tit">${tit}</p>${txt}${marca}`;
+}
+$("aEsc").value = "virgil"; $("aEsc").onchange();
+
+// ===== 3 =====
+NIVELES.forEach((n, i) => $("nSuj").add(new Option(`${i} · ${n}`, i)));
+$("nSuj").value = 2;
+function dibN(){
+  const s = Number($("nSuj").value);
+  const fila = (f, i) => {
+    const r = f(s, i, "R"), w = f(s, i, "W");
+    return `<div class="nivel ${i === s ? "suj" : ""}"><span class="n">${i} · ${NIVELES[i]}${i === s ? " ← proceso" : ""}</span>
+      <span class="chip ${r ? "si" : "no"}">leer ${r ? "✔" : "✘"}</span>
+      <span class="chip ${w ? "si" : "no"}">escribir ${w ? "✔" : "✘"}</span></div>`;
+  };
+  $("nBLP").innerHTML = NIVELES.map((_, i) => fila(blp, i)).join("");
+  $("nBiba").innerHTML = NIVELES.map((_, i) => fila(biba, i)).join("");
+}
+$("nSuj").onchange = dibN; dibN();
+
+// ===== 4 =====
+const TEC = {
+  lock:{uno:"bloqueado", cero:"libre", txt:"El servidor <b>bloquea</b> un archivo durante el intervalo para mandar un 1 y lo deja libre para un 0. El colaborador intenta bloquearlo: si falla, lee un 1. Ni siquiera necesita poder abrir el archivo, solo detectar el bloqueo (fig. 9-15, con F1 y F2 para sincronizar)."},
+  cpu:{uno:"CPU 100 %", cero:"inactivo", txt:"Para un 1 el servidor calcula a fondo; para un 0 se duerme. El colaborador mide <b>su propio tiempo de respuesta</b>: si va lento, es un 1. Es ruidoso, pero con un código corrector (Hamming) se vuelve confiable."},
+  pag:{uno:"muchos fallos", cero:"sin fallos", txt:"Para un 1 el servidor provoca muchos <b>fallos de página</b>; para un 0, ninguno. El colaborador nota el disco ocupado (🔗 U3)."}
+};
+function dibC(){
+  const b = canal($("cBits").value), t = TEC[$("cTec").value];
+  if(!b){ $("cLinea").innerHTML = ""; $("cPq").innerHTML = `<div class="estado mal">Escribí solo ceros y unos.</div>`; return; }
+  $("cLinea").innerHTML = b.map((x, i) => `<div><div class="bar" style="background:${x ? "var(--fal)" : "var(--ok)"}" title="${x ? t.uno : t.cero}">${x}</div><small>t${i}</small></div>`).join("");
+  $("cPq").innerHTML = `<p class="tit">Rojo = ${t.uno} (1) · Verde = ${t.cero} (0) · ${b.length} bits filtrados</p>${t.txt}`;
+}
+$("cBits").oninput = $("cTec").onchange = dibC; dibC();
+</script>
+</body>
+</html>

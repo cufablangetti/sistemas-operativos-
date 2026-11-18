@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manejo del fallo de página</title>
+<style>
+  :root{
+    --bg:#f4f5f8; --panel:#fff; --borde:#d6dae2; --texto:#1b1f24; --suave:#5b6572; --acento:#3d63c9;
+    --ok:#15803d; --ok-bg:#e9f8ee; --fal:#dc2626; --fal-bg:#fdecec; --lim:#b45309; --lim-bg:#fff6e0;
+    --cer:#7c3aed; --cer-bg:#f3edff; --hl:#facc15;
+    --hw:#0e7490; --asm:#7c3aed; --so:#2563eb; --dis:#b45309; --otro:#15803d;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+      --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+      --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308;
+      --hw:#22d3ee; --asm:#a78bfa; --so:#60a5fa; --dis:#fbbf24; --otro:#4ade80;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317; --panel:#1b1e24; --borde:#2f343d; --texto:#e6e9ee; --suave:#9aa4b2; --acento:#6f8ff0;
+    --ok:#4ade80; --ok-bg:#13291b; --fal:#f87171; --fal-bg:#2d1515; --lim:#fbbf24; --lim-bg:#2b2310;
+    --cer:#a78bfa; --cer-bg:#221a38; --hl:#eab308;
+    --hw:#22d3ee; --asm:#a78bfa; --so:#60a5fa; --dis:#fbbf24; --otro:#4ade80;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--texto); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .envoltura{max-width:1150px; margin:0 auto; padding:18px 16px 48px}
+  h1{font-size:1.35rem; margin:0 0 4px}
+  h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--suave); margin:0 0 6px}
+  .sub{color:var(--suave); margin:0 0 14px; font-size:.92rem}
+  .tarjeta{background:var(--panel); border:1px solid var(--borde); border-radius:12px; padding:14px 16px; margin-bottom:12px}
+  button{font:inherit; font-size:.9rem; padding:7px 12px; border-radius:8px; border:1px solid var(--borde); background:var(--panel); color:var(--texto); cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--acento)}
+  button:disabled{opacity:.45; cursor:not-allowed}
+  button.prim{background:var(--acento); color:#fff; border-color:var(--acento); font-weight:650}
+  label{font-size:.83rem; font-weight:650; display:block; margin-bottom:3px}
+  select{width:100%; font:inherit; padding:6px 9px; border-radius:8px; border:1px solid var(--borde); background:var(--bg); color:var(--texto)}
+  .barra{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:10px 0 2px}
+  .contador{margin-left:auto; color:var(--suave); font-size:.88rem}
+  @media (max-width:820px){ .contador{margin-left:0} }
+  .grilla{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  @media (max-width:880px){ .grilla{grid-template-columns:1fr} }
+  .celdas{display:grid; grid-template-columns:repeat(2,1fr); gap:8px}
+  .celda{border:1px solid var(--borde); border-radius:9px; padding:6px 9px}
+  .celda .k{font-size:.72rem; color:var(--suave); text-transform:uppercase; letter-spacing:.04em}
+  .celda .v{font:700 .92rem ui-monospace,Consolas,monospace}
+  .celda.cambio{outline:2px solid var(--cer); background:var(--cer-bg)}
+  table{border-collapse:collapse; font-size:.85rem; width:100%; margin-top:8px}
+  th,td{border:1px solid var(--borde); padding:3px 6px; text-align:center}
+  th{background:var(--bg); font-size:.76rem}
+  td.cambio{outline:2px solid var(--cer); outline-offset:-2px; background:var(--cer-bg)}
+  .mono{font-family:ui-monospace,Consolas,monospace}
+  .codigo{font:13px/1.5 ui-monospace,Consolas,monospace; margin:0; padding:0; list-style:none}
+  .codigo li{display:flex; gap:8px; padding:2px 6px; border-radius:6px; white-space:pre-wrap}
+  .codigo .nl{color:var(--suave); flex:0 0 22px; text-align:right}
+  .codigo li.ahora{background:var(--hl); color:#000}
+  .codigo li.ahora .nl{color:#000}
+  .codigo li.hecho{opacity:.55}
+  .codigo li.salt{opacity:.3; text-decoration:line-through}
+  .actor{display:inline-block; padding:2px 10px; border-radius:99px; font-weight:800; font-size:.82rem; color:#fff}
+  .a-HARDWARE{background:var(--hw)} .a-ENSAMBLADOR{background:var(--asm)} .a-SO{background:var(--so)} .a-DISCO{background:var(--dis)} .a-OTRO{background:var(--otro)}
+  .quien{margin-top:8px; font-size:.85rem}
+  .porque{border:1px solid var(--borde); border-left:5px solid var(--acento); border-radius:10px; padding:12px 14px; margin-top:10px}
+  .porque .tit{font-weight:700; font-size:1.02rem; margin:0 0 4px}
+  .marca{display:block; margin-top:8px; border-radius:8px; padding:7px 10px; font-size:.88rem}
+  .marca.ojo{background:var(--fal-bg); border:1px solid var(--fal)}
+  .marca.cer{background:var(--cer-bg); border:1px solid var(--cer)}
+  .linea-tiempo{display:flex; gap:3px; margin-top:10px; flex-wrap:wrap}
+  .linea-tiempo span{flex:1 0 26px; text-align:center; font-size:.7rem; font-weight:700; padding:3px 0; border-radius:4px; color:#fff; opacity:.35}
+  .linea-tiempo span.act{opacity:1; outline:2px solid var(--texto)}
+  .linea-tiempo span.ya{opacity:.8}
+  .ideas li{margin-bottom:5px}
+  .leyenda{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <h1>Manejo de un fallo de página: los 10 pasos</h1>
+  <p class="sub">Tanenbaum 3.6.2–3.6.3 (págs. 228–230). El proceso <b>A</b> ejecuta <span class="mono">MOV R1, [0x5A10]</span> en la dirección <span class="mono">0x1000</span> (páginas de 4 KB). Elegí un escenario y avanzá con «Siguiente paso». A la derecha se resalta el paso que se ejecuta y <b>quién lo ejecuta</b>; a la izquierda, las casillas que cambian se marcan en violeta.</p>
+  <div class="leyenda"><span class="actor a-HARDWARE">HARDWARE</span><span class="actor a-ENSAMBLADOR">ENSAMBLADOR</span><span class="actor a-SO">SO</span><span class="actor a-DISCO">DISCO</span><span class="actor a-OTRO">OTRO</span></div>
+
+  <div class="tarjeta" style="margin-top:12px">
+    <label for="esc">Escenario</label>
+    <select id="esc">
+      <option value="sucia">Víctima SUCIA (M = 1): primero se escribe al disco</option>
+      <option value="limpia">Víctima limpia (M = 0)</option>
+      <option value="libre">Hay un marco libre: no hace falta reemplazar</option>
+      <option value="invalida">Dirección inválida (fuera del espacio del proceso)</option>
+      <option value="proteccion">Violación de protección (escritura en el código)</option>
+    </select>
+    <div class="barra"><button id="ant">◀ Anterior</button><button class="prim" id="sig">Siguiente paso ▶</button><button id="rei">Reiniciar</button><span class="contador" id="cont"></span></div>
+    <div class="linea-tiempo" id="lt"></div>
+  </div>
+
+  <div class="grilla">
+    <div class="tarjeta">
+      <h2>Estado de la máquina</h2>
+      <div class="celdas" id="celdas"></div>
+      <table id="tabla"></table>
+    </div>
+    <div class="tarjeta">
+      <h2>Los 10 pasos (Tanenbaum 3.6.2)</h2>
+      <ol class="codigo" id="cod"></ol>
+      <div class="quien" id="quien"></div>
+      <div class="porque" id="porque"></div>
+    </div>
+  </div>
+
+  <div class="tarjeta ideas">
+    <h2>Ideas clave para el examen</h2>
+    <ul>
+      <li>El orden para recitar: <b>trap</b> (el hardware guarda el PC) → <b>ensamblador</b> guarda los registros → el SO averigua la <b>página virtual</b> → <b>valida</b> dirección y protección → busca marco (<b>reemplazo</b> si no hay) → si está <b>sucia, la escribe</b> y cambia de proceso → <b>lee la página</b> del disco (y vuelve a cambiar de proceso) → con la interrupción de disco <b>actualiza la tabla</b> → <b>respalda la instrucción</b> (PC al inicio) → planifica el proceso → el ensamblador <b>recarga los registros</b> y vuelve a modo usuario.</li>
+      <li>⚠️ Durante las dos esperas de disco (escritura de la sucia y lectura de la nueva) el proceso que falló queda <b>BLOQUEADO</b> y la CPU la usa <b>otro</b> proceso. Cuando el disco termina pasa a <b>LISTO</b>, no directo a ejecución. El marco se marca <b>ocupado</b> para que nadie lo use mientras tanto.</li>
+      <li>🧠 Conexión con la U1 y la U2: los pasos 1–2 y 9–10 son el mismo esquema que el <b>tratamiento de una interrupción</b> y el <b>cambio de contexto</b>. El fallo de página es un <b>trap</b> (excepción sincrónica), no una interrupción de un dispositivo.</li>
+      <li>⚠️ <b>Respaldo de instrucción</b>: al fallar, el PC puede valer 1000, 1002 o 1004 según qué operando falló (fig. 3-28), y puede haber autoincrementos a medio hacer. Algunas CPU guardan el PC de inicio en un <b>registro oculto</b>; si no, el SO tiene que deducirlo.</li>
+    </ul>
+  </div>
+</div>
+
+<script id="motor">
+// ======== MOTOR (sin DOM: se verifica con Node) ========
+const PASOS = [
+  "1. HW: trap al kernel, guarda el PC en la pila",
+  "2. Rutina en ensamblador guarda registros",
+  "3. SO: ¿qué página virtual se necesita?",
+  "4. SO: ¿dirección válida y protección ok?",
+  "   ¿hay marco libre? si no → reemplazo",
+  "5. Si la víctima está sucia: escribirla al disco",
+  "   (cambio de contexto; marco = ocupado)",
+  "6. Buscar la página en disco y leerla",
+  "   (el proceso sigue suspendido)",
+  "7. Interrupción de disco: actualizar la tabla",
+  "8. Respaldar la instrucción (PC al inicio)",
+  "9. Planificar al proceso; volver a la rutina",
+  "10. Recargar registros y volver a usuario"
+];
+function simular(esc) {
+  const st = {
+    modo: "usuario", pc: "0x1000", pila: "—", regs: "en la CPU", estadoA: "EJECUCIÓN", cpu: "A",
+    instr: esc === "proteccion" ? "MOV [0x1004], R1" : (esc === "invalida" ? "MOV R1, [0xF3A0]" : "MOV R1, [0x5A10]"),
+    pagV: "?", marcoLibre: esc === "libre" ? "4" : "ninguno", disco: "inactivo", senal: "—",
+    tabla: { 1: { marco: 2, P: 1, M: 0, prot: "R-X" }, 3: { marco: 7, P: 1, M: esc === "sucia" ? 1 : 0, prot: "RW" }, 5: { marco: "—", P: 0, M: 0, prot: "RW" } }
+  };
+  const pasos = []; let hechos = new Set();
+  const snap = () => JSON.parse(JSON.stringify(st));
+  const add = (lineas, actor, tit, texto, cambios, extra = {}) => { lineas.forEach(l => hechos.add(l)); pasos.push({ lineas, actor, tit, texto, cambios, estado: snap(), hechos: [...hechos], ...extra }); };
+  add([], "OTRO", "A ejecuta la instrucción", "El proceso A está en EJECUCIÓN y ejecuta " + st.instr + ". La MMU busca la página en la TLB y en la tabla de páginas...", [],
+    { paso: 0 });
+  st.modo = "kernel"; st.pila = "PC = 0x1000 (+ PSW)";
+  const causa = esc === "proteccion" ? "la página 1 es de código (solo lectura/ejecución) y la instrucción quiere escribir" : (esc === "invalida" ? "la página 15 no existe en la tabla del proceso" : "la página 5 tiene P = 0");
+  add([0], "HARDWARE", "Paso 1: trap al kernel", "La MMU detecta que " + causa + ". El hardware hace un TRAP: pasa a modo kernel y guarda el PC en la pila. Muchas máquinas también guardan en registros especiales información sobre el estado de la instrucción que estaba a medio ejecutar.", ["modo", "pila"],
+    { paso: 1, cer: "Igual que en cualquier interrupción o llamada al sistema (U1): lo primero lo hace el hardware." });
+  st.regs = "guardados (en el BCP de A)";
+  add([1], "ENSAMBLADOR", "Paso 2: guardar registros y estado volátil", "Una rutina en código ensamblador guarda los registros generales y la demás información volátil para que el SO no los destruya. Después llama al SO como un procedimiento (en C).", ["regs"],
+    { paso: 2, ojo: "Se hace en ensamblador porque C no puede manipular registros directamente: es el mismo motivo que en el tratamiento de interrupciones." });
+  st.pagV = esc === "invalida" ? "15 (0xF3A0)" : (esc === "proteccion" ? "1 (0x1004)" : "5 (0x5A10)");
+  add([2], "SO", "Paso 3: averiguar la página virtual", "El SO descubre que fue un fallo de página y averigua qué dirección lo provocó: " + st.pagV + ". A menudo un registro de hardware la tiene; si no, el SO toma el PC, lee la instrucción y la analiza por software para ver qué estaba haciendo.", ["pagV"], { paso: 3 });
+  if (esc === "invalida" || esc === "proteccion") {
+    st.senal = esc === "invalida" ? "SIGSEGV: dirección inválida" : "SIGSEGV: violación de protección";
+    st.estadoA = "recibe señal / terminado";
+    add([3], "SO", "Paso 4: la validación falla → señal", esc === "invalida" ? "La dirección 0xF3A0 no pertenece al espacio del proceso: no es un fallo «legal». El proceso recibe una señal o es eliminado. Los pasos 5 a 10 no se ejecutan." : "La dirección existe y la página está en memoria, pero la protección (R-X) no permite escribir. Es una violación de protección: el proceso recibe una señal o es eliminado. Los pasos 5 a 10 no se ejecutan.", ["senal", "estadoA"],
+      { paso: 4, fin: true, ojo: "Un fallo de página no siempre se «arregla». Si el acceso es inválido, el SO no trae ninguna página: castiga al proceso. En UNIX el mensaje típico es «segmentation fault»." });
+    return pasos;
+  }
+  if (esc === "libre") {
+    add([3, 4], "SO", "Paso 4: dirección válida; hay un marco libre", "La dirección es válida y el acceso (lectura) es compatible con la protección. Hay un marco libre (4), así que no hace falta ejecutar el algoritmo de reemplazo.", [], { paso: 4 });
+  } else {
+    add([3, 4], "SO", "Paso 4: dirección válida; no hay marco libre → reemplazo", "La dirección es válida y la protección es compatible. No hay marcos libres, así que se ejecuta el algoritmo de reemplazo, que elige como víctima la página 3 (marco 7)" + (esc === "sucia" ? ", que está SUCIA (M = 1)." : ", que está limpia (M = 0)."), [],
+      { paso: 4, ojo: "En la traducción del libro, este paso dice «si la dirección es válida y no ha ocurrido un fallo de página». Debería decir «y no hubo una violación de protección»: el fallo de página ya ocurrió." });
+  }
+  const marco = esc === "libre" ? 4 : 7;
+  if (esc === "sucia") {
+    st.estadoA = "BLOQUEADO"; st.cpu = "B (otro proceso)"; st.disco = "ESCRIBIENDO pág. 3 (marco 7 = ocupado)";
+    add([5, 6], "SO", "Paso 5: la víctima está sucia → escribirla al disco", "Como el marco 7 tiene una página modificada, primero hay que guardarla en el disco. Se planifica la escritura y se hace un CAMBIO DE CONTEXTO: A queda suspendido y otro proceso (B) usa la CPU hasta que termine la transferencia. El marco se marca como ocupado para que nadie lo use.", ["estadoA", "cpu", "disco"],
+      { paso: 5, cer: "Fin de quantum → LISTO; esperar E/S → BLOQUEADO. Acá A espera al disco: BLOQUEADO." });
+    st.tabla[3].P = 0; st.tabla[3].marco = "—"; st.tabla[3].M = 0;
+    add([], "DISCO", "La escritura termina", "El disco termina de escribir la página 3. Ahora está en el disco y el marco 7 está limpio. En la tabla, la página 3 queda ausente (P = 0).", ["t3"], { paso: 5 });
+  } else if (esc === "limpia") {
+    st.tabla[3].P = 0; st.tabla[3].marco = "—";
+    add([5], "SO", "Paso 5: la víctima está limpia", "La página 3 no se modificó: la copia del disco está al día. No hace falta escribirla; se descarta y la página 3 queda ausente (P = 0). El marco 7 se marca ocupado.", ["t3"], { paso: 5 });
+  } else {
+    add([5], "SO", "Paso 5: no aplica", "Como había un marco libre, no hay víctima ni nada que escribir. El marco 4 se marca ocupado.", [], { paso: 5 });
+  }
+  st.estadoA = "BLOQUEADO"; st.cpu = "B (otro proceso)"; st.disco = "LEYENDO pág. 5 → marco " + marco;
+  add([7, 8], "SO", "Paso 6: buscar la página en disco y planificar la lectura", "Con el marco limpio, el SO busca en qué dirección de disco está la página 5 (eso lo guarda el SO, no la tabla de páginas) y planifica la lectura hacia el marco " + marco + ". Mientras tanto A sigue suspendido y se ejecuta otro proceso, si hay alguno.", ["estadoA", "cpu", "disco"],
+    { paso: 6, ojo: "La dirección de disco NO está en la entrada de la tabla de páginas (tema 5): el SO la tiene en sus propias estructuras." });
+  st.tabla[5] = { marco, P: 1, M: 0, prot: "RW" }; st.disco = "inactivo"; st.estadoA = "LISTO";
+  add([9], "DISCO", "Paso 7: interrupción de disco → actualizar la tabla", "El disco avisa con una interrupción que la página llegó. El SO actualiza la tabla: página 5 → marco " + marco + ", P = 1. El marco vuelve a su estado normal.", ["t5", "disco"], { paso: 7 });
+  st.pc = "0x1000 (inicio de la instrucción)";
+  add([10], "SO", "Paso 8: respaldar la instrucción", "La instrucción que falló había quedado a medias. Se la lleva al estado en que estaba cuando empezó y el PC se restablece para que apunte a ella (0x1000), así se ejecuta completa de nuevo.", ["pc"],
+    { paso: 8, ojo: "Respaldo de instrucción (3.6.3): con MOV.L #6(A1),2(A0) de 6 bytes en 1000, el PC al fallar puede ser 1000, 1002 o 1004 según qué referencia falló, y el SO no siempre puede saber dónde empezó. Algunas CPU guardan el PC de inicio en un registro oculto." });
+  st.estadoA = "LISTO → EJECUCIÓN"; st.cpu = "A";
+  add([11], "SO", "Paso 9: planificar al proceso y volver a la rutina", "Cuando el planificador vuelve a elegir a A (estaba LISTO), el SO regresa a la rutina en ensamblador que lo había llamado.", ["estadoA", "cpu"], { paso: 9 });
+  st.regs = "restaurados en la CPU"; st.modo = "usuario"; st.estadoA = "EJECUCIÓN"; st.pila = "—";
+  add([12], "ENSAMBLADOR", "Paso 10: recargar registros y volver a modo usuario", "La rutina recarga los registros y el resto del estado y vuelve al espacio de usuario. A ejecuta otra vez MOV R1, [0x5A10]; ahora la página 5 está presente y la instrucción se completa, como si el fallo nunca hubiera ocurrido.", ["regs", "modo", "estadoA", "pila"],
+    { paso: 10, fin: true, cer: "Es el espejo de los pasos 1 y 2: lo que se guardó al entrar se restaura al salir." });
+  return pasos;
+}
+if (typeof module !== "undefined") module.exports = { simular, PASOS };
+</script>
+
+<script>
+// ======== INTERFAZ ========
+const $ = id => document.getElementById(id);
+let pasos = [], idx = 0;
+const COLORES = { HARDWARE: "var(--hw)", ENSAMBLADOR: "var(--asm)", SO: "var(--so)", DISCO: "var(--dis)", OTRO: "var(--otro)" };
+function cargar() { pasos = simular($("esc").value); idx = 0; mostrar(); }
+function mostrar() {
+  const p = pasos[idx], e = p.estado;
+  $("cont").textContent = `paso ${idx + 1} de ${pasos.length}`;
+  $("ant").disabled = idx === 0; $("sig").disabled = idx >= pasos.length - 1;
+  $("lt").innerHTML = pasos.map((q, i) => `<span class="${i === idx ? "act" : (i < idx ? "ya" : "")}" style="background:${COLORES[q.actor]}" title="${q.tit}">${q.paso || "·"}</span>`).join("");
+  const C = (k, nom, v) => `<div class="celda ${p.cambios.includes(k) ? "cambio" : ""}"><div class="k">${nom}</div><div class="v">${v}</div></div>`;
+  $("celdas").innerHTML = C("instr", "instrucción de A", e.instr) + C("modo", "modo de la CPU", e.modo) + C("pc", "PC de A", e.pc) + C("pila", "pila del kernel", e.pila) +
+    C("regs", "registros de A", e.regs) + C("estadoA", "estado de A", e.estadoA) + C("cpu", "quién usa la CPU", e.cpu) + C("pagV", "página que falló", e.pagV) +
+    C("disco", "disco", e.disco) + C("senal", "señal a A", e.senal);
+  $("tabla").innerHTML = `<tr><th>página de A</th><th>marco</th><th>P</th><th>M</th><th>prot.</th></tr>` +
+    Object.entries(e.tabla).map(([pg, x]) => { const c = p.cambios.includes("t" + pg) ? "cambio" : ""; return `<tr><td>${pg}${pg === "1" ? " (código)" : ""}</td><td class="mono ${c}">${x.marco}</td><td class="mono ${c}">${x.P}</td><td class="mono ${c}">${x.M}</td><td class="mono">${x.prot}</td></tr>`; }).join("");
+  const salt = $("esc").value === "invalida" || $("esc").value === "proteccion";
+  $("cod").innerHTML = PASOS.map((l, i) => `<li class="${p.lineas.includes(i) ? "ahora" : (p.hechos.includes(i) ? "hecho" : (salt && i >= 4 && p.fin ? "salt" : ""))}"><span class="nl">${p.lineas.includes(i) ? "▶" : ""}</span><span>${l}</span></li>`).join("");
+  $("quien").innerHTML = `Lo ejecuta: <span class="actor a-${p.actor}">${p.actor === "OTRO" ? "PROCESO A" : p.actor}</span>`;
+  $("porque").innerHTML = `<p class="tit">${p.tit}</p><div>${p.texto}</div>` + (p.ojo ? `<span class="marca ojo">⚠️ ${p.ojo}</span>` : "") + (p.cer ? `<span class="marca cer">🧠 ${p.cer}</span>` : "");
+}
+$("esc").onchange = cargar;
+$("sig").onclick = () => { idx++; mostrar(); };
+$("ant").onclick = () => { idx--; mostrar(); };
+$("rei").onclick = () => { idx = 0; mostrar(); };
+cargar();
+</script>
+</body>
+</html>

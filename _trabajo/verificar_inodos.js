@@ -1,0 +1,25 @@
+// Verifica el motor de unidades/u04-archivos/visuales/inodos.html
+const fs=require('fs'), vm=require('vm');
+const html=fs.readFileSync('unidades/u04-archivos/visuales/inodos.html','utf8');
+const ctx={}; vm.createContext(ctx);
+vm.runInContext(html.match(/<script id="motor">([\s\S]*?)<\/script>/)[1]+';this.R={maxTam,limitePuntero,bloquesIndice,ubicar,datosNecesarios};',ctx);
+const {maxTam,limitePuntero,bloquesIndice,ubicar,datosNecesarios}=ctx.R;
+let ok=0,mal=0; const chk=(c,m)=>{c?(ok++,console.log('OK  ',m)):(mal++,console.log('FALLA',m));};
+const T=[1,1,1];
+let m=maxTam(10,4096,4,T); chk(m.bytes===4402345713664n,'10 dir, 4KB, 4B -> 4.402.345.713.664 B (≈4 TiB, no 4,27)');
+chk(Math.abs(Number(m.bytes)/2**40-4.0039)<0.001,'= 4,004 TiB');
+m=maxTam(12,1024,4,T); chk(m.bloques===16843020n,'ext2 1KB: 12+256+65536+16777216 bloques');
+m=maxTam(12,2048,4,T); chk(m.bytes===134480396n*2048n,'12 dir 2KB');
+chk(maxTam(12,1024,4,[1,0,0]).bloques===268n,'solo simple: 12+256=268 bloques (268 KB)');
+chk(limitePuntero(4096,4).bytes===2n**44n,'punteros 4B y 4KB -> 16 TiB');
+let n=datosNecesarios(5.5*1048576,2048); chk(n===2816,'5,5 MB / 2 KB = 2816 bloques');
+let b=bloquesIndice(n,12,512,T); chk(b.indice===7&&b.entra,'práctica: 7 bloques índice');
+chk(bloquesIndice(10,12,512,T).indice===0,'archivo chico: 0 índice');
+chk(bloquesIndice(12+512+1,12,512,T).indice===3,'un bloque en el doble: simple+doble+1 sencillo = 3');
+chk(bloquesIndice(12+512+512*512+1,12,512,T).indice===1+1+512+1+1+1,'1 bloque en el triple');
+let u=ubicar(300000,12,1024,4,T); chk(u.n===292&&u.nivel==='doble'&&u.camino[1].entrada===0&&u.camino[2].entrada===24&&u.lecturas===3,'ext2 byte 300000: doble, 0, 24, 3 lecturas');
+u=ubicar(5000,12,1024,4,T); chk(u.nivel==='directo'&&u.n===4&&u.lecturas===1,'byte 5000 directo 4');
+u=ubicar(13*1024,12,1024,4,T); chk(u.nivel==='simple'&&u.camino[1].entrada===1&&u.lecturas===2,'bloque 13 -> simple entrada 1');
+u=ubicar((12+256+65536+5)*1024,12,1024,4,T); chk(u.nivel==='triple'&&u.camino[1].entrada===0&&u.camino[3].entrada===5&&u.lecturas===4,'triple');
+u=ubicar(300000,10,4096,4,T); chk(u.n===73&&u.nivel==='simple'&&u.camino[1].entrada===63,'cátedra byte 300000: bloque 73 -> simple 63');
+console.log(`\n${ok} OK, ${mal} fallos`); process.exit(mal?1:0);
